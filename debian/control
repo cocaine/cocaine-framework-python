@@ -11,4 +11,4 @@ Package: cocaine-framework-python
 Architecture: any
 Depends: ${misc:Depends}, ${python:Depends}, python-msgpack
 Description: Cocaine - Python Framework
- A simple framework to ease the developing of Cocaine apps
+ A simple framework to ease the developing of Cocaine apps.
