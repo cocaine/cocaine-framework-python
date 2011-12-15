@@ -1,4 +1,10 @@
-cocaine-framework-python (0.6.22-~20111215.c2ceba80-yandex0) unstable; urgency=low
+cocaine-framework-python (0.6.23) unstable; urgency=low
+
+  * Added a dependency on python-msgpack.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 15 Dec 2011 03:22:29 +0300
+
+cocaine-framework-python (0.6.22) unstable; urgency=low
 
   * Initial release.
 
