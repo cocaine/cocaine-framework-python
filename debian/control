@@ -9,6 +9,7 @@ Vcs-Browser: https://github.com/Kobolog/cocaine-framework-python
 
 Package: cocaine-framework-python
 Architecture: any
-Depends: ${misc:Depends}, ${python:Depends}, python-msgpack
+Depends: ${misc:Depends}, ${python:Depends}, cocaine-plugin-python,
+ python-msgpack
 Description: Cocaine - Python Framework
  A simple framework to ease the developing of Cocaine apps.

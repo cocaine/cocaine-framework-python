@@ -1,3 +1,9 @@
+cocaine-framework-python (0.7.0) lucid; urgency=low
+
+  * Support for the new Cocaine 0.7 features.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 01 Mar 2012 19:15:01 +0300
+
 cocaine-framework-python (0.6.23) unstable; urgency=low
 
   * Added a dependency on python-msgpack.

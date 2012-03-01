@@ -5,14 +5,14 @@ from distutils.core import setup
 
 setup(
     name = "cocaine",
-    version = "0.6",
+    version = "0.7.0",
     description = "Cocaine Python Framework",
-    long_description = "A simple framework to ease the developing of Cocaine apps",
+    long_description = "A simple framework to ease the development of Cocaine apps",
     url = "https://github.com/kobolog/cocaine",
     author = "Andrey Sibiryov",
     author_email = "me@kobology.ru",
     license = "BSD 2-Clause",
     platforms = ["Linux", "BSD", "MacOS"],
-    packages = ["cocaine", "cocaine.decorators"],
-    requires = ["msgpack", "json"]
+    packages = ["cocaine", "cocaine.decorators", "cocaine.context"],
+    requires = ["msgpack"]
 )
