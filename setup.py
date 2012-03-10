@@ -5,7 +5,7 @@ from distutils.core import setup
 
 setup(
     name = "cocaine",
-    version = "0.7.0",
+    version = "0.7.1-4",
     description = "Cocaine Python Framework",
     long_description = "A simple framework to ease the development of Cocaine apps",
     url = "https://github.com/kobolog/cocaine",
