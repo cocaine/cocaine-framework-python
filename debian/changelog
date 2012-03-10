@@ -1,3 +1,9 @@
+cocaine-framework-python (0.7.1-1) lucid; urgency=low
+
+  * Even better way to pack the responses.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Sat, 10 Mar 2012 23:27:49 +0300
+
 cocaine-framework-python (0.7.1) lucid; urgency=low
 
   * Support for the new Python I/O object.
