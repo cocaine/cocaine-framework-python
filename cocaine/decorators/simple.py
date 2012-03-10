@@ -20,9 +20,9 @@ class SimpleTimer(object):
             return
 
         try:
-            io.write(msgpack.packs(response))
+            msgpack.pack(response, io)
         except TypeError:
-            [io.write(msgpack.packs(chunk)) for chunk in response]
+            [msgpack.pack(chunk, io) for chunk in response]
 
 
 class SimpleServer(object):
@@ -43,7 +43,7 @@ class SimpleServer(object):
             return
 
         try:
-            io.write(msgpack.packs(response))
+            msgpack.pack(response, io)
         except TypeError:
-            [io.write(msgpack.packs(chunk)) for chunk in response]
+            [msgpack.pack(chunk, io) for chunk in response]
 

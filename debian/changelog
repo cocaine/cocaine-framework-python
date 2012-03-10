@@ -1,3 +1,9 @@
+cocaine-framework-python (0.7.1-4) lucid; urgency=low
+
+  * The code here worked, the bug was in the Python I/O object.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Sun, 11 Mar 2012 00:58:23 +0300
+
 cocaine-framework-python (0.7.1-3) lucid; urgency=low
 
   * Even more proper way to do it.
