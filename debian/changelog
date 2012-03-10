@@ -1,3 +1,9 @@
+cocaine-framework-python (0.7.1) lucid; urgency=low
+
+  * Support for the new Python I/O object.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Sat, 10 Mar 2012 23:25:20 +0300
+
 cocaine-framework-python (0.7.0) lucid; urgency=low
 
   * Support for the new Cocaine 0.7 features.

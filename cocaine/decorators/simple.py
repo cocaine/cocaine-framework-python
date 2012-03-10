@@ -1,7 +1,6 @@
 # encoding: utf-8
 
 import types
-import io
 import msgpack
 
 
@@ -11,24 +10,20 @@ class SimpleTimer(object):
             assert(callable(processor))
             self.process = processor
 
-    def __call__(self):
+    def __call__(self, io):
         try:
-            self.result = self.process()
+            response = self.process()
         except AttributeError:
             raise NotImplementedError("You have to implement the process() method")
 
-        if self.result is None:
+        if response is None:
             return
 
         try:
-            return [msgpack.packs(self.result)]
+            io.write(msgpack.packs(response))
         except TypeError:
-            self.result = iter(self.result)
-            return self
-
-    def __iter__(self):
-        while True:
-            yield msgpack.packs(next(self.result)) 
+            for chunk in response:
+                io.write(msgpack.packs(chunk))
 
 
 class SimpleServer(object):
@@ -37,24 +32,20 @@ class SimpleServer(object):
             assert(callable(processor))
             self.process = processor
 
-    def __call__(self, request):
-        request = msgpack.unpack(io.BytesIO(request))
+    def __call__(self, io):
+        request = msgpack.unpack(io)
 
         try:
-            self.result = self.process(request)
+            response = self.process(request)
         except AttributeError:
             raise NotImplementedError("You have to implement the process() method")
 
-        if self.result is None:
+        if response is None:
             return
 
         try:
-            return [msgpack.packs(self.result)]
+            io.write(msgpack.packs(response))
         except TypeError:
-            self.result = iter(self.result)
-            return self
-
-    def __iter__(self):
-        while True:
-            yield msgpack.packs(next(self.result)) 
+            for chunk in response:
+                io.write(msgpack.packs(chunk))
 
