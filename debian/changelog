@@ -1,3 +1,9 @@
+cocaine-framework-python (0.7.2) lucid; urgency=low
+
+  * Bump package version to match the corresponding cocaine-core version.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 12 Mar 2012 04:38:44 +0300
+
 cocaine-framework-python (0.7.1-4) lucid; urgency=low
 
   * The code here worked, the bug was in the Python I/O object.
