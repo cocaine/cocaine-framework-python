@@ -1,3 +1,9 @@
+cocaine-framework-python (0.7.2-2) lucid; urgency=low
+
+  * MessagePack SEGFAULTs on generators, great.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 12 Mar 2012 19:19:06 +0300
+
 cocaine-framework-python (0.7.2-1) lucid; urgency=low
 
   * More informative error message when trying to import the context module from bare Python.

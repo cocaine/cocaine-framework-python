@@ -3,7 +3,6 @@
 import types
 import msgpack
 
-
 class SimpleTimer(object):
     def __init__(self, processor = None):
         if processor is not None:
@@ -16,13 +15,10 @@ class SimpleTimer(object):
         except AttributeError:
             raise NotImplementedError("You have to implement the process() method")
 
-        if response is None:
-            return
-
-        try:
-            msgpack.pack(response, io)
-        except TypeError:
+        if isinstance(response, types.GeneratorType):
             [msgpack.pack(chunk, io) for chunk in response]
+        elif response is not None:
+            msgpack.pack(response, io)
 
 
 class SimpleServer(object):
@@ -39,11 +35,8 @@ class SimpleServer(object):
         except AttributeError:
             raise NotImplementedError("You have to implement the process() method")
 
-        if response is None:
-            return
-
-        try:
-            msgpack.pack(response, io)
-        except TypeError:
+        if isinstance(response, types.GeneratorType):
             [msgpack.pack(chunk, io) for chunk in response]
+        elif response is not None:
+            msgpack.pack(response, io)
 
