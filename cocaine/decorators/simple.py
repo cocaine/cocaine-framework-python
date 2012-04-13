@@ -28,7 +28,7 @@ class SimpleServer(object):
             self.process = processor
 
     def __call__(self, io):
-        request = msgpack.unpack(io)
+        request = msgpack.unpack(io)['request']
 
         try:
             response = self.process(request)
