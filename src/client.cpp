@@ -23,7 +23,11 @@ typedef cocaine::helpers::track_t<PyObject*, Py_DecRef> tracked_object_t;
 
 int client_object_t::constructor(client_object_t * self, PyObject * args, PyObject * kwargs) {
     static char config_keyword[] = "config";
-    static char * keywords[] = { config_keyword, NULL };
+
+    static char * keywords[] = {
+        config_keyword, 
+        NULL
+    };
 
     const char * config = NULL;
 
@@ -35,7 +39,6 @@ int client_object_t::constructor(client_object_t * self, PyObject * args, PyObje
 
     return 0;
 }
-
 
 void client_object_t::destructor(client_object_t * self) {
     if(self->m_client) {
@@ -92,11 +95,11 @@ PyObject* client_object_t::send(client_object_t * self, PyObject * args, PyObjec
     }
 
     tracked_object_t ptr(PyCObject_FromVoidPtr(&future, NULL)),
-                     pack(PyTuple_Pack(1, *ptr));
+                     argpack(PyTuple_Pack(1, *ptr));
    
     PyObject * object = PyObject_Call(
         reinterpret_cast<PyObject*>(&response_object_type),
-        pack,
+        argpack,
         NULL
     );
 

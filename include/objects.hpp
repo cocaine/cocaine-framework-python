@@ -28,7 +28,7 @@ static PyMethodDef client_object_methods[] = {
 static PyTypeObject client_object_type = {
     PyObject_HEAD_INIT(NULL)
     0,                                          /* ob_size */
-    "cocaine.Client",                           /* tp_name */
+    "cocaine.client.Client",                    /* tp_name */
     sizeof(client_object_t),                    /* tp_basicsize */
     0,                                          /* tp_itemsize */
     (destructor)client_object_t::destructor,    /* tp_dealloc */
@@ -47,7 +47,7 @@ static PyTypeObject client_object_type = {
     0,                                          /* tp_setattro */
     0,                                          /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT,                         /* tp_flags */
-    "Cocaine Client",                           /* tp_doc */
+    "Client",                                   /* tp_doc */
     0,                                          /* tp_traverse */
     0,                                          /* tp_clear */
     0,                                          /* tp_richcompare */
@@ -76,7 +76,7 @@ static PyMethodDef response_object_methods[] = {
 static PyTypeObject response_object_type = {
     PyObject_HEAD_INIT(NULL)
     0,                                          /* ob_size */
-    "IO",                                       /* tp_name */
+    "cocaine.client.Response",                  /* tp_name */
     sizeof(response_object_t),                  /* tp_basicsize */
     0,                                          /* tp_itemsize */
     (destructor)response_object_t::destructor,  /* tp_dealloc */
@@ -95,7 +95,7 @@ static PyTypeObject response_object_type = {
     0,                                          /* tp_setattro */
     0,                                          /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT,                         /* tp_flags */
-    "I/O Proxy",                                /* tp_doc */
+    "Deferred Response",                        /* tp_doc */
     0,                                          /* tp_traverse */
     0,                                          /* tp_clear */
     0,                                          /* tp_richcompare */

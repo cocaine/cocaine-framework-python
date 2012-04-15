@@ -18,13 +18,15 @@ using namespace cocaine::dealer;
 extern "C" {
 
 void init_client(void) {
-    PyObject* module = Py_InitModule3(
+    PyObject * module = Py_InitModule3(
         "cocaine._client",
         NULL,
-        "Cocaine Client"
+        "Client Objects"
     );
 
     PyType_Ready(&client_object_type);
+    PyType_Ready(&response_object_type);
+    
     Py_INCREF(&client_object_type);
 
     PyModule_AddObject(
