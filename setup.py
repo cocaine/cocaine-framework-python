@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-from distutils.core import setup
+from distutils.core import setup, Extension
 
 setup(
     name = "cocaine",
@@ -14,5 +14,9 @@ setup(
     license = "BSD 2-Clause",
     platforms = ["Linux", "BSD", "MacOS"],
     packages = ["cocaine", "cocaine.decorators", "cocaine.context"],
+    ext_modules = [Extension("cocaine.client",  ["src/module.cpp", "src/response.cpp"],
+                             include_dirs = ["include"],
+                             libraries = ["cocaine-dealer"])
+    ],
     requires = ["msgpack"]
 )
