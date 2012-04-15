@@ -21,7 +21,7 @@ void init_client(void) {
     PyObject* module = Py_InitModule3(
         "cocaine._client",
         NULL,
-        "Cocaine Native Client"
+        "Cocaine Client"
     );
 
     PyType_Ready(&client_object_type);

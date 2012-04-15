@@ -22,6 +22,8 @@
 
 namespace cocaine { namespace dealer {
 
+class client;
+
 class client_object_t {
     public:
         PyObject_HEAD
@@ -32,7 +34,7 @@ class client_object_t {
         static PyObject* send(client_object_t * self, PyObject * args, PyObject * kwargs);
 
     public:
-        // Pass
+        client * m_client;
 };
 
 }}
