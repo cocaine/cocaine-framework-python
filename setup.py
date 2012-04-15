@@ -13,8 +13,9 @@ setup(
     author_email = "me@kobology.ru",
     license = "BSD 2-Clause",
     platforms = ["Linux", "BSD", "MacOS"],
-    packages = ["cocaine", "cocaine.decorators", "cocaine.context"],
-    ext_modules = [Extension("cocaine.client",  ["src/module.cpp", "src/response.cpp"],
+    packages = ["cocaine", "cocaine.context", "cocaine.client", "cocaine.decorators"],
+    ext_modules = [Extension("cocaine._client",
+                             ["src/module.cpp", "src/client.cpp", "src/response.cpp"],
                              include_dirs = ["include"],
                              libraries = ["cocaine-dealer"])
     ],
