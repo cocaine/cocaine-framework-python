@@ -12,6 +12,7 @@
 //
 
 #include <cocaine/dealer/response.hpp>
+#include <cocaine/dealer/utils/error.hpp>
 
 #include "gil.hpp"
 #include "response.hpp"
@@ -67,10 +68,17 @@ PyObject* response_wrapper_t::next(response_wrapper_t * self) {
     try {
         allow_threads_t allow_threads;
         success = (*self->m_response)->get(&chunk);
-    } catch(...) {
+    } catch(const dealer_error& e) {
         PyErr_SetString(
             PyExc_RuntimeError,
-            "Something went wrong"
+            e.what()
+        );
+
+        return NULL;
+    } catch(const internal_error& e) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            e.what()
         );
 
         return NULL;

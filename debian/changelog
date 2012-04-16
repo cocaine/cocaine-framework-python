@@ -1,3 +1,9 @@
+cocaine-framework-python (0.7.3-b2) lucid; urgency=low
+
+  * Python bindings, again.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 16 Apr 2012 18:22:35 +0400
+
 cocaine-framework-python (0.7.3-b1) lucid; urgency=low
 
   * Python bindings.

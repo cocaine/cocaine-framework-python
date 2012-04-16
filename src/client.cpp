@@ -12,6 +12,8 @@
 //
 
 #include <cocaine/dealer/client.hpp>
+#include <cocaine/dealer/utils/error.hpp>
+
 #include <cocaine/helpers/track.hpp>
 
 #include "gil.hpp"
@@ -52,14 +54,16 @@ int client_object_t::initialize(client_object_t * self, PyObject * args, PyObjec
 
     try {
         self->m_client = new client(config);
-    } catch(...) {
+    } catch(const internal_error& e) {
         PyErr_SetString(
             PyExc_RuntimeError,
-            "Something went wrong"
+            e.what()
         );
 
         return -1;
     }
+
+    BOOST_ASSERT(self->m_client);
 
     return 0;
 }
@@ -110,10 +114,36 @@ PyObject* client_object_t::send(client_object_t * self, PyObject * args, PyObjec
                 message_policy()
             )
         );
-    } catch(...) {
+    } catch(const dealer_error& e) {
+        switch(e.code()) {
+            case request_error:
+                PyErr_SetString(
+                    PyExc_ValueError,
+                    e.what()
+                );
+                
+                return NULL;
+
+            case location_error:
+                PyErr_SetString(
+                    PyExc_LookupError,
+                    e.what()
+                );
+                
+                return NULL;
+
+            default:
+                PyErr_SetString(
+                    PyExc_RuntimeError,
+                    e.what()
+                );
+
+                return NULL;
+        }
+    } catch(const internal_error& e) {
         PyErr_SetString(
             PyExc_RuntimeError,
-            "Something went wrong"
+            e.what()
         );
 
         return NULL;
@@ -127,6 +157,8 @@ PyObject* client_object_t::send(client_object_t * self, PyObject * args, PyObjec
         argpack,
         NULL
     );
+
+    BOOST_ASSERT(object);
 
     return object;
 }
