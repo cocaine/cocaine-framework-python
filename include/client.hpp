@@ -28,9 +28,9 @@ class client_object_t {
     public:
         PyObject_HEAD
 
-        static PyObject* constructor(PyTypeObject * type, PyObject * args, PyObject * kwargs);
-        static int initializer(client_object_t * self, PyObject * args, PyObject * kwargs);
-        static void destructor(client_object_t * self);
+        static PyObject* construct(PyTypeObject * type, PyObject * args, PyObject * kwargs);
+        static int initialize(client_object_t * self, PyObject * args, PyObject * kwargs);
+        static void destruct(client_object_t * self);
 
         static PyObject* send(client_object_t * self, PyObject * args, PyObject * kwargs);
 
@@ -50,7 +50,7 @@ static PyTypeObject client_object_type = {
     "cocaine.client.Client",                    /* tp_name */
     sizeof(client_object_t),                    /* tp_basicsize */
     0,                                          /* tp_itemsize */
-    (destructor)client_object_t::destructor,    /* tp_dealloc */
+    (destructor)client_object_t::destruct,      /* tp_dealloc */
     0,                                          /* tp_print */
     0,                                          /* tp_getattr */
     0,                                          /* tp_setattr */
@@ -81,9 +81,9 @@ static PyTypeObject client_object_type = {
     0,                                          /* tp_descr_get */
     0,                                          /* tp_descr_set */
     0,                                          /* tp_dictoffset */
-    (initproc)client_object_t::initializer,     /* tp_init */
+    (initproc)client_object_t::initialize,      /* tp_init */
     0,                                          /* tp_alloc */
-    client_object_t::constructor                /* tp_new */
+    client_object_t::construct                  /* tp_new */
 };
 
 }}

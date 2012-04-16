@@ -11,8 +11,8 @@
 // limitations under the License.
 //
 
-#ifndef COCAINE_DEALER_PYTHON_BINDING_RESPONSE_OBJECT_HPP
-#define COCAINE_DEALER_PYTHON_BINDING_RESPONSE_OBJECT_HPP
+#ifndef COCAINE_DEALER_PYTHON_BINDINGS_RESPONSE_HPP
+#define COCAINE_DEALER_PYTHON_BINDINGS_RESPONSE_HPP
 
 // NOTE: These are being redefined in Python.h
 #undef _POSIX_C_SOURCE
@@ -26,9 +26,9 @@ namespace cocaine { namespace dealer {
 
 class response;
 
-class response_wrapper_t {
+class response_holder_t {
     public:
-        explicit response_wrapper_t(const boost::shared_ptr<response>& response_):
+        explicit response_holder_t(const boost::shared_ptr<response>& response_):
             m_response(response_)
         { }
 
@@ -40,35 +40,31 @@ class response_wrapper_t {
         boost::shared_ptr<response> m_response;
 };
 
-class response_object_t {
+class response_wrapper_t {
     public:
         PyObject_HEAD
 
-        static PyObject* constructor(PyTypeObject * type, PyObject * args, PyObject * kwargs);
-        static int initializer(response_object_t * self, PyObject * args, PyObject * kwargs);
-        static void destructor(response_object_t * self);
+        static PyObject* construct(PyTypeObject * type, PyObject * args, PyObject * kwargs);
+        static int initialize(response_wrapper_t * self, PyObject * args, PyObject * kwargs);
+        static void destruct(response_wrapper_t * self);
 
-        static PyObject* get(response_object_t * self, PyObject * args, PyObject * kwargs);
-
-        static PyObject* iter_next(response_object_t * it);
+        static PyObject* next(response_wrapper_t * self);
 
     public:
-        response_wrapper_t * m_future;
+        response_holder_t * m_response;
 };
 
-static PyMethodDef response_object_methods[] = {
-    { "get", (PyCFunction)response_object_t::get, METH_KEYWORDS,
-        "Pulls in a response chunk." },
+static PyMethodDef response_wrapper_methods[] = {
     { NULL, NULL, 0, NULL }
 };
 
-static PyTypeObject response_object_type = {
+static PyTypeObject response_wrapper_type = {
     PyObject_HEAD_INIT(&PyType_Type)
     0,                                          /* ob_size */
     "cocaine.client.Response",                  /* tp_name */
-    sizeof(response_object_t),                  /* tp_basicsize */
+    sizeof(response_wrapper_t),                 /* tp_basicsize */
     0,                                          /* tp_itemsize */
-    (destructor)response_object_t::destructor,  /* tp_dealloc */
+    (destructor)response_wrapper_t::destruct,   /* tp_dealloc */
     0,                                          /* tp_print */
     0,                                          /* tp_getattr */
     0,                                          /* tp_setattr */
@@ -90,8 +86,8 @@ static PyTypeObject response_object_type = {
     0,                                          /* tp_richcompare */
     0,                                          /* tp_weaklistoffset */
     PyObject_SelfIter,                          /* tp_iter */
-    (iternextfunc)response_object_t::iter_next, /* tp_iternext */
-    response_object_methods,                    /* tp_methods */
+    (iternextfunc)response_wrapper_t::next,     /* tp_iternext */
+    response_wrapper_methods,                   /* tp_methods */
     0,                                          /* tp_members */
     0,                                          /* tp_getset */
     0,                                          /* tp_base */
@@ -99,9 +95,9 @@ static PyTypeObject response_object_type = {
     0,                                          /* tp_descr_get */
     0,                                          /* tp_descr_set */
     0,                                          /* tp_dictoffset */
-    (initproc)response_object_t::initializer,   /* tp_init */
+    (initproc)response_wrapper_t::initialize,   /* tp_init */
     0,                                          /* tp_alloc */
-    response_object_t::constructor              /* tp_new */
+    response_wrapper_t::construct               /* tp_new */
 };
 
 }}

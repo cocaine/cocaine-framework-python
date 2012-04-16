@@ -22,8 +22,8 @@ using namespace cocaine::dealer;
 
 typedef cocaine::helpers::track_t<PyObject*, Py_DecRef> tracked_object_t;
 
-PyObject* client_object_t::constructor(PyTypeObject * type, PyObject * args, PyObject * kwargs) {
-    if(PyType_Ready(&response_object_type) < 0) {
+PyObject* client_object_t::construct(PyTypeObject * type, PyObject * args, PyObject * kwargs) {
+    if(PyType_Ready(&response_wrapper_type) < 0) {
         return NULL;
     }
 
@@ -36,7 +36,7 @@ PyObject* client_object_t::constructor(PyTypeObject * type, PyObject * args, PyO
     return reinterpret_cast<PyObject*>(self);
 }
 
-int client_object_t::initializer(client_object_t * self, PyObject * args, PyObject * kwargs) {
+int client_object_t::initialize(client_object_t * self, PyObject * args, PyObject * kwargs) {
     static char config_keyword[] = "config";
 
     static char * keywords[] = {
@@ -64,7 +64,7 @@ int client_object_t::initializer(client_object_t * self, PyObject * args, PyObje
     return 0;
 }
 
-void client_object_t::destructor(client_object_t * self) {
+void client_object_t::destruct(client_object_t * self) {
     if(self->m_client) {
         delete self->m_client;
     }
@@ -98,11 +98,11 @@ PyObject* client_object_t::send(client_object_t * self, PyObject * args, PyObjec
         return NULL;
     }
 
-    response_wrapper_t * future = NULL;
+    response_holder_t * response = NULL;
 
     try {
         allow_threads_t allow_threads;
-        future = new response_wrapper_t(
+        response = new response_holder_t(
             self->m_client->send_message(
                 message,
                 size,
@@ -119,11 +119,11 @@ PyObject* client_object_t::send(client_object_t * self, PyObject * args, PyObjec
         return NULL;
     }
 
-    tracked_object_t ptr(PyCObject_FromVoidPtr(future, NULL)),
+    tracked_object_t ptr(PyCObject_FromVoidPtr(response, NULL)),
                      argpack(PyTuple_Pack(1, *ptr));
 
     PyObject * object = PyObject_Call(
-        reinterpret_cast<PyObject*>(&response_object_type),
+        reinterpret_cast<PyObject*>(&response_wrapper_type),
         argpack,
         NULL
     );

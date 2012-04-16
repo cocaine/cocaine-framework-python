@@ -18,24 +18,24 @@
 
 using namespace cocaine::dealer;
 
-PyObject* response_object_t::constructor(PyTypeObject * type, PyObject * args, PyObject * kwargs) {
-    response_object_t * self = reinterpret_cast<response_object_t*>(type->tp_alloc(type, 0));
+PyObject* response_wrapper_t::construct(PyTypeObject * type, PyObject * args, PyObject * kwargs) {
+    response_wrapper_t * self = reinterpret_cast<response_wrapper_t*>(type->tp_alloc(type, 0));
 
     if(self) {
-        self->m_future = NULL;
+        self->m_response = NULL;
     }
 
     return reinterpret_cast<PyObject*>(self);
 }
 
-int response_object_t::initializer(response_object_t * self, PyObject * args, PyObject * kwargs) {
-    PyObject * future = NULL;
+int response_wrapper_t::initialize(response_wrapper_t * self, PyObject * args, PyObject * kwargs) {
+    PyObject * response = NULL;
 
-    if(!PyArg_ParseTuple(args, "O", &future)) {
+    if(!PyArg_ParseTuple(args, "O", &response)) {
         return -1;
     }
 
-    if(!PyCObject_Check(future)) {
+    if(!PyCObject_Check(response)) {
         PyErr_SetString(
             PyExc_TypeError,
             "Response objects cannot be instantiated directly"
@@ -44,29 +44,29 @@ int response_object_t::initializer(response_object_t * self, PyObject * args, Py
         return -1;
     }
 
-    self->m_future = static_cast<response_wrapper_t*>(PyCObject_AsVoidPtr(future));
+    self->m_response = static_cast<response_holder_t*>(PyCObject_AsVoidPtr(response));
 
-    BOOST_ASSERT(self->m_future);
+    BOOST_ASSERT(self->m_response);
 
     return 0;
 }
 
 
-void response_object_t::destructor(response_object_t * self) {
-    if(self->m_future) {
-        delete self->m_future;
+void response_wrapper_t::destruct(response_wrapper_t * self) {
+    if(self->m_response) {
+        delete self->m_response;
     }
 
     self->ob_type->tp_free(self);
 }
 
-PyObject* response_object_t::get(response_object_t * self, PyObject * args, PyObject * kwargs) {
+PyObject* response_wrapper_t::next(response_wrapper_t * self) {
     bool success = false;
     data_container chunk;
 
     try {
         allow_threads_t allow_threads;
-        success = (*self->m_future)->get(&chunk);
+        success = (*self->m_response)->get(&chunk);
     } catch(...) {
         PyErr_SetString(
             PyExc_RuntimeError,
@@ -82,15 +82,7 @@ PyObject* response_object_t::get(response_object_t * self, PyObject * args, PyOb
             chunk.size()
         );
     } else {
-        return PyBytes_FromString("");
+        PyErr_SetNone(PyExc_StopIteration);
+        return NULL;
     }
-}
-
-PyObject* response_object_t::iter_next(response_object_t * it) {
-    PyErr_SetString(
-        PyExc_NotImplementedError,
-        "Method is not yet implemented"
-    );
-
-    return NULL;
 }
