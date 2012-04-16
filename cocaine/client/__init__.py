@@ -1,3 +1,3 @@
 # encoding: utf-8
 
-from cocaine._client import Client
+from _client import Client

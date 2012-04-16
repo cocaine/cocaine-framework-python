@@ -11,29 +11,30 @@
 // limitations under the License.
 //
 
-#include "client.hpp"
+#ifndef COCAINE_DEALER_PYTHON_BINDING_COMMON_HPP
+#define COCAINE_DEALER_PYTHON_BINDING_COMMON_HPP
 
-using namespace cocaine::dealer;
+// NOTE: These are being redefined in Python.h
+#undef _POSIX_C_SOURCE
+#undef _XOPEN_SOURCE
 
-extern "C" {
-    void init_client(void) {
-        PyObject * module = Py_InitModule3(
-            "_client",
-            NULL,
-            "Cocaine Python Client"
-        );
+#include "Python.h"
 
-        if(PyType_Ready(&client_object_type) < 0) {
-            return;
-        }
-        
-        Py_INCREF(&client_object_type);
+namespace cocaine { namespace dealer {
 
-        PyModule_AddObject(
-            module,
-            "Client",
-            reinterpret_cast<PyObject*>(&client_object_type)
-        );
+class allow_threads_t {
+public:
+    allow_threads_t():
+        m_thread(PyEval_SaveThread())
+    { }
+
+    ~allow_threads_t() {
+        PyEval_RestoreThread(m_thread);
     }
-}
 
+private:
+    PyThreadState * m_thread;
+};
+
+}}
+#endif

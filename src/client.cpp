@@ -14,6 +14,7 @@
 #include <cocaine/dealer/client.hpp>
 #include <cocaine/helpers/track.hpp>
 
+#include "gil.hpp"
 #include "client.hpp"
 #include "response.hpp"
 
@@ -100,16 +101,15 @@ PyObject* client_object_t::send(client_object_t * self, PyObject * args, PyObjec
     response_wrapper_t * future = NULL;
 
     try {
-        Py_BEGIN_ALLOW_THREADS
-            future = new response_wrapper_t(
-                self->m_client->send_message(
-                    message,
-                    size,
-                    message_path(service, handle),
-                    message_policy()
-                )
-            );
-        Py_END_ALLOW_THREADS
+        allow_threads_t allow_threads;
+        future = new response_wrapper_t(
+            self->m_client->send_message(
+                message,
+                size,
+                message_path(service, handle),
+                message_policy()
+            )
+        );
     } catch(...) {
         PyErr_SetString(
             PyExc_RuntimeError,

@@ -13,6 +13,7 @@
 
 #include <cocaine/dealer/response.hpp>
 
+#include "gil.hpp"
 #include "response.hpp"
 
 using namespace cocaine::dealer;
@@ -64,18 +65,8 @@ PyObject* response_object_t::get(response_object_t * self, PyObject * args, PyOb
     data_container chunk;
 
     try {
-        Py_BEGIN_ALLOW_THREADS
-            success = (*self->m_future)->get(&chunk);
-        Py_END_ALLOW_THREADS
-
-        if(success) {
-            return PyBytes_FromStringAndSize(
-                static_cast<const char*>(chunk.data()),
-                chunk.size()
-            );
-        } else {
-            return PyBytes_FromString("");
-        }
+        allow_threads_t allow_threads;
+        success = (*self->m_future)->get(&chunk);
     } catch(...) {
         PyErr_SetString(
             PyExc_RuntimeError,
@@ -83,6 +74,15 @@ PyObject* response_object_t::get(response_object_t * self, PyObject * args, PyOb
         );
 
         return NULL;
+    }
+
+    if(success) {
+        return PyBytes_FromStringAndSize(
+            static_cast<const char*>(chunk.data()),
+            chunk.size()
+        );
+    } else {
+        return PyBytes_FromString("");
     }
 }
 
