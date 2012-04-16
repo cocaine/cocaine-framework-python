@@ -11,30 +11,30 @@
 // limitations under the License.
 //
 
-#include "objects.hpp"
+#include "client.hpp"
+#include "response.hpp"
 
 using namespace cocaine::dealer;
 
 extern "C" {
+    void init_client(void) {
+        PyObject * module = Py_InitModule3(
+            "_client",
+            NULL,
+            "Cocaine Python Client"
+        );
 
-void init_client(void) {
-    PyObject * module = Py_InitModule3(
-        "cocaine._client",
-        NULL,
-        "Client Objects"
-    );
+        if(PyType_Ready(&client_object_type) < 0) {
+            return;
+        }
+        
+        Py_INCREF(&client_object_type);
 
-    PyType_Ready(&client_object_type);
-    PyType_Ready(&response_object_type);
-    
-    Py_INCREF(&client_object_type);
-
-    PyModule_AddObject(
-        module,
-        "Client",
-        reinterpret_cast<PyObject*>(&client_object_type)
-    );
-}
-
+        PyModule_AddObject(
+            module,
+            "Client",
+            reinterpret_cast<PyObject*>(&client_object_type)
+        );
+    }
 }
 

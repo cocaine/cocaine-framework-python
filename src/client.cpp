@@ -15,13 +15,27 @@
 #include <cocaine/helpers/track.hpp>
 
 #include "client.hpp"
-#include "objects.hpp"
+#include "response.hpp"
 
 using namespace cocaine::dealer;
 
 typedef cocaine::helpers::track_t<PyObject*, Py_DecRef> tracked_object_t;
 
-int client_object_t::constructor(client_object_t * self, PyObject * args, PyObject * kwargs) {
+PyObject* client_object_t::constructor(PyTypeObject * type, PyObject * args, PyObject * kwargs) {
+    if(PyType_Ready(&response_object_type) < 0) {
+        return NULL;
+    }
+
+    client_object_t * self = reinterpret_cast<client_object_t*>(type->tp_alloc(type, 0));
+
+    if(self) {
+        self->m_client = NULL;
+    }
+
+    return reinterpret_cast<PyObject*>(self);
+}
+
+int client_object_t::initializer(client_object_t * self, PyObject * args, PyObject * kwargs) {
     static char config_keyword[] = "config";
 
     static char * keywords[] = {
@@ -35,7 +49,16 @@ int client_object_t::constructor(client_object_t * self, PyObject * args, PyObje
         return -1;
     };
 
-    self->m_client = new client(config);
+    try {
+        self->m_client = new client(config);
+    } catch(...) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "Something went wrong"
+        );
+
+        return -1;
+    }
 
     return 0;
 }
@@ -74,16 +97,18 @@ PyObject* client_object_t::send(client_object_t * self, PyObject * args, PyObjec
         return NULL;
     }
 
-    boost::shared_ptr<response> future;
+    response_wrapper_t * future = NULL;
 
     try {
         Py_BEGIN_ALLOW_THREADS
-            future = self->m_client->send_message(
-                message,
-                size,
-                message_path(service, handle),
-                message_policy()
-        );
+            future = new response_wrapper_t(
+                self->m_client->send_message(
+                    message,
+                    size,
+                    message_path(service, handle),
+                    message_policy()
+                )
+            );
         Py_END_ALLOW_THREADS
     } catch(...) {
         PyErr_SetString(
@@ -94,9 +119,9 @@ PyObject* client_object_t::send(client_object_t * self, PyObject * args, PyObjec
         return NULL;
     }
 
-    tracked_object_t ptr(PyCObject_FromVoidPtr(&future, NULL)),
+    tracked_object_t ptr(PyCObject_FromVoidPtr(future, NULL)),
                      argpack(PyTuple_Pack(1, *ptr));
-   
+
     PyObject * object = PyObject_Call(
         reinterpret_cast<PyObject*>(&response_object_type),
         argpack,

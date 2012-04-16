@@ -17,17 +17,73 @@
 
 using namespace cocaine::dealer;
 
-int response_object_t::constructor(response_object_t * self, PyObject * args, PyObject * kwargs) {
+PyObject* response_object_t::constructor(PyTypeObject * type, PyObject * args, PyObject * kwargs) {
+    response_object_t * self = reinterpret_cast<response_object_t*>(type->tp_alloc(type, 0));
+
+    if(self) {
+        self->m_future = NULL;
+    }
+
+    return reinterpret_cast<PyObject*>(self);
+}
+
+int response_object_t::initializer(response_object_t * self, PyObject * args, PyObject * kwargs) {
+    PyObject * future = NULL;
+
+    if(!PyArg_ParseTuple(args, "O", &future)) {
+        return -1;
+    }
+
+    if(!PyCObject_Check(future)) {
+        PyErr_SetString(
+            PyExc_TypeError,
+            "Response objects cannot be instantiated directly"
+        );
+
+        return -1;
+    }
+
+    self->m_future = static_cast<response_wrapper_t*>(PyCObject_AsVoidPtr(future));
+
+    BOOST_ASSERT(self->m_future);
+
     return 0;
 }
 
 
 void response_object_t::destructor(response_object_t * self) {
+    if(self->m_future) {
+        delete self->m_future;
+    }
+
     self->ob_type->tp_free(self);
 }
 
 PyObject* response_object_t::get(response_object_t * self, PyObject * args, PyObject * kwargs) {
-    Py_RETURN_NONE;
+    bool success = false;
+    data_container chunk;
+
+    try {
+        Py_BEGIN_ALLOW_THREADS
+            success = (*self->m_future)->get(&chunk);
+        Py_END_ALLOW_THREADS
+
+        if(success) {
+            return PyBytes_FromStringAndSize(
+                static_cast<const char*>(chunk.data()),
+                chunk.size()
+            );
+        } else {
+            return PyBytes_FromString("");
+        }
+    } catch(...) {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "Something went wrong"
+        );
+
+        return NULL;
+    }
 }
 
 PyObject* response_object_t::iter_next(response_object_t * it) {
