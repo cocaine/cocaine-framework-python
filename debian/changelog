@@ -1,18 +1,25 @@
+cocaine-framework-python (0.7.3-b3) lucid; urgency=low
+
+  * Beta 3.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 17 Apr 2012 14:44:56 +0400
+
 cocaine-framework-python (0.7.3-b2) lucid; urgency=low
 
-  * Python bindings, again.
+  * Beta 2.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 16 Apr 2012 18:22:35 +0400
 
 cocaine-framework-python (0.7.3-b1) lucid; urgency=low
 
-  * Python bindings.
+  * Beta 1.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 16 Apr 2012 05:16:31 +0400
 
 cocaine-framework-python (0.7.3-b0) lucid; urgency=low
 
-  * New protocol adoption.
+  * New protocol.
+  * Python bindings.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 13 Apr 2012 20:03:21 +0400
 
