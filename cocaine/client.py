@@ -39,3 +39,11 @@ class Client(ClientBase):
 
         return super(Client, self).send(service, handle, message)
 
+    def get(self, path, message):
+        """
+        A simple wrapper around ``send``, which sends the ``message`` using
+        the specified ``path``, waits for all the response chunks to arrive,
+        stores them into a list and returns to the user.
+        """
+
+        return [chunk for chunk in self.send(path, message)]
