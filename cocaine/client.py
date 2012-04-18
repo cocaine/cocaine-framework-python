@@ -24,7 +24,7 @@ class Client(ClientBase):
         is a configured service alias, and 'handle' is the actual app method
         name.
 
-        If ``message`` does support buffer protocol, it will be sent as-is,
+        If the ``message`` supports buffer protocol, it will be sent as-is,
         otherwise an attempt will be made to serialize it with MessagePack,
         sending the resulting bytestream instead.
         """
@@ -43,7 +43,7 @@ class Client(ClientBase):
         """
         A simple wrapper around ``send``, which sends the ``message`` using
         the specified ``path``, waits for all the response chunks to arrive,
-        stores them into a list and returns to the user.
+        stores them into a list and returns it to the user.
         """
 
         return [chunk for chunk in self.send(path, message)]
