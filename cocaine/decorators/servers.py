@@ -5,6 +5,8 @@ import msgpack
 
 from functools import wraps
 
+__all__ = ["zeromq", "native"]
+
 def pack(response, io):
     if isinstance(response, types.StringTypes):
         io.write(response)
