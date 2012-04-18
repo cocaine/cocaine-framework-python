@@ -1,3 +1,15 @@
+cocaine-framework-python (0.7.3-b5) lucid; urgency=low
+
+  * Beta 5.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 18 Apr 2012 16:04:52 +0400
+
+cocaine-framework-python (0.7.3-b4) lucid; urgency=low
+
+  * Beta 4.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 18 Apr 2012 15:36:40 +0400
+
 cocaine-framework-python (0.7.3-b3) lucid; urgency=low
 
   * Beta 3.
