@@ -1,3 +1,10 @@
+cocaine-framework-python (0.7.4-0) lucid; urgency=low
+
+  * Python bindings for the Cocaine Dealer.
+  * Reworked decorators to reflect manifest driver types more verbosely.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 19 Apr 2012 18:53:56 +0400
+
 cocaine-framework-python (0.7.3-b5) lucid; urgency=low
 
   * Beta 5.
@@ -30,8 +37,7 @@ cocaine-framework-python (0.7.3-b1) lucid; urgency=low
 
 cocaine-framework-python (0.7.3-b0) lucid; urgency=low
 
-  * New protocol.
-  * Python bindings.
+  * Beta 0.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 13 Apr 2012 20:03:21 +0400
 
