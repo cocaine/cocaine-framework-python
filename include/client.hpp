@@ -87,4 +87,5 @@ static PyTypeObject client_object_type = {
 };
 
 }}
+
 #endif

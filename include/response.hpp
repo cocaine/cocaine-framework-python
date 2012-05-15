@@ -48,6 +48,7 @@ class response_wrapper_t {
         static int initialize(response_wrapper_t * self, PyObject * args, PyObject * kwargs);
         static void destruct(response_wrapper_t * self);
 
+        static PyObject* get(response_wrapper_t* self, PyObject * args, PyObject * kwargs);
         static PyObject* next(response_wrapper_t * self);
 
     public:
@@ -55,6 +56,8 @@ class response_wrapper_t {
 };
 
 static PyMethodDef response_wrapper_methods[] = {
+    { "get", (PyCFunction)response_wrapper_t::get, METH_KEYWORDS,
+        "Waits for a next response chunk with an optional timeout." },
     { NULL, NULL, 0, NULL }
 };
 
