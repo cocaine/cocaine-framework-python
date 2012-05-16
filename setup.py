@@ -5,7 +5,7 @@ from distutils.core import setup, Extension
 
 setup(
     name = "cocaine",
-    version = "0.7.3-b3",
+    version = "0.7.4-2",
     description = "Cocaine Python Framework",
     long_description = "A simple framework to ease the development of Cocaine apps",
     url = "https://github.com/cocaine/cocaine-framework-python",

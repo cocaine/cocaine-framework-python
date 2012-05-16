@@ -1,3 +1,9 @@
+cocaine-framework-python (0.7.4-2) lucid; urgency=low
+
+  * Rebuilt for binary compatibility.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 16 May 2012 16:21:46 +0400
+
 cocaine-framework-python (0.7.4-1) lucid; urgency=low
 
   * Support for timeout argument in the Dealer response object.
