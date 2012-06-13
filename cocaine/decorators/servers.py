@@ -9,7 +9,7 @@ from collections import Iterable
 
 from cocaine.context import Log
 
-__all__ = ["zeromq", "native", "wsgi"]
+__all__ = ["zeromq", "simple", "wsgi"]
 
 log = Log()
 
@@ -30,7 +30,7 @@ def zeromq(function):
 
     return wrapper
 
-def native(function):
+def simple(function):
     @wraps(function)
     def wrapper(io):
         pack({'code': 200, 'headers': [('Content-type', 'text/plain')], io)
