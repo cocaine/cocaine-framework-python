@@ -75,9 +75,19 @@ def wsgi(function):
             if key not in ('HTTP_CONTENT_TYPE', 'HTTP_CONTENT_LENGTH'):
                 environ[key] = value
 
-        def start_response(status, response_headers):
+        def start_response(status, response_headers, exc_info=None):
+            if exc_info:
+                 try:
+                     raise exc_info[0], exc_info[1], exc_info[2]
+                 finally:
+                     exc_info = None    # Avoid circular ref.
+
             pack({'code': int(status.split(' ')[0]), 'headers': response_headers}, io)
 
-        pack(function(environ, start_response), io)
+        result = function(environ, start_response)
+        pack(result, io)
+
+        if hasattr(result, 'close'):
+            result.close()
 
     return wrapper
