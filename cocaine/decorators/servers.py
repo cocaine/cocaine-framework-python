@@ -9,7 +9,7 @@ from collections import Iterable
 
 from cocaine.context import Log
 
-__all__ = ["zeromq", "simple", "wsgi"]
+__all__ = ["zeromq", "simple", "http", "wsgi"]
 
 log = Log()
 
