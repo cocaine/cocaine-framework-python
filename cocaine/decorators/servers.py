@@ -39,7 +39,7 @@ def simple(function):
     return wrapper
 
 def http(function):
-    @wraps(function):
+    @wraps(function)
     def wrapper(io):
         code, headers, result = function(**msgpack.unpack(io))
         pack({'code': code, 'headers': headers})
