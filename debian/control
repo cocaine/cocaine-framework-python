@@ -2,7 +2,8 @@ Source: cocaine-framework-python
 Section: utils
 Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
-Build-Depends: cdbs, debhelper (>= 7.0.13), python, python-support
+Build-Depends: cdbs, debhelper (>= 7.0.13), python, python-support,
+ cocaine-dev (>= 0.8.0), libcocaine-dealer-dev (>= 0.8.0)
 Standards-Version: 3.8.4
 Vcs-Git: git://github.com/Kobolog/cocaine-framework-python.git
 Vcs-Browser: https://github.com/Kobolog/cocaine-framework-python
