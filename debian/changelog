@@ -1,3 +1,9 @@
+cocaine-framework-python (0.8.0-0) lucid; urgency=low
+
+  * Wonderful new decorators and Dealer bindings.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 19 Jun 2012 20:16:26 +0400
+
 cocaine-framework-python (0.7.4-2) lucid; urgency=low
 
   * Rebuilt for binary compatibility.

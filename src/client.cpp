@@ -11,7 +11,7 @@
 // limitations under the License.
 //
 
-#include <cocaine/dealer/client.hpp>
+#include <cocaine/dealer/dealer.hpp>
 #include <cocaine/dealer/utils/error.hpp>
 
 #include <cocaine/helpers/track.hpp>
@@ -53,7 +53,7 @@ int client_object_t::initialize(client_object_t * self, PyObject * args, PyObjec
     };
 
     try {
-        self->m_client = new client(config);
+        self->m_client = new dealer_t(config);
     } catch(const internal_error& e) {
         PyErr_SetString(
             PyExc_RuntimeError,
@@ -110,8 +110,8 @@ PyObject* client_object_t::send(client_object_t * self, PyObject * args, PyObjec
             self->m_client->send_message(
                 message,
                 size,
-                message_path(service, handle),
-                message_policy()
+                message_path_t(service, handle),
+                message_policy_t()
             )
         );
     } catch(const dealer_error& e) {

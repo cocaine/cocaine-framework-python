@@ -24,20 +24,20 @@
 
 namespace cocaine { namespace dealer {
 
-class response;
+class response_t;
 
 class response_holder_t {
     public:
-        explicit response_holder_t(const boost::shared_ptr<response>& response_):
+        explicit response_holder_t(const boost::shared_ptr<response_t>& response_):
             m_response(response_)
         { }
 
-        response* operator -> () {
+        response_t* operator -> () {
             return m_response.get();
         }
 
     private:
-        boost::shared_ptr<response> m_response;
+        boost::shared_ptr<response_t> m_response;
 };
 
 class response_wrapper_t {

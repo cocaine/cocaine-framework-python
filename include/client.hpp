@@ -22,7 +22,7 @@
 
 namespace cocaine { namespace dealer {
 
-class client;
+class dealer_t;
 
 class client_object_t {
     public:
@@ -35,7 +35,7 @@ class client_object_t {
         static PyObject* send(client_object_t * self, PyObject * args, PyObject * kwargs);
 
     public:
-        client * m_client;
+        dealer_t * m_client;
 };
 
 static PyMethodDef client_object_methods[] = {
