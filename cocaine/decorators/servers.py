@@ -72,7 +72,7 @@ def wsgi(function):
             'CONTENT_TYPE':         headers.get('CONTENT-TYPE', ''),
             'CONTENT_LENGTH':       headers.get('CONTENT_LENGTH', ''),
             'REMOTE_ADDR':          meta.get('remote_addr', ''),
-            'REMOTE_PORT':          meta.get('remote_port', ''),,
+            'REMOTE_PORT':          meta.get('remote_port', ''),
             'SERVER_NAME':          '',
             'SERVER_PORT':          '',
             'SERVER_PROTOCOL':      '',
