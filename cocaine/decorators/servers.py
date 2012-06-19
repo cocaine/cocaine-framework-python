@@ -33,7 +33,7 @@ def zeromq(function):
 def simple(function):
     @wraps(function)
     def wrapper(io):
-        pack({'code': 200, 'headers': [('Content-type', 'text/plain')], io)
+        pack({'code': 200, 'headers': [('Content-type', 'text/plain')]}, io)
         pack(function(**msgpack.unpack(io)), io)
 
     return wrapper
