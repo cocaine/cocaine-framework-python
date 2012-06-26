@@ -1,3 +1,15 @@
+cocaine-framework-python (0.8.0-4) lucid; urgency=low
+
+  * Fuck Debian again.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 26 Jun 2012 16:49:51 +0400
+
+cocaine-framework-python (0.8.0-3) lucid; urgency=low
+
+  * Fuck Debian.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 25 Jun 2012 20:41:55 +0400
+
 cocaine-framework-python (0.8.0-2) lucid; urgency=low
 
   * [c022f0f8] fixed the @http decorator.
