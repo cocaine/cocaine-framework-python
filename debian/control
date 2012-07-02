@@ -11,7 +11,7 @@ XS-Python-Version: >= 2.6
 
 Package: cocaine-framework-python
 Architecture: any
-Depends: ${misc:Depends}, ${python:Depends}, python-msgpack,
+Depends: ${misc:Depends}, ${python:Depends}, python-msgpack | msgpack-python,
  libcocaine-plugin-python (>= 0.8.0), libcocaine-dealer1
 Description: Cocaine - Python Framework
  A simple framework to ease the developing of Cocaine apps.
