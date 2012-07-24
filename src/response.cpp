@@ -89,8 +89,6 @@ PyObject* response_wrapper_t::get(response_wrapper_t * self, PyObject * args, Py
     bool success = false;
     data_container chunk;
 
-    printf("timeout: %f\n", timeout);
-
     try {
         allow_threads_t allow_threads;
         success = (*self->m_response)->get(&chunk, timeout);

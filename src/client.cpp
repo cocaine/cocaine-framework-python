@@ -84,20 +84,31 @@ void client_object_t::destruct(client_object_t * self) {
 }
 
 PyObject* client_object_t::send(client_object_t * self, PyObject * args, PyObject * kwargs) {
-    static char service_keyword[] = "service";
-    static char handle_keyword[] = "handle";
-    static char message_keyword[] = "message";
-    
+    // base keywords
+    static char service_keyword[]   = "service";
+    static char handle_keyword[]    = "handle";
+    static char message_keyword[]   = "message";
+
+    // policy keywords
+    static char urgent_keyword[]        = "urgent";
+    static char deadline_keyword[]      = "deadline";
+    static char timeout_keyword[]       = "timeout";
+    static char max_retries_keyword[]   = "max_retries";
+
     static char * keywords[] = {
         service_keyword,
         handle_keyword,
         message_keyword,
+        urgent_keyword,
+        deadline_keyword,
+        timeout_keyword,
+        max_retries_keyword,
         NULL 
     };
 
-    const char * service = NULL;
-    const char * handle = NULL;
-    const char * message = NULL;
+    const char * service    = NULL;
+    const char * handle     = NULL;
+    const char * message    = NULL;
 
 #ifdef PY_SSIZE_T_CLEAN
     Py_ssize_t size = 0;
@@ -105,7 +116,36 @@ PyObject* client_object_t::send(client_object_t * self, PyObject * args, PyObjec
     int size = 0;
 #endif
 
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "sss#:send", keywords, &service, &handle, &message, &size)) {
+    int tmp_urgent;
+    float tmp_deadline;
+    float tmp_timeout;
+    int tmp_max_retries;
+
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|s#iffi:send", keywords,
+                                    &service,
+                                    &handle,
+                                    &message,
+                                    &size,
+                                    &tmp_urgent,
+                                    &tmp_deadline,
+                                    &tmp_timeout,
+                                    &tmp_max_retries)) {
+        return NULL;
+    }
+
+    // get default policy for service
+    message_policy_t policy = self->m_client->policy_for_service(service);
+
+    // populate policy from kwargs
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "ss|s#iddi:send", keywords,
+                                    &service,
+                                    &handle,
+                                    &message,
+                                    &size,
+                                    &policy.urgent,
+                                    &policy.deadline,
+                                    &policy.timeout,
+                                    &policy.max_retries)) {
         return NULL;
     }
 
@@ -118,7 +158,7 @@ PyObject* client_object_t::send(client_object_t * self, PyObject * args, PyObjec
                 message,
                 size,
                 message_path_t(service, handle),
-                message_policy_t()
+                policy
             )
         );
     } catch(const dealer_error& e) {

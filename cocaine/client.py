@@ -35,7 +35,7 @@ class Client(ClientBase):
     def __init__(self, config):
         super(Client, self).__init__(config)
 
-    def send(self, path, message):
+    def send(self, path, message = None, **kwargs):
         """
         Sends a ``message`` to the cloud using the specified ``path``.
 
@@ -53,16 +53,19 @@ class Client(ClientBase):
         except ValueError:
             raise ValueError("Malformed message path")
 
-        if not isinstance(message, types.StringTypes):
-            message = msgpack.packb(message)
+        if message is not None:
+            if not isinstance(message, types.StringTypes):
+                message = msgpack.packb(message)
 
-        return super(Client, self).send(service, handle, message)
+            return super(Client, self).send(service, handle, message, **kwargs)
+        else:
+            return super(Client, self).send(service, handle, **kwargs)
 
-    def get(self, path, message):
+    def get(self, path, message = None, **kwargs):
         """
         A simple wrapper around ``send``, which sends the ``message`` using
         the specified ``path``, waits for all the response chunks to arrive,
         stores them into a list and returns it to the user.
         """
 
-        return [chunk for chunk in self.send(path, message)]
+        return [chunk for chunk in self.send(path, message, **kwargs)]
