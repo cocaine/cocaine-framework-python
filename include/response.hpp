@@ -68,7 +68,7 @@ static PyMethodDef response_wrapper_methods[] = {
     { NULL, NULL, 0, NULL }
 };
 
-static PyTypeObject response_wrapper_type = {
+__attribute__ ((unused)) static PyTypeObject response_wrapper_type = {
     PyObject_HEAD_INIT(&PyType_Type)
     0,                                          /* ob_size */
     "cocaine.client.Response",                  /* tp_name */

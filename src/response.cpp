@@ -87,11 +87,11 @@ PyObject* response_wrapper_t::get(response_wrapper_t * self, PyObject * args, Py
     };
 
     bool success = false;
-    data_container chunk;
+    chunk_data chunk;
 
     try {
         allow_threads_t allow_threads;
-        success = (*self->m_response)->get(&chunk, timeout);
+        success = (*self->m_response)->get(chunk, timeout);
     } catch(const dealer_error& e) {
         PyErr_SetString(
             PyExc_RuntimeError,

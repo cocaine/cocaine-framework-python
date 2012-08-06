@@ -51,7 +51,7 @@ static PyMethodDef client_object_methods[] = {
     { NULL, NULL, 0, NULL }
 };
 
-static PyTypeObject client_object_type = {
+__attribute__ ((unused)) static PyTypeObject client_object_type = {
     PyObject_HEAD_INIT(&PyType_Type)
     0,                                          /* ob_size */
     "cocaine.client.Client",                    /* tp_name */
