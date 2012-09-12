@@ -45,15 +45,23 @@ def pack(response, io):
 def zeromq(function):
     @wraps(function)
     def wrapper(io):
-        pack(function(msgpack.unpack(io)), io)
+        args = msgpack.unpack(io)
+
+        if args is not None:
+            result = function()
+        else:
+            result = function(args)
+
+        pack(result, io)
 
     return wrapper
 
 def simple(function):
     @wraps(function)
     def wrapper(io):
+        result = function(**msgpack.unpack(io))
         pack({'code': 200, 'headers': [('Content-type', 'text/plain')]}, io)
-        pack(function(**msgpack.unpack(io)), io)
+        pack(result, io)
 
     return wrapper
 
