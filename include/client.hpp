@@ -27,6 +27,8 @@
 
 #include "Python.h"
 
+extern PyTypeObject client_object_type;
+
 namespace cocaine { namespace dealer {
 
 class dealer_t;
@@ -44,8 +46,6 @@ class client_object_t {
     public:
         dealer_t * m_client;
 };
-
-extern PyTypeObject client_object_type;
 
 }}
 
