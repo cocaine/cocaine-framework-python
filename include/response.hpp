@@ -29,6 +29,8 @@
 
 #include <boost/shared_ptr.hpp>
 
+extern PyTypeObject response_wrapper_type;
+
 namespace cocaine {
 namespace dealer {
 
@@ -62,8 +64,6 @@ class response_wrapper_t {
     public:
         response_holder_t * m_response;
 };
-
-extern PyTypeObject response_wrapper_type;
 
 } // namespace cocaine
 } // namespace dealer
