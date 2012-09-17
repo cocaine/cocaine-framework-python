@@ -1,3 +1,9 @@
+cocaine-framework-python (0.9.5) lucid; urgency=low
+
+  * Sometimes even I do stupid mistakes.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 17 Sep 2012 22:01:26 +0400
+
 cocaine-framework-python (0.9.4) lucid; urgency=low
 
   * Debianization is back.

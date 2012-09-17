@@ -48,9 +48,9 @@ def zeromq(function):
         args = msgpack.unpack(io)
 
         if args is not None:
-            result = function()
-        else:
             result = function(args)
+        else:
+            result = function()
 
         pack(result, io)
 
