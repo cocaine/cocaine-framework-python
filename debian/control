@@ -6,7 +6,6 @@ Build-Depends:
  cdbs,
  debhelper (>= 7.0.13),
  python,
- python-support,
  python-central,
  libcocaine-dev (>= 0.9),
  libcocaine-dealer-dev (>= 0.9)
