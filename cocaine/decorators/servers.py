@@ -37,7 +37,7 @@ def pack(response, io):
         io.write(response)
     elif isinstance(response, dict):
         msgpack.pack(response, io)
-    elif isinstance(response, types.GeneratorType) or isinstance(response, Iterable):
+    elif isinstance(response, types.GeneratorType):
         [pack(chunk, io) for chunk in response]
     elif response is not None:
         msgpack.pack(response, io)
@@ -121,7 +121,11 @@ def wsgi(function):
             pack({'code': int(status.split(' ')[0]), 'headers': response_headers}, io)
 
         result = function(environ, start_response)
-        pack(result, io)
+
+        if (isinstance(response, Iterable)):
+            [pack(chunk, io) for chunk in response]
+        else:
+           pack(result, io)
 
         if hasattr(result, 'close'):
             result.close()

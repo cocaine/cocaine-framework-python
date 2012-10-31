@@ -1,3 +1,9 @@
+cocaine-framework-python (0.9.6) lucid; urgency=low
+
+  * Do not split iterable response into chunks in wrappers
+
+ -- Anton Kortunov <toshik@yandex-team.ru>  Wed, 31 Oct 2012 19:56:03 +0400
+
 cocaine-framework-python (0.9.5) lucid; urgency=low
 
   * Sometimes even I do stupid mistakes.
