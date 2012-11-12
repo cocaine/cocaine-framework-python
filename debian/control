@@ -7,8 +7,9 @@ Build-Depends:
  debhelper (>= 7.0.13),
  python,
  python-central,
- libcocaine-dev (>= 0.9),
- libcocaine-dealer-dev (>= 0.9)
+ python-dev,
+ libcocaine-dev (>= 0.9.7),
+ libcocaine-dealer-dev (>= 0.9.7)
 Standards-Version: 3.8.4
 Vcs-Git: git://github.com/cocaine/cocaine-framework-python.git
 Vcs-Browser: https://github.com/cocaine/cocaine-framework-python
@@ -20,8 +21,8 @@ Depends:
  ${misc:Depends},
  ${python:Depends},
  python-msgpack | msgpack-python,
- libcocaine-plugin-python (>= 0.9),
- libcocaine-dealer1 (>= 0.9)
+ libcocaine-plugin-python (>= 0.9.7),
+ libcocaine-dealer1 (>= 0.9.7)
 Description: Cocaine - Python Framework
  A simple framework to ease the developing of Cocaine apps.
 XB-Python-Version: >= 2.6

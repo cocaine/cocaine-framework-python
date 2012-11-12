@@ -1,3 +1,9 @@
+cocaine-framework-python (0.9.7) lucid; urgency=low
+
+  * Updated binary compatibility with libcocaine-dealer
+
+ -- Rim Zaidullin <rimz@yandex-team.ru>  Mon, 12 Nov 2012 14:49:10 +0400
+
 cocaine-framework-python (0.9.6) lucid; urgency=low
 
   * Do not split iterable response into chunks in wrappers
