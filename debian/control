@@ -22,7 +22,7 @@ Depends:
  ${misc:Depends},
  ${python:Depends},
  python-msgpack | msgpack-python,
- libcocaine-plugin-python (>= 0.9.7),
+ libcocaine-plugin-python (>= 0.9),
  libcocaine-dealer1 (>= 0.9.7)
 Description: Cocaine - Python Framework
  A simple framework to ease the developing of Cocaine apps.
