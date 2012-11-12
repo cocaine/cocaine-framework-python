@@ -1,3 +1,9 @@
+cocaine-framework-python (0.9.8) lucid; urgency=low
+
+  * Updated build dependencies
+
+ -- Rim Zaidullin <rimz@yandex-team.ru>  Mon, 12 Nov 2012 14:57:53 +0400
+
 cocaine-framework-python (0.9.7) lucid; urgency=low
 
   * Updated build dependencies
