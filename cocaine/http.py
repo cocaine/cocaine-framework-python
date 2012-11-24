@@ -62,24 +62,6 @@ class HTTPWritableStream(object):
         self.response.write(body)
 
     def close(self):
-        self.invoke("close")
-
-class HTTPWritableStream(object):
-    def __init__(self, response):
-        self.response = response
-
-    def writeHead(self, code, headers):
-        head = msgpack.packb({
-            'code': code,
-            'headers': headers.items()
-        })
-
-        self.response.write(head)
-
-    def write(self, body):
-        self.response.write(body)
-
-    def close(self):
         self.response.close()
 
 def http(function):
