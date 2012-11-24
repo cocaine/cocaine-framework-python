@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # encoding: utf-8
 #
 #    Copyright (c) 2011-2012 Andrey Sibiryov <me@kobology.ru>
@@ -20,25 +19,14 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-try:
-    from setuptools import setup, Extension
-except ImportError:
-    from distutils.core import setup, Extension
+from functools import wraps
 
-setup(
-    name = "cocaine",
-    version = "0.10.0",
-    description = "Cocaine Python Framework",
-    long_description = "A simple framework to ease the development of Cocaine apps",
-    url = "https://github.com/cocaine/cocaine-framework-python",
-    author = "Andrey Sibiryov",
-    author_email = "me@kobology.ru",
-    license = "BSD 2-Clause",
-    platforms = ["Linux", "BSD", "MacOS"],
-    packages = ["cocaine"],
-    #ext_modules = [Extension("cocaine._client",
-    #                         ["src/module.cpp", "src/client.cpp", "src/response.cpp"],
-    #                         include_dirs = ["include"],
-    #                         libraries = ["cocaine-dealer"])],
-    requires = ["msgpack"]
-)
+__all__ = ["timer"]
+
+def timer(function):
+    @wraps(function)
+    def wrapper(request, response):
+        function()
+        response.close()
+
+    return wrapper

@@ -19,5 +19,19 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-from servers import zeromq, simple, http, wsgi
-from timers import timer
+from collections import defaultdict
+
+class EventSource(object):
+    def __init__(self):
+        self.slots = defaultdict(lambda: [])
+
+    def on(self, event, callback):
+        if callback in self.slots[event]:
+            raise RuntimeError("duplicate callback")
+
+        self.slots[event].append(callback)
+
+    def invoke(self, event, *args, **kwargs):
+        for callback in self.slots[event]:
+            callback(*args, **kwargs)
+

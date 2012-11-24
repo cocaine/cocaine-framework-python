@@ -21,11 +21,18 @@
 
 from functools import wraps
 
-__all__ = ["timer"]
+import msgpack
+import posix
 
-def timer(function):
+__all__ = ["fs"]
+
+def fs(function):
     @wraps(function)
-    def wrapper(io):
-        function()
+    def wrapper(request, response):
+        def process(chunk):
+            function(posix.stat_result(msgpack.unpackb(chunk)))
+            response.close()
+        
+        request.on("chunk", process)
 
     return wrapper
