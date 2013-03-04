@@ -40,5 +40,5 @@ setup(
                              ["src/module.cpp", "src/client.cpp", "src/response.cpp"],
                              include_dirs = ["include"],
                              libraries = ["cocaine-dealer"])],
-    requires = ["msgpack"]
+    requires = ["msgpack", "tornado"]
 )

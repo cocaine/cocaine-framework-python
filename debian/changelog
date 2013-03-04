@@ -1,3 +1,9 @@
+cocaine-framework-python (0.10.0-rc0) lucid; urgency=low
+
+  * init 
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Mon, 04 Mar 2013 19:35:55 +0400
+
 cocaine-framework-python (0.9.9) lucid; urgency=low
 
   * Updated build dependencies
