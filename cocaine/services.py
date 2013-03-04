@@ -29,7 +29,7 @@ from asio_worker.stream import Decoder
 from asio_worker.log_message import PROTOCOL_LIST
 from asio_worker.log_message import Message
 
-class _AbstractService(object):
+class _BaseService(object):
 
     def __init__(self, endpoint):
         self.m_service = ev.Service()
@@ -50,20 +50,20 @@ class _AbstractService(object):
     def on_message(self, *args):
         pass
 
-class Log(_AbstractService):
+class Log(_BaseService):
 
     def __init__(self):
         super(Log, self).__init__(('localhost', 12501))
-
+        self.m_target = "app/%s" % self.m_app_name
 
     def debug(self, data):
-        self.m_w_stream.write(Message("Message", 4, self.m_app_name, data).pack())
+        self.m_w_stream.write(Message("Message", 4, self.m_target, data).pack())
 
     def info(self, data):
-        self.m_w_stream.write(Message("Message", 3, self.m_app_name, data).pack())
+        self.m_w_stream.write(Message("Message", 3, self.m_target, data).pack())
 
     def warn(self, data):
-        self.m_w_stream.write(Message("Message", 2, self.m_app_name, data).pack())
+        self.m_w_stream.write(Message("Message", 2, self.m_target, data).pack())
 
     def error(self, data):
-        self.m_w_stream.write(Message("Message", 1, self.m_app_name, data).pack())
+        self.m_w_stream.write(Message("Message", 1, self.m_target, data).pack())
