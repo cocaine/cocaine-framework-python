@@ -1,0 +1,21 @@
+{
+  "type" : "python",
+    "slave" : "/home/noxiouz/cocaine-framework-python/examples/test_worker.py",
+    "drivers" : {
+        "io" : {
+            "type" : "blastbeat",
+            "args": {
+                "emit": "hash",
+                "identity": "cocaine-node-0",
+                "endpoint": "tcp://localhost:5001"
+            }
+        },
+        "fs": {
+            "type": "filesystem-monitor",
+            "args": {
+                "emit": "fs",
+                "path": "/tmp/dummy-file"
+            }
+        }
+    }
+}

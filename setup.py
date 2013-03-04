@@ -36,9 +36,9 @@ setup(
     license = "BSD 2-Clause",
     platforms = ["Linux", "BSD", "MacOS"],
     packages = ["cocaine", "cocaine.asio_worker"],
-    ext_modules = [Extension("cocaine._client",
-                             ["src/module.cpp", "src/client.cpp", "src/response.cpp"],
-                             include_dirs = ["include"],
-                             libraries = ["cocaine-dealer"])],
+    #ext_modules = [Extension("cocaine._client",
+    #                         ["src/module.cpp", "src/client.cpp", "src/response.cpp"],
+    #                         include_dirs = ["include"],
+    #                         libraries = ["cocaine-dealer"])],
     requires = ["msgpack", "tornado"]
 )

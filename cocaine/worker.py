@@ -19,6 +19,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
+
 import uuid
 import json
 import time
@@ -76,30 +77,25 @@ class Worker(object):
 
     def _init_endpoint(self):
         try:
-            print sys.argv
             uuid=sys.argv[sys.argv.index("--uuid") + 1]
             config_path = sys.argv[sys.argv.index("-c") + 1]
             app_name = sys.argv[sys.argv.index("--app") + 1]
             self.m_id = Unique_id(uuid).id
         except Exception as err:
-            print err
             raise RuntimeError("Wrong cmdline arguments")
 
         try:
             cfg = json.load(open(config_path))
             self.endpoint = "%s/engines/%s" % (cfg["paths"]["runtime"], app_name)
         except IOError as err:
-            print "IOError: %s" % err
             raise RuntimeError("No such configuration file")
         except Exception as err:
-            print err
             raise RuntimeError("Bla-bla")
 
     def run(self):
         self.m_service.run()
 
     def terminate(self, reason, msg):
-        print "terminate"
         self.m_w_stream.write(Message("rpc::terminate", reason, msg).pack())
         self.m_service.stop()
 
@@ -115,7 +111,8 @@ class Worker(object):
     def on_message(self, args):
         msg = Message.initialize(args)
         if msg is None:
-            print "Worker %s dropping unknown message %s" % (self.m_id, str(args))
+            #print "Worker %s dropping unknown message %s" % (self.m_id, str(args))
+            return 
 
         elif msg.id == PROTOCOL_LIST.index("rpc::invoke"):
             #print "Receive invoke: %s %s" % (msg.event, msg.session)
@@ -140,11 +137,11 @@ class Worker(object):
             self.m_disown_timer.start()
 
         elif msg.id == PROTOCOL_LIST.index("rpc::terminate"):
-            print "Receive terminate"
+            #print "Receive terminate"
             self.terminate(msg.reason, msg.message)
 
     def on_disown(self):
-        print "Worker has lost controlling engine"
+        #print "Worker has lost controlling engine"
         self.m_service.stop()
 
     # Private:
