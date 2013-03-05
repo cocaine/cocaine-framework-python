@@ -95,5 +95,5 @@ class Message(object):
             args = unpacked_data[1] #if unpacked_data[1] is not None else list()
             return Message(PROTOCOL_LIST[_id], *args)
         except Exception as err:
-            print str(err)
+            #print str(err)
             return None
