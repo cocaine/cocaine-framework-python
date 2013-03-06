@@ -19,7 +19,16 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-from default import default
-from fs import fs
-from http import http
-from timer import timer
+import posix
+
+import msgpack
+
+from _callablewrappers import proxy_factory
+
+__all__ = ['fs']
+
+def _stat_request_hadler(chunk):
+    return posix.stat_result(msgpack.unpackb(chunk))
+
+def fs(func):
+    return proxy_factory(func, request_handler=_stat_request_hadler)

@@ -19,7 +19,9 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-from default import default
-from fs import fs
-from http import http
-from timer import timer
+from proxycoroutine import ProxyCoroutine
+from proxyhttp import ProxyHTTP
+from proxycollect import ProxyCollect
+
+
+__all__ = ["ProxyHTTP", "ProxyCoroutine", "ProxyCollect"]

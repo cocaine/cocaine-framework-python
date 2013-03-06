@@ -20,7 +20,7 @@
 #
 
 
-from decorators import ProxyCoroutine
+from decorators import default
 
 class Sandbox(object):
 
@@ -35,9 +35,9 @@ class Sandbox(object):
         assert (event_handler is not None)
 
     def on(self, event_name, event_handler):
-        assert callable(event_handler)
         if not hasattr(event_handler, "_wrapped"):
-            event_handler = ProxyCoroutine(event_handler)
+            #event_handler = ProxyCoroutine(event_handler)
+            event_handler = default(event_handler)
         self._events[event_name] = event_handler
 
 class Stream(object):

@@ -19,7 +19,11 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-from default import default
-from fs import fs
-from http import http
-from timer import timer
+
+from _callablewrappers import proxy_factory
+
+
+__all__ = ["timer"]
+
+def timer(func):
+    return proxy_factory(func, None, None)
