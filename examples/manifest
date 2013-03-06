@@ -16,6 +16,13 @@
                 "emit": "fs",
                 "path": "/tmp/dummy-file"
             }
+        },
+        "fs2": {
+            "type": "filesystem-monitor",
+            "args": {
+                "emit": "fs2",
+                "path": "/tmp/dummy-file2"
+            }
         }
     }
 }

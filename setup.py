@@ -35,7 +35,7 @@ setup(
     author_email = "me@kobology.ru",
     license = "BSD 2-Clause",
     platforms = ["Linux", "BSD", "MacOS"],
-    packages = ["cocaine", "cocaine.asio_worker"],
+    packages = ["cocaine", "cocaine.asio_worker", "cocaine.decorators"],
     #ext_modules = [Extension("cocaine._client",
     #                         ["src/module.cpp", "src/client.cpp", "src/response.cpp"],
     #                         include_dirs = ["include"],

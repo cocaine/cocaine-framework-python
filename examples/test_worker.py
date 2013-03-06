@@ -2,6 +2,7 @@
 
 from cocaine.worker import Worker
 from cocaine.decorators import *
+#from cocaine.decorators import *
 from cocaine.services import Log
 
 from hashlib import sha512
@@ -12,18 +13,7 @@ l.debug("DEBUG")
 l.error("ERROR")
 l.warn("WARN")
 
-def generator(response):
-    import msgpack
-    while True:
-        try:
-            recv = yield
-            print msgpack.unpackb(recv)
-            l.info("Receive %s" % recv)
-        except Exception as err:
-            print str(err)
-            response.close()
-
-@ProxyHTTP
+@http
 def http_ok(response):
     headers = yield
     result = "<html><head>Hash</head>%s</html>\r\n" % sha512(str(headers)).hexdigest()
@@ -32,8 +22,21 @@ def http_ok(response):
     response.write(result)
     response.close()
 
+@fs
+def fs_ok(response):
+    stats = yield
+    l.info("fs_ok")
+    l.info(stats)
+    response.close()
+
+def fs_func(request, response):
+    l.info("fs_func")
+    l.info(request)
+    response.close()
+
 
 W = Worker()
 W.on("hash", http_ok)
-W.on("fs", generator)
+W.on("fs", fs_ok)
+W.on("fs2", fs_func)
 W.run()
