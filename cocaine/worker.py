@@ -130,6 +130,7 @@ class Worker(object):
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
                 _session[1].close()
+                self.sessions.pop(msg.session)
 
         elif msg.id == PROTOCOL_LIST.index("rpc::heartbeat"):
             #print "Receive heartbeat. Restart disown timer"
