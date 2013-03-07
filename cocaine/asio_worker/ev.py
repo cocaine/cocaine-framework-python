@@ -28,8 +28,9 @@ class Service(object):
 
     def __init__(self, ioloop=None):
         self._ioloop = ioloop or ev.IOLoop.instance()
-        self.READ_callbacks = dict()
-        self.WRITE_callbacks = dict()
+
+        self._callbacks = dict()
+        self._fd_events = dict()
         self.READ = self._ioloop.READ
         self.WRITE = self._ioloop.WRITE
 
@@ -48,32 +49,41 @@ class Service(object):
         self._ioloop.stop()
 
     def bind_on_fd(self, fd):
-        self._ioloop.add_handler(fd, self.proxy, self.READ | self.WRITE)
+        def dummy(*args):
+            pass
+        self._ioloop.add_handler(fd, self.proxy, self._ioloop.READ)
+        self._fd_events[fd] = self._ioloop.READ
+        self._callbacks[(fd, self.READ)] = dummy
+
+    def _register_event(self, fd, event):
+        self._fd_events[fd] |= event
+
+    def _unregister_event(self, fd, event):
+        self._fd_events[fd] ^= event
+
+    def register_write_event(self, callback, fd):
+        self._register_event(fd, self.WRITE)
+        self._callbacks[(fd, self.WRITE)] = callback
+        return True
+
+    def unregister_write_event(self, fd):
+        self._unregister_event(fd, self.WRITE)
+        return True
+
+    def register_read_event(self, callback, fd):
+        self._register_event(fd, self.READ)
+        self._callbacks[(fd, self.READ)] = callback
+        return True
+
+    def unregister_read_event(self, fd):
+        self._unregister_event(fd, self.READ)
+        return True
 
     def proxy(self, fd, event):
-        try:
-            if event == self.READ | self.WRITE:
-                self.READ_callbacks[fd]()
-            elif event == self.WRITE:
-                self.WRITE_callbacks[fd]()
-        except KeyError:
-            pass
-
-    def register_callback(self, callback, fd, event):
-        if event == self.READ:
-            self.READ_callbacks[fd] = callback
-            return True
-        elif event == self.WRITE:
-            self.WRITE_callbacks[fd] = callback
-            return True
-        else:
-            return False
-
-    def disown_callback(self, callback, fd, event):
-        if event == self.READ:
-            self.READ_callbacks.pop(fd)
-        elif event == self.WRITE:
-            self.WRITE_callbacks.pop(fd)
+        if event & self.WRITE:
+            self._callbacks[(fd, self.WRITE)]()
+        elif event & self.READ:
+            self._callbacks[(fd, self.READ)]()
 
     @property
     def ioloop(self):

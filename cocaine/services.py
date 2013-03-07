@@ -39,13 +39,14 @@ class _BaseService(object):
         self.m_decoder = Decoder()
         self.m_decoder.bind(self.on_message)
 
+        self.m_service.bind_on_fd(self.m_pipe.fileno())
+
         self.m_w_stream = WritableStream(self.m_service, self.m_pipe)
         self.m_r_stream = ReadableStream(self.m_service, self.m_pipe)
         self.m_r_stream.bind(self.m_decoder.decode)
 
-        self.m_service.register_callback(self.m_r_stream._on_event, self.m_pipe.fileno(), self.m_service.READ)
-        self.m_service.register_callback(self.m_w_stream._on_event, self.m_pipe.fileno(), self.m_service.WRITE)
-        self.m_service.bind_on_fd(self.m_pipe.fileno())
+        self.m_service.register_read_event(self.m_r_stream._on_event, self.m_pipe.fileno())
+        #self.m_service.register_write_event(self.m_w_stream._on_event, self.m_pipe.fileno())
 
     def on_message(self, *args):
         pass

@@ -73,12 +73,12 @@ class ReadableStream(object):
     def bind(self, callback):
         assert callable(callback)
         self.m_callback = callback
-        self.is_attached = self.m_service.register_callback(self._on_event, self.m_pipe.fileno(), self.m_service.READ)
+        self.is_attached = self.m_service.register_read_event(self._on_event, self.m_pipe.fileno())
 
     def unbind(self):
         self.m_callback = None
         if self.is_attached:
-            self.m_service.disown_callback(self._on_event, self.m_pipe.fileno(), self.m_service.READ)
+            self.m_service.unregister_read_evnt(self.m_pipe.fileno())
 
     def _on_event(self):
         unparsed = self.m_rd_offset - self.m_rx_offset
@@ -91,7 +91,7 @@ class ReadableStream(object):
         length = self.m_pipe.read(self.tmp_buff, self.tmp_buff.buffer_info()[1])
         if length <= 0:
             if length == 0: #Remote side has closed connection
-                self.m_service.disown_callback(self._on_event, self.m_pipe.fileno(), self.m_service.READ)
+                self.m_service.unregister_read_event(self.m_pipe.fileno())
             return
 
         self.m_rd_offset += length
@@ -110,7 +110,7 @@ class WritableStream(object):
     def __init__(self, service, pipe):
         self.m_service = service
         self.m_pipe = pipe
-        self.is_attached = service.register_callback(self._on_event, pipe.fileno(), service.WRITE)
+        self.is_attached = False#service.register_write_event(self._on_event, pipe.fileno())
 
         self.m_mutex = Lock()
 
@@ -120,10 +120,11 @@ class WritableStream(object):
         self.m_tx_offset = 0
 
     def _on_event(self):
+        print "WRIETE ON EVENT"
         with self.m_mutex:
 
             if len(self.m_ring) == 0 and self.is_attached:
-                self.m_service.disown_callback(self._on_event, self.m_pipe.fileno(), self.m_service.WRITE)
+                self.m_service.unregister_write_event(self.m_pipe.fileno())
                 self.is_attached = False
                 return
 
@@ -157,6 +158,5 @@ class WritableStream(object):
 
 
             if False == self.is_attached:
-                self.m_service.register_callback(self._on_event, self.m_pipe.fileno(), self.m_service.WRITE)
+                self.m_service.register_write_event(self._on_event, self.m_pipe.fileno())
                 self.is_attached = True
-

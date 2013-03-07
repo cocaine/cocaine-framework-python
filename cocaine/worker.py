@@ -61,6 +61,7 @@ class Worker(object):
         self.m_heartbeat_timer.start()
 
         self.m_pipe = Pipe(self.endpoint)
+        self.m_service.bind_on_fd(self.m_pipe.fileno())
 
         self.m_decoder = Decoder()
         self.m_decoder.bind(self.on_message)
@@ -69,11 +70,10 @@ class Worker(object):
         self.m_r_stream = ReadableStream(self.m_service, self.m_pipe)
         self.m_r_stream.bind(self.m_decoder.decode)
 
-        self._send_handshake()
 
-        self.m_service.register_callback(self.m_r_stream._on_event, self.m_pipe.fileno(), self.m_service.READ)
-        self.m_service.register_callback(self.m_w_stream._on_event, self.m_pipe.fileno(), self.m_service.WRITE)
-        self.m_service.bind_on_fd(self.m_pipe.fileno())
+        self.m_service.register_read_event(self.m_r_stream._on_event, self.m_pipe.fileno())
+        #self.m_service.register_write_event(self.m_w_stream._on_event, self.m_pipe.fileno())
+        self._send_handshake()
 
     def _init_endpoint(self):
         try:
@@ -112,7 +112,7 @@ class Worker(object):
         msg = Message.initialize(args)
         if msg is None:
             #print "Worker %s dropping unknown message %s" % (self.m_id, str(args))
-            return 
+            return
 
         elif msg.id == PROTOCOL_LIST.index("rpc::invoke"):
             #print "Receive invoke: %s %s" % (msg.event, msg.session)
@@ -157,7 +157,6 @@ class Worker(object):
     def send_choke(self, session):
         #print "send choke"
         self.m_w_stream.write(Message("rpc::choke", session).pack())
-        #print "Finish send choke"
 
     def send_chunk(self, session, data):
         #print "send chunk"
