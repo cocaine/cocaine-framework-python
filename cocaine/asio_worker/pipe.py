@@ -23,6 +23,7 @@
 
 import socket
 import fcntl
+import errno
 
 class Pipe(socket.socket):
 
@@ -46,10 +47,17 @@ class ServicePipe(socket.socket):
     def __init__(self, path):
         super(ServicePipe, self).__init__(socket.AF_INET, socket.SOCK_STREAM)
         self._configure()
-        self.connect(path)
+        while True:
+            try:
+                self.connect(path)
+            except Exception as e:
+                if e.args[0] not in  (errno.EINPROGRESS, errno.EAGAIN):
+                    raise
+            else:
+                break
 
     def _configure(self):
-        #self.setblocking(0)
+        self.setblocking(0)
         fcntl.fcntl(self.fileno(), fcntl.F_SETFD, fcntl.FD_CLOEXEC)
 
     def read(self, buff, size):
