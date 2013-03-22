@@ -47,7 +47,6 @@ class Unique_id(object):
 class Worker(object):
 
     def __init__(self):
-
         self._init_endpoint()
 
         self.sessions = dict()
@@ -55,8 +54,8 @@ class Worker(object):
 
         self.m_service = ev.Service()
 
-        self.m_disown_timer = ev.Timer(self.on_disown, 30, self.m_service)
-        self.m_heartbeat_timer = ev.Timer(self.on_heartbeat, 10, self.m_service)
+        self.m_disown_timer = ev.Timer(self.on_disown, 2, self.m_service)
+        self.m_heartbeat_timer = ev.Timer(self.on_heartbeat, 5, self.m_service)
         self.m_disown_timer.start()
         self.m_heartbeat_timer.start()
 
@@ -72,25 +71,16 @@ class Worker(object):
 
 
         self.m_service.register_read_event(self.m_r_stream._on_event, self.m_pipe.fileno())
-        #self.m_service.register_write_event(self.m_w_stream._on_event, self.m_pipe.fileno())
         self._send_handshake()
 
     def _init_endpoint(self):
         try:
             uuid=sys.argv[sys.argv.index("--uuid") + 1]
-            config_path = sys.argv[sys.argv.index("-c") + 1]
             app_name = sys.argv[sys.argv.index("--app") + 1]
+            self.endpoint = sys.argv[sys.argv.index("--endpoint") + 1]
             self.m_id = Unique_id(uuid).id
         except Exception as err:
             raise RuntimeError("Wrong cmdline arguments")
-
-        try:
-            cfg = json.load(open(config_path))
-            self.endpoint = "%s/engines/%s" % (cfg["paths"]["runtime"], app_name)
-        except IOError as err:
-            raise RuntimeError("No such configuration file")
-        except Exception as err:
-            raise RuntimeError("Bla-bla")
 
     def run(self):
         self.m_service.run()
@@ -105,7 +95,6 @@ class Worker(object):
 
     # Events
     def on_heartbeat(self):
-        #print "Send heartbeat"
         self._send_heartbeat()
 
     def on_message(self, args):
@@ -135,7 +124,6 @@ class Worker(object):
         elif msg.id == PROTOCOL_LIST.index("rpc::heartbeat"):
             #print "Receive heartbeat. Restart disown timer"
             self.m_disown_timer.stop()
-            self.m_disown_timer.start()
 
         elif msg.id == PROTOCOL_LIST.index("rpc::terminate"):
             #print "Receive terminate"
@@ -148,11 +136,12 @@ class Worker(object):
     # Private:
     def _send_handshake(self):
         #print "Send handshake"
-        self.m_w_stream.write(Message("rpc::handshake", self.m_id).pack())
+        self.m_w_stream.write(Message("rpc::handshake", 0, self.m_id).pack())
+        self.m_disown_timer.start()
 
     def _send_heartbeat(self):
         #print "Send heartbeat"
-        self.m_w_stream.write(Message("rpc::heartbeat").pack())
+        self.m_w_stream.write(Message("rpc::heartbeat", 0).pack())
 
     def send_choke(self, session):
         #print "send choke"

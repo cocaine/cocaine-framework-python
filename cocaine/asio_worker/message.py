@@ -53,36 +53,37 @@ PROTOCOL = {
     },
     "rpc::invoke"   : {
         "id" : PROTOCOL_LIST.index("rpc::invoke"),
-        "tuple_type": ("session", "event")
+        "tuple_type": ("event",)
     },
     "rpc::chunk"    : {
         "id" : PROTOCOL_LIST.index("rpc::chunk"),
-        "tuple_type": ("session", "data")
+        "tuple_type": ("data",)
     },
     "rpc::error"    : {
         "id" : PROTOCOL_LIST.index("rpc::error"),
-        "tuple_type": ("session", "code", "message")
+        "tuple_type": ("code", "message")
     },
     "rpc::choke"    : {
         "id" : PROTOCOL_LIST.index("rpc::choke"),
-        "tuple_type": ("session",)
+        "tuple_type": ()
     }
 }
 
-def closure(m_id, args):
+def closure(m_id, m_session, args):
     def _wrapper():
-        return ((m_id, args))
+        return ((m_id, m_session, args))
     return _wrapper
 
 class MessageInit(type):
 
-    def __call__(cls, rpc_tag, *tuple_types):
+    def __call__(cls, rpc_tag, session, *tuple_types):
         obj_dict = PROTOCOL[rpc_tag]
         msg = object.__new__(cls)
         msg.__init__()
         setattr(msg, "id", obj_dict["id"])
+        setattr(msg, "session", session)
         [setattr(msg, attr, value) for attr, value in izip(obj_dict["tuple_type"], tuple_types)]
-        setattr(msg, "pack", closure(msg.id, tuple_types))
+        setattr(msg, "pack", closure(msg.id, msg.session, tuple_types))
         return msg
 
 class Message(object):
@@ -92,8 +93,9 @@ class Message(object):
     def initialize(unpacked_data):
         try:
             _id = unpacked_data[0]
-            args = unpacked_data[1] #if unpacked_data[1] is not None else list()
-            return Message(PROTOCOL_LIST[_id], *args)
+            session = unpacked_data[1]
+            args = unpacked_data[2] #if unpacked_data[1] is not None else list()
+            return Message(PROTOCOL_LIST[_id], session, *args)
         except Exception as err:
             #print str(err)
             return None

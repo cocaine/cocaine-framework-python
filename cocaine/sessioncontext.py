@@ -48,7 +48,6 @@ class Stream(object):
         self.m_session = session
 
     def push(self, chunk):
-        #print "PUSH ME", chunk
         if self._m_state is not None:
             self.m_worker.send_chunk(self.m_session, chunk)
             return
