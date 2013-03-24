@@ -86,7 +86,7 @@ class Worker(object):
         self.m_service.run()
 
     def terminate(self, reason, msg):
-        self.m_w_stream.write(Message("rpc::terminate", reason, msg).pack())
+        self.m_w_stream.write(Message("rpc::terminate", 0, reason, msg).pack())
         self.m_service.stop()
 
     # Event machine

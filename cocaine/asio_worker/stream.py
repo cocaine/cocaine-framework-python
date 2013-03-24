@@ -29,6 +29,7 @@ START_CHUNK_SIZE = 1024
 
 def encode_dec(f):
     def wrapper(self, data):
+        #print "SEND", data
         encode = msgpack.packb(data)
         return f(self, encode, len(encode))
     return wrapper
@@ -49,6 +50,7 @@ class Decoder(object):
         try:
             for res in unpacker:
                 parsed_len += len(msgpack.packb(res))
+                #print "Decode:",  res
                 self.m_callback(res)
         except Exception as err:
             pass # hook - view later
