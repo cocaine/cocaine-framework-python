@@ -41,12 +41,13 @@ def closure(m_id, args):
 
 class MessageInit(type):
 
-    def __call__(cls, rpc_tag, *tuple_types):
+    def __call__(cls, rpc_tag, session,  *tuple_types):
         obj_dict = PROTOCOL[rpc_tag]
         msg = object.__new__(cls)
         msg.__init__()
         setattr(msg, "id", obj_dict["id"])
-        [setattr(msg, attr, value) for attr, value in izip_longest(obj_dict["tuple_type"], tuple_types)]
+        setattr(msg, "session", session)
+        [setattr(msg, attr, value) for attr, value in izip(obj_dict["tuple_type"], tuple_types)]
         setattr(msg, "pack", closure(msg.id, tuple_types))
         return msg
 
@@ -57,8 +58,9 @@ class Message(object):
     def initialize(unpacked_data):
         try:
             _id = unpacked_data[0]
-            args = unpacked_data[1] #if unpacked_data[1] is not None else list()
+            session = unpacked_data[1]
+            args = unpacked_data[2] #if unpacked_data[1] is not None else list()
             return Message(PROTOCOL_LIST[_id], *args)
         except Exception as err:
-            print str(err)
+            #print str(err)
             return None
