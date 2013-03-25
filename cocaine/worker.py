@@ -136,8 +136,8 @@ class Worker(object):
     # Private:
     def _send_handshake(self):
         #print "Send handshake"
-        self.m_w_stream.write(Message("rpc::handshake", 0, self.m_id).pack())
         self.m_disown_timer.start()
+        self.m_w_stream.write(Message("rpc::handshake", 0, self.m_id).pack())
 
     def _send_heartbeat(self):
         #print "Send heartbeat"
