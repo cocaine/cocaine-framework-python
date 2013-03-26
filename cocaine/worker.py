@@ -19,23 +19,22 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-
 import json
 import time
 import sys
-import struct
 
-from asio_worker import ev
-from asio_worker.pipe import Pipe
-from asio_worker.stream import ReadableStream
-from asio_worker.stream import WritableStream
-from asio_worker.stream import Decoder
+from asio import ev
+from asio.pipe import Pipe
+from asio.stream import ReadableStream
+from asio.stream import WritableStream
+from asio.stream import Decoder
 
-from asio_worker.message import PROTOCOL_LIST
-from asio_worker.message import Message
+from asio.message import PROTOCOL_LIST
+from asio.message import Message
 
-from sessioncontext import Sandbox
-from sessioncontext import Stream
+from cocaine.sessioncontext import Sandbox
+from cocaine.sessioncontext import Stream
+from cocaine.sessioncontext import Request
 
 class Worker(object):
 
@@ -97,20 +96,25 @@ class Worker(object):
 
         elif msg.id == PROTOCOL_LIST.index("rpc::invoke"):
             #print "Receive invoke: %s %s" % (msg.event, msg.session)
-            _stream = Stream(msg.session, self)
-            self.sessions[msg.session] = (_stream, self.m_sandbox.invoke(msg.event, _stream))
+            try:
+                _request = Request()
+                _stream = Stream(msg.session, self)
+                self.m_sandbox.invoke(msg.event, _request, _stream)
+                self.sessions[msg.session] = _request
+            except Exception as err:
+                print err
 
         elif msg.id == PROTOCOL_LIST.index("rpc::chunk"):
             #print "Receive chunk: %s" % msg.session
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
-                _session[1].push(msg.data)
+                _session.push(msg.data)
 
         elif msg.id == PROTOCOL_LIST.index("rpc::choke"):
             #print "Receive choke: %s" % msg.session
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
-                _session[1].close()
+                _session.close()
                 self.sessions.pop(msg.session)
 
         elif msg.id == PROTOCOL_LIST.index("rpc::heartbeat"):

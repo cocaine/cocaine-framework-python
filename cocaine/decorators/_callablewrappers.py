@@ -45,6 +45,13 @@ class _Proxy(object):
         return self._state is None
 
 
+def request_future(object):
+    """ Helper object. """
+    def read(self):
+        return self
+
+
+
 class _Coroutine(_Proxy):
     """Wrapper for coroutine function """
 
@@ -53,28 +60,52 @@ class _Coroutine(_Proxy):
         self._obj = func
         self._func = None
         self._state = None
+        self._current_future_object = None
 
     def push(self, chunk):
         try:
-            self._func.send(chunk)
+            self._current_future_object = self._func.send(chunk)
+            if self._current_future_object is not None:
+                self._current_future_object(self.push)
         except StopIteration:
+            print "Stop iteration in push"
             if not self._response.closed:
                 self._response.close()
 
-    def invoke(self, stream):
+    #def push_from_poll(self, chunk):
+    #    try:
+    #        self._current_future_object = self._func.send(chunk)
+    #        while ((self._current_future_object is None) and (len(self._cache) > 0)): #REQUEST FUTURE
+    #            self._current_future_object = self._func.send(self._cache.pop(0))
+    #        if self._current_future_object is not None:
+    #            self._current_future_object(self.push_from_poll)
+    #    except StopIteration:
+    #        if not self._response.closed:
+    #            self._response.close()
+
+    def invoke(self, request, stream):
         self._state = 1
         self._response = stream # attach response stream
-        self._func = self._obj(self._response) # prepare generator
-        self._func.next()
+        self._func = self._obj(request, self._response) # prepare generator
+        self._current_future_object = self._func.next()
+        if self._current_future_object is not None:
+            try:
+                self._current_future_object(self.push)
+            except Exception as err:
+                print str(err)
         return self
 
     def close(self):
         try:
-            self._func.throw(Exception("close"))
+            #print "CLOSE BY"
+            pass
+            #self._func.throw(Exception("close"))
         except Exception as err:
             #print str(err)
             pass
         self._state = None
+
+#===========================================
 
 class _Function(_Proxy):
     """Wrapper for function object"""
@@ -97,6 +128,8 @@ class _Function(_Proxy):
 
     def close(self):
         self._state = None
+
+#=========================================
 
 import compiler
 

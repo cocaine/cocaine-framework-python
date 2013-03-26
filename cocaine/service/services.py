@@ -21,13 +21,11 @@
 
 import sys
 
-from asio_worker import ev
-from asio_worker.pipe import ServicePipe
-from asio_worker.stream import ReadableStream
-from asio_worker.stream import WritableStream
-from asio_worker.stream import Decoder
-from asio_worker.log_message import PROTOCOL_LIST
-from asio_worker.log_message import Message
+from cocaine.asio import ev
+from cocaine.asio.pipe import ServicePipe
+from cocaine.asio.stream import ReadableStream
+from cocaine.asio.stream import WritableStream
+from cocaine.asio.stream import Decoder
 
 class _BaseService(object):
 
@@ -50,25 +48,4 @@ class _BaseService(object):
     def on_message(self, *args):
         pass
 
-class Log(_BaseService):
 
-    def __init__(self):
-        super(Log, self).__init__(('localhost', 12501))
-        self.m_target = "app/%s" % self.m_app_name
-        self._counter = 0;
-
-    def debug(self, data):
-        self._counter += 1
-        self.m_w_stream.write(Message("Message", 4, self._counter, self.m_target, data).pack())
-
-    def info(self, data):
-        self._counter += 1
-        self.m_w_stream.write(Message("Message", 3, self.m_target, data).pack())
-
-    def warn(self, data):
-        self._counter += 1
-        self.m_w_stream.write(Message("Message", 2, self.m_target, data).pack())
-
-    def error(self, data):
-        self._counter += 1
-        self.m_w_stream.write(Message("Message", 1, self.m_target, data).pack())
