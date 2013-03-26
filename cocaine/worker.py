@@ -20,7 +20,6 @@
 #
 
 
-import uuid
 import json
 import time
 import sys
@@ -37,12 +36,6 @@ from asio_worker.message import Message
 
 from sessioncontext import Sandbox
 from sessioncontext import Stream
-
-class Unique_id(object):
-
-    def __init__(self, _uuid):
-        u = uuid.UUID(_uuid)
-        self.id = struct.unpack('LL', u.bytes )
 
 class Worker(object):
 
@@ -75,10 +68,9 @@ class Worker(object):
 
     def _init_endpoint(self):
         try:
-            uuid=sys.argv[sys.argv.index("--uuid") + 1]
+            self.m_id = sys.argv[sys.argv.index("--uuid") + 1]
             app_name = sys.argv[sys.argv.index("--app") + 1]
             self.endpoint = sys.argv[sys.argv.index("--endpoint") + 1]
-            self.m_id = Unique_id(uuid).id
         except Exception as err:
             raise RuntimeError("Wrong cmdline arguments")
 
