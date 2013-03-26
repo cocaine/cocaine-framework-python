@@ -53,10 +53,28 @@ class _Coroutine(_Proxy):
         self._obj = func
         self._func = None
         self._state = None
+        self._cache = list()
+        self._current_future_object = None
 
     def push(self, chunk):
+        if self._current_future_object is None: #REQUEST FUTURE
+            try:
+                self._current_future_object = self._func.send(chunk)
+                print self._current_future_object
+
+                # If next chunk is request and there is a chunk in cache - send it right now
+                print "Chunk from cache"
+                while ((self._current_future_object is None) and (len(self._cache) > 0)): #REQUEST FUTURE
+                    self._current_future_object = self._func.send(self._cache.pop(0))
+            except StopIteration:
+                if not self._response.closed:
+                    self._response.close()
+        else:
+            self._cache.append(chunk)
+
+    def push_from_poll(self, chunk):
         try:
-            self._func.send(chunk)
+            self._current_future_object = self._func.seld(chunk)
         except StopIteration:
             if not self._response.closed:
                 self._response.close()
@@ -65,7 +83,7 @@ class _Coroutine(_Proxy):
         self._state = 1
         self._response = stream # attach response stream
         self._func = self._obj(self._response) # prepare generator
-        self._func.next()
+        self._current_future_object = self._func.next()
         return self
 
     def close(self):

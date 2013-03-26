@@ -72,3 +72,20 @@ class Log(_BaseService):
     def error(self, data):
         self._counter += 1
         self.m_w_stream.write(Message("Message", 1, self.m_target, data).pack())
+
+def Urlfetcher(_BaseService):
+
+    def __init__(self):
+        super(Urlfetcher, self).__init__(('localhost', 12502))
+        self._subscribers = dict()
+        self._counter = 0
+
+    def _fetch(self, url, counter):
+        pass
+
+    def get(self, url):
+        def wrapper(clbk):
+            self._counter += 1
+            self._subscribers[self._counter] = clbk
+            self._fetch(url, self._counter)
+        return wrapper
