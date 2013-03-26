@@ -27,16 +27,15 @@ class Sandbox(object):
     def __init__(self):
         self._events = dict()
 
-    def invoke(self, event_name, stream):
+    def invoke(self, event_name, request, stream):
         """ Connect worker and decorator """
         event_handler = self._events.get(event_name, None)
         if event_name is not None:
-            return event_handler.invoke(stream)
+            event_handler.invoke(request, stream)
         assert (event_handler is not None)
 
     def on(self, event_name, event_handler):
         if not hasattr(event_handler, "_wrapped"):
-            #event_handler = ProxyCoroutine(event_handler)
             event_handler = default(event_handler)
         self._events[event_name] = event_handler
 
@@ -63,3 +62,35 @@ class Stream(object):
     @property
     def closed(self):
         return self._m_state is None
+
+class Request(object):
+
+    def __init__(self):
+        self.m_cache = list()
+        self._clbk = None
+        self._state = 1
+
+    def push(self, chunk):
+        if self._clbk is None:
+            #print "Save chunk in cache"
+            self.m_cache.append(chunk)
+        else:
+            #print "Push chunk to clbk directly"
+            self._clbk(chunk)
+
+    def read(self):
+        return self
+
+    def close(self):
+        #print "close by choke"
+        self._state = None
+
+    def __call__(self, clbk):
+        if len(self.m_cache) > 0:
+            print "Push from cache:"
+            clbk(self.m_cache.pop(0))
+        elif self._state is not None:
+            print "Bind callback"
+            self._clbk = clbk
+        #Raise exception here because no chunks from cocaine-runtime are availaible
+        #raise
