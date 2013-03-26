@@ -47,8 +47,8 @@ class _BaseService(object):
 
         self.m_service.register_read_event(self.m_r_stream._on_event, self.m_pipe.fileno())
 
-    def on_message(self, *args):
-        pass
+    #def on_message(self, *args):
+    #    pass
 
 class Log(_BaseService):
 
@@ -73,7 +73,7 @@ class Log(_BaseService):
         self._counter += 1
         self.m_w_stream.write(Message("Message", 1, self.m_target, data).pack())
 
-def Urlfetcher(_BaseService):
+class Urlfetcher(_BaseService):
 
     def __init__(self):
         super(Urlfetcher, self).__init__(('localhost', 12502))
@@ -81,7 +81,8 @@ def Urlfetcher(_BaseService):
         self._counter = 0
 
     def _fetch(self, url, counter):
-        pass
+        print "FETCH"
+        self.m_w_stream.write([0, counter, [["http://company.yandex.ru", [], True]]])
 
     def get(self, url):
         def wrapper(clbk):
@@ -89,3 +90,12 @@ def Urlfetcher(_BaseService):
             self._subscribers[self._counter] = clbk
             self._fetch(url, self._counter)
         return wrapper
+
+    def on_message(self, *args):
+        try:
+            num =  args[0][1]
+            data = args[0][2]
+            self._subscribers[num](data)
+            self._subscribers.pop(num, None)
+        except Exception as err:
+            print "ERROR", str(err)

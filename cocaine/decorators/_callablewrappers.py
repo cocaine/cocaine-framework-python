@@ -60,35 +60,53 @@ class _Coroutine(_Proxy):
         if self._current_future_object is None: #REQUEST FUTURE
             try:
                 self._current_future_object = self._func.send(chunk)
-                print self._current_future_object
-
                 # If next chunk is request and there is a chunk in cache - send it right now
-                print "Chunk from cache"
                 while ((self._current_future_object is None) and (len(self._cache) > 0)): #REQUEST FUTURE
                     self._current_future_object = self._func.send(self._cache.pop(0))
+                if self._current_future_object is not None:
+                    print "INVO"
+                    self._current_future_object(push_from_poll)
             except StopIteration:
                 if not self._response.closed:
                     self._response.close()
         else:
+            print "Put in cache", chunk
             self._cache.append(chunk)
 
     def push_from_poll(self, chunk):
         try:
-            self._current_future_object = self._func.seld(chunk)
+            print "FROM POLL"#, chunk
+            self._current_future_object = self._func.send(chunk)
+            print "END POLL"
+            while ((self._current_future_object is None) and (len(self._cache) > 0)): #REQUEST FUTURE
+                self._current_future_object = self._func.send(self._cache.pop(0))
+            if self._current_future_object is not None:
+                print "INVO"
+                self._current_future_object(push_from_poll)
         except StopIteration:
+            print "STOP ITER"
             if not self._response.closed:
                 self._response.close()
+        except Exception as err:
+            print "DDDDD", str(err)
 
     def invoke(self, stream):
         self._state = 1
         self._response = stream # attach response stream
         self._func = self._obj(self._response) # prepare generator
         self._current_future_object = self._func.next()
+        if self._current_future_object is not None:
+            print "On invoke"
+            try:
+                self._current_future_object(self.push_from_poll)
+            except Exception as err:
+                print str(err)
         return self
 
     def close(self):
         try:
-            self._func.throw(Exception("close"))
+            print "CLOSE BY"
+            #self._func.throw(Exception("close"))
         except Exception as err:
             #print str(err)
             pass
