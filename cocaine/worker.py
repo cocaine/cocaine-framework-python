@@ -26,14 +26,14 @@ import time
 import sys
 import struct
 
-from asio_worker import ev
-from asio_worker.pipe import Pipe
-from asio_worker.stream import ReadableStream
-from asio_worker.stream import WritableStream
-from asio_worker.stream import Decoder
+from asio import ev
+from asio.pipe import Pipe
+from asio.stream import ReadableStream
+from asio.stream import WritableStream
+from asio.stream import Decoder
 
-from asio_worker.message import PROTOCOL_LIST
-from asio_worker.message import Message
+from asio.message import PROTOCOL_LIST
+from asio.message import Message
 
 from sessioncontext import Sandbox
 from sessioncontext import Stream

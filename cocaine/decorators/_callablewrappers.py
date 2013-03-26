@@ -65,7 +65,7 @@ class _Coroutine(_Proxy):
                     self._current_future_object = self._func.send(self._cache.pop(0))
                 if self._current_future_object is not None:
                     print "INVO"
-                    self._current_future_object(push_from_poll)
+                    self._current_future_object(self.push_from_poll)
             except StopIteration:
                 if not self._response.closed:
                     self._response.close()
@@ -75,16 +75,12 @@ class _Coroutine(_Proxy):
 
     def push_from_poll(self, chunk):
         try:
-            print "FROM POLL"#, chunk
             self._current_future_object = self._func.send(chunk)
-            print "END POLL"
             while ((self._current_future_object is None) and (len(self._cache) > 0)): #REQUEST FUTURE
                 self._current_future_object = self._func.send(self._cache.pop(0))
             if self._current_future_object is not None:
-                print "INVO"
-                self._current_future_object(push_from_poll)
+                self._current_future_object(self.push_from_poll)
         except StopIteration:
-            print "STOP ITER"
             if not self._response.closed:
                 self._response.close()
         except Exception as err:
@@ -96,7 +92,6 @@ class _Coroutine(_Proxy):
         self._func = self._obj(self._response) # prepare generator
         self._current_future_object = self._func.next()
         if self._current_future_object is not None:
-            print "On invoke"
             try:
                 self._current_future_object(self.push_from_poll)
             except Exception as err:
