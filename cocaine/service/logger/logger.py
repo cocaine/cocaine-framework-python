@@ -16,12 +16,12 @@ class Log(_BaseService):
 
     def info(self, data):
         self._counter += 1
-        self.m_w_stream.write(Message("Message", 3, self.m_target, data).pack())
+        self.m_w_stream.write(Message("Message", 3, self._counter, self.m_target, data).pack())
 
     def warn(self, data):
         self._counter += 1
-        self.m_w_stream.write(Message("Message", 2, self.m_target, data).pack())
+        self.m_w_stream.write(Message("Message", 2, self._counter, self.m_target, data).pack())
 
     def error(self, data):
         self._counter += 1
-        self.m_w_stream.write(Message("Message", 1, self.m_target, data).pack())
+        self.m_w_stream.write(Message("Message", 1, self._counter, self.m_target, data).pack())

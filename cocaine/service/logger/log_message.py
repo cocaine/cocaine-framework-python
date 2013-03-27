@@ -21,7 +21,7 @@
 
 import msgpack
 
-from itertools import izip_longest
+from itertools import izip
 
 PROTOCOL_LIST = (
     "Message",
@@ -34,9 +34,9 @@ PROTOCOL = {
    }
 }
 
-def closure(m_id, args):
+def closure(m_id, session, args):
     def _wrapper():
-        return ((m_id, args))
+        return (m_id, session, args)
     return _wrapper
 
 class MessageInit(type):
@@ -48,7 +48,8 @@ class MessageInit(type):
         setattr(msg, "id", obj_dict["id"])
         setattr(msg, "session", session)
         [setattr(msg, attr, value) for attr, value in izip(obj_dict["tuple_type"], tuple_types)]
-        setattr(msg, "pack", closure(msg.id, tuple_types))
+        setattr(msg, "pack", closure(msg.id, session, tuple_types))
+        print dir(msg)
         return msg
 
 class Message(object):
