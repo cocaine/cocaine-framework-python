@@ -72,25 +72,32 @@ class Request(object):
 
     def push(self, chunk):
         if self._clbk is None:
-            #print "Save chunk in cache"
+            # If there is no attachment object, put chunk in the cache
             self.m_cache.append(chunk)
         else:
-            #print "Push chunk to clbk directly"
-            self._clbk(chunk)
-
-    def read(self):
-        return self
+            # Copy callback to temp, clear current callback and perform temp
+            # Do it so because self._clbk may change, while perfoming callback function.
+            # Avoid double chunk sending to the task
+            temp = self._clbk
+            self._clbk = None
+            temp(chunk)
 
     def close(self):
         #print "close by choke"
         self._state = None
 
-    def __call__(self, clbk):
+    def read(self):
+        def wrapper(clbk):
+            self._read(clbk)
+        return wrapper
+
+    def _read(self, clbk):
         if len(self.m_cache) > 0:
-            print "Push from cache:"
+            #print "Push from cache:"
             clbk(self.m_cache.pop(0))
         elif self._state is not None:
-            print "Bind callback"
+            #print "Bind callback"
             self._clbk = clbk
+        # else: Stream is closed by choke
         #Raise exception here because no chunks from cocaine-runtime are availaible
         #raise

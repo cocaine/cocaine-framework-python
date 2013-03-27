@@ -68,20 +68,9 @@ class _Coroutine(_Proxy):
             if self._current_future_object is not None:
                 self._current_future_object(self.push)
         except StopIteration:
-            print "Stop iteration in push"
+            #print "Stop iteration in push"
             if not self._response.closed:
                 self._response.close()
-
-    #def push_from_poll(self, chunk):
-    #    try:
-    #        self._current_future_object = self._func.send(chunk)
-    #        while ((self._current_future_object is None) and (len(self._cache) > 0)): #REQUEST FUTURE
-    #            self._current_future_object = self._func.send(self._cache.pop(0))
-    #        if self._current_future_object is not None:
-    #            self._current_future_object(self.push_from_poll)
-    #    except StopIteration:
-    #        if not self._response.closed:
-    #            self._response.close()
 
     def invoke(self, request, stream):
         self._state = 1
@@ -92,7 +81,8 @@ class _Coroutine(_Proxy):
             try:
                 self._current_future_object(self.push)
             except Exception as err:
-                print str(err)
+                pass
+                #print str(err)
         return self
 
     def close(self):
