@@ -19,10 +19,10 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-import msgpack
 import array
-
 from threading import Lock
+
+import msgpack
 
 MAX_BUFF_SIZE = 104857600
 START_CHUNK_SIZE = 1024

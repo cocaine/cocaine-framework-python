@@ -1,8 +1,8 @@
 cocaine-framework-python (0.10.0-rc6) lucid; urgency=low
 
-  * new protocol 
+  * async
 
- -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 26 Mar 2013 15:41:22 +0400
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 27 Mar 2013 16:38:39 +0400
 
 cocaine-framework-python (0.10.0-rc0) lucid; urgency=low
 

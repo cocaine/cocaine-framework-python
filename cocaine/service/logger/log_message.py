@@ -49,7 +49,6 @@ class MessageInit(type):
         setattr(msg, "session", session)
         [setattr(msg, attr, value) for attr, value in izip(obj_dict["tuple_type"], tuple_types)]
         setattr(msg, "pack", closure(msg.id, session, tuple_types))
-        print dir(msg)
         return msg
 
 class Message(object):

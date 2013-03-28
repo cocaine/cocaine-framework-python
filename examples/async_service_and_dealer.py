@@ -1,30 +1,33 @@
 #! /usr/bin/env python
 
-from cocaine.worker import Worker
-from cocaine.decorators import *
-from cocaine.service.urlfetcher import Urlfetcher
-from cocaine.service.logger import Log
-
 from hashlib import sha512
 
-#l = Log()
-#l.info("INFO")
-#l.debug("DEBUG")
-#l.error("ERROR")
-#l.warn("WARN")
+from cocaine.worker import Worker
+from cocaine.decorators import *
+#from cocaine.service.urlfetcher import Urlfetcher
+from cocaine.service.logger import Log
+from cocaine.service.services import Service
 
-U = Urlfetcher()
+
+l = Log()
+l.info("INFO")
+l.debug("DEBUG")
+l.error("ERROR")
+l.warn("WARN")
+
+S = Service("urlfetch")
 
 def http_ok(request, response):
     print "INITIALIZE FUNCTION." 
     print "Request www.ya.ru"
-    webpage = yield U.get("www.ya.ru")
-    print webpage
+    webpage = yield S.get(["www.ya.ru",[], True])
+    l.info(sha512(webpage).hexdigest())
     chunk_from_cloud = yield request.read()
     print "from dealer:", chunk_from_cloud
     print "Request www.google.ru"
-    webpage = yield U.get("www.google.ru")
-    print webpage
+    webpage = yield S.get(["www.google.ru",[], True])
+    l.info(sha512(webpage).hexdigest())
+    print "ANSWER"
     response.push("ANSWER")
     response.close()
 
