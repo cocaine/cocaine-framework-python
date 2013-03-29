@@ -18,14 +18,14 @@ l.warn("WARN")
 S = Service("urlfetch")
 
 def http_ok(request, response):
-    print "INITIALIZE FUNCTION." 
+    print "INITIALIZE FUNCTION."
     print "Request www.ya.ru"
-    webpage = yield S.get(["www.ya.ru",[], True])
+    webpage = yield S.get("www.ya.ru",{}, True)
     l.info(sha512(webpage).hexdigest())
     chunk_from_cloud = yield request.read()
     print "from dealer:", chunk_from_cloud
     print "Request www.google.ru"
-    webpage = yield S.get(["www.google.ru",[], True])
+    webpage = yield S.get("www.google.ru",{}, True)
     l.info(sha512(webpage).hexdigest())
     print "ANSWER"
     response.push("ANSWER")
