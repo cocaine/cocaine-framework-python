@@ -105,9 +105,10 @@ class _Function(_Proxy):
         self._func = func
         self._response = None
 
-    def invoke(self, stream):
+    def invoke(self, request, stream):
         self._state = 1
         self._response = stream
+        self._request = request
         return self
 
     def push(self, chunk):
