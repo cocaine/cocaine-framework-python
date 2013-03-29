@@ -43,18 +43,18 @@ class Stream(object):
 
     def __init__(self, session, worker):
         self._m_state = 1
-        self.m_worker = worker
-        self.m_session = session
+        self.worker = worker
+        self.session = session
 
     def push(self, chunk):
         if self._m_state is not None:
-            self.m_worker.send_chunk(self.m_session, chunk)
+            self.worker.send_chunk(self.session, chunk)
             return
         assert (self._m_state is not None)
 
     def close(self):
         if self._m_state is not None:
-            self.m_worker.send_choke(self.m_session)
+            self.worker.send_choke(self.session)
             self._m_state = None
             return
         assert (self._m_state is None)
@@ -66,14 +66,14 @@ class Stream(object):
 class Request(object):
 
     def __init__(self):
-        self.m_cache = list()
+        self.cache = list()
         self._clbk = None
         self._state = 1
 
     def push(self, chunk):
         if self._clbk is None:
             # If there is no attachment object, put chunk in the cache
-            self.m_cache.append(chunk)
+            self.cache.append(chunk)
         else:
             # Copy callback to temp, clear current callback and perform temp
             # Do it so because self._clbk may change, while perfoming callback function.
@@ -92,9 +92,9 @@ class Request(object):
         return wrapper
 
     def _read(self, clbk):
-        if len(self.m_cache) > 0:
+        if len(self.cache) > 0:
             #print "Push from cache:"
-            clbk(self.m_cache.pop(0))
+            clbk(self.cache.pop(0))
         elif self._state is not None:
             #print "Bind callback"
             self._clbk = clbk

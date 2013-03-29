@@ -38,20 +38,20 @@ from cocaine.asio.message import Message
 class _BaseService(object):
 
     def __init__(self, endpoint):
-        self.m_service = ev.Service()
-        self.m_pipe = ServicePipe(endpoint)
-        self.m_app_name = sys.argv[sys.argv.index("--app") + 1]
+        self.service = ev.Service()
+        self.pipe = ServicePipe(endpoint)
+        self.app_name = sys.argv[sys.argv.index("--app") + 1]
 
-        self.m_decoder = Decoder()
-        self.m_decoder.bind(self.on_message)
+        self.decoder = Decoder()
+        self.decoder.bind(self.on_message)
 
-        self.m_service.bind_on_fd(self.m_pipe.fileno())
+        self.service.bind_on_fd(self.pipe.fileno())
 
-        self.m_w_stream = WritableStream(self.m_service, self.m_pipe)
-        self.m_r_stream = ReadableStream(self.m_service, self.m_pipe)
-        self.m_r_stream.bind(self.m_decoder.decode)
+        self.w_stream = WritableStream(self.service, self.pipe)
+        self.r_stream = ReadableStream(self.service, self.pipe)
+        self.r_stream.bind(self.decoder.decode)
 
-        self.m_service.register_read_event(self.m_r_stream._on_event, self.m_pipe.fileno())
+        self.service.register_read_event(self.r_stream._on_event, self.pipe.fileno())
 
     def on_message(self, *args):
         pass
@@ -63,7 +63,7 @@ class Service(object):
         def closure(number):
             def wrapper(*args):
                 def register_callback(clbk):
-                    self.m_w_stream.write([number, self._counter, args])
+                    self.w_stream.write([number, self._counter, args])
                     self._subscribers[self._counter] = clbk
                     self._counter += 1
                 return register_callback
@@ -74,24 +74,24 @@ class Service(object):
         for number, name in service_api.iteritems():
             setattr(self, name, closure(number))
 
-        self.m_service = ev.Service()
+        self.service = ev.Service()
 
         self._counter = 1
         self._subscribers = dict()
 
-        self.m_pipe = ServicePipe((service_endpoint.split(':')[0], int(service_endpoint.split(':')[1])))
+        self.pipe = ServicePipe((service_endpoint.split(':')[0], int(service_endpoint.split(':')[1])))
 
-        self.m_decoder = Decoder()
-        self.m_decoder.bind(self._on_message)
+        self.decoder = Decoder()
+        self.decoder.bind(self._on_message)
 
-        self.m_service.bind_on_fd(self.m_pipe.fileno())
+        self.service.bind_on_fd(self.pipe.fileno())
 
-        self.m_w_stream = WritableStream(self.m_service, self.m_pipe)
-        self.m_r_stream = ReadableStream(self.m_service, self.m_pipe)
-        self.m_r_stream.bind(self.m_decoder.decode)
+        self.w_stream = WritableStream(self.service, self.pipe)
+        self.r_stream = ReadableStream(self.service, self.pipe)
+        self.r_stream.bind(self.decoder.decode)
 
-        self.m_service.register_read_event(self.m_r_stream._on_event, self.m_pipe.fileno())
-        self.m_app_name = sys.argv[sys.argv.index("--app") + 1]
+        self.service.register_read_event(self.r_stream._on_event, self.pipe.fileno())
+        self.app_name = sys.argv[sys.argv.index("--app") + 1]
 
     def _get_api(self, name, endpoint, port):
         locator_pipe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

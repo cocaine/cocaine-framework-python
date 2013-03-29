@@ -18,7 +18,7 @@ class Urlfetcher(_BaseService):
         self._counter = 0
 
     def _fetch(self, url, counter):
-        self.m_w_stream.write([0, counter, [[url, [], True]]])
+        self.w_stream.write([0, counter, [[url, [], True]]])
 
     def get(self, url):
         def wrapper(clbk):

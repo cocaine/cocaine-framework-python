@@ -42,47 +42,47 @@ class Worker(object):
         self._init_endpoint()
 
         self.sessions = dict()
-        self.m_sandbox = Sandbox()
+        self.sandbox = Sandbox()
 
-        self.m_service = ev.Service()
+        self.service = ev.Service()
 
-        self.m_disown_timer = ev.Timer(self.on_disown, 2, self.m_service)
-        self.m_heartbeat_timer = ev.Timer(self.on_heartbeat, 5, self.m_service)
-        self.m_disown_timer.start()
-        self.m_heartbeat_timer.start()
+        self.disown_timer = ev.Timer(self.on_disown, 2, self.service)
+        self.heartbeat_timer = ev.Timer(self.on_heartbeat, 5, self.service)
+        self.disown_timer.start()
+        self.heartbeat_timer.start()
 
-        self.m_pipe = Pipe(self.endpoint)
-        self.m_service.bind_on_fd(self.m_pipe.fileno())
+        self.pipe = Pipe(self.endpoint)
+        self.service.bind_on_fd(self.pipe.fileno())
 
-        self.m_decoder = Decoder()
-        self.m_decoder.bind(self.on_message)
+        self.decoder = Decoder()
+        self.decoder.bind(self.on_message)
 
-        self.m_w_stream = WritableStream(self.m_service, self.m_pipe)
-        self.m_r_stream = ReadableStream(self.m_service, self.m_pipe)
-        self.m_r_stream.bind(self.m_decoder.decode)
+        self.w_stream = WritableStream(self.service, self.pipe)
+        self.r_stream = ReadableStream(self.service, self.pipe)
+        self.r_stream.bind(self.decoder.decode)
 
 
-        self.m_service.register_read_event(self.m_r_stream._on_event, self.m_pipe.fileno())
+        self.service.register_read_event(self.r_stream._on_event, self.pipe.fileno())
         self._send_handshake()
 
     def _init_endpoint(self):
         try:
-            self.m_id = sys.argv[sys.argv.index("--uuid") + 1]
+            self.id = sys.argv[sys.argv.index("--uuid") + 1]
             app_name = sys.argv[sys.argv.index("--app") + 1]
             self.endpoint = sys.argv[sys.argv.index("--endpoint") + 1]
         except Exception as err:
             raise RuntimeError("Wrong cmdline arguments")
 
     def run(self):
-        self.m_service.run()
+        self.service.run()
 
     def terminate(self, reason, msg):
-        self.m_w_stream.write(Message("rpc::terminate", 0, reason, msg).pack())
-        self.m_service.stop()
+        self.w_stream.write(Message("rpc::terminate", 0, reason, msg).pack())
+        self.service.stop()
 
     # Event machine
     def on(self, event, callback):
-        self.m_sandbox.on(event, callback)
+        self.sandbox.on(event, callback)
 
     # Events
     def on_heartbeat(self):
@@ -91,7 +91,7 @@ class Worker(object):
     def on_message(self, args):
         msg = Message.initialize(args)
         if msg is None:
-            #print "Worker %s dropping unknown message %s" % (self.m_id, str(args))
+            #print "Worker %s dropping unknown message %s" % (self.id, str(args))
             return
 
         elif msg.id == PROTOCOL_LIST.index("rpc::invoke"):
@@ -99,7 +99,7 @@ class Worker(object):
             try:
                 _request = Request()
                 _stream = Stream(msg.session, self)
-                self.m_sandbox.invoke(msg.event, _request, _stream)
+                self.sandbox.invoke(msg.event, _request, _stream)
                 self.sessions[msg.session] = _request
             except Exception as err:
                 print err
@@ -119,7 +119,7 @@ class Worker(object):
 
         elif msg.id == PROTOCOL_LIST.index("rpc::heartbeat"):
             #print "Receive heartbeat. Restart disown timer"
-            self.m_disown_timer.stop()
+            self.disown_timer.stop()
 
         elif msg.id == PROTOCOL_LIST.index("rpc::terminate"):
             #print "Receive terminate"
@@ -127,22 +127,22 @@ class Worker(object):
 
     def on_disown(self):
         #print "Worker has lost controlling engine"
-        self.m_service.stop()
+        self.service.stop()
 
     # Private:
     def _send_handshake(self):
         #print "Send handshake"
-        self.m_disown_timer.start()
-        self.m_w_stream.write(Message("rpc::handshake", 0, self.m_id).pack())
+        self.disown_timer.start()
+        self.w_stream.write(Message("rpc::handshake", 0, self.id).pack())
 
     def _send_heartbeat(self):
         #print "Send heartbeat"
-        self.m_w_stream.write(Message("rpc::heartbeat", 0).pack())
+        self.w_stream.write(Message("rpc::heartbeat", 0).pack())
 
     def send_choke(self, session):
         #print "send choke"
-        self.m_w_stream.write(Message("rpc::choke", session).pack())
+        self.w_stream.write(Message("rpc::choke", session).pack())
 
     def send_chunk(self, session, data):
         #print "send chunk"
-        self.m_w_stream.write(Message("rpc::chunk", session, data).pack())
+        self.w_stream.write(Message("rpc::chunk", session, data).pack())

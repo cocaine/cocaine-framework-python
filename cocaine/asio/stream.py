@@ -37,11 +37,11 @@ def encode_dec(f):
 class Decoder(object):
 
     def __init__(self):
-        self.m_callback = None
+        self.callback = None
 
     def bind(self, callback):
         assert callable(callback)
-        self.m_callback = callback
+        self.callback = callback
 
     def decode(self, data):
         unpacker = msgpack.Unpacker()
@@ -51,7 +51,7 @@ class Decoder(object):
             for res in unpacker:
                 parsed_len += len(msgpack.packb(res))
                 #print "Decode:",  res
-                self.m_callback(res)
+                self.callback(res)
         except Exception as err:
             pass # hook - view later
         finally:
@@ -61,46 +61,46 @@ class Decoder(object):
 class ReadableStream(object):
 
     def __init__(self, service, pipe):
-        self.m_service = service
-        self.m_pipe = pipe
+        self.service = service
+        self.pipe = pipe
 
-        self.m_callback = None
+        self.callback = None
         self.is_attached = False
 
-        self.m_ring = array.array('c')
+        self.ring = array.array('c')
         self.tmp_buff = array.array('c','\0' * START_CHUNK_SIZE)
-        self.m_rd_offset = 0
-        self.m_rx_offset = 0
+        self.rd_offset = 0
+        self.rx_offset = 0
 
     def bind(self, callback):
         assert callable(callback)
-        self.m_callback = callback
-        self.is_attached = self.m_service.register_read_event(self._on_event, self.m_pipe.fileno())
+        self.callback = callback
+        self.is_attached = self.service.register_read_event(self._on_event, self.pipe.fileno())
 
     def unbind(self):
-        self.m_callback = None
+        self.callback = None
         if self.is_attached:
-            self.m_service.unregister_read_evnt(self.m_pipe.fileno())
+            self.service.unregister_read_evnt(self.pipe.fileno())
 
     def _on_event(self):
-        unparsed = self.m_rd_offset - self.m_rx_offset
-        if len(self.m_ring) > MAX_BUFF_SIZE:
-            self.m_ring = array.array('c', self.m_ring[self.m_rx_offset : self.m_rx_offset + unparsed])
-            self.m_rd_offset = unparsed
-            self.m_rx_offset = 0
+        unparsed = self.rd_offset - self.rx_offset
+        if len(self.ring) > MAX_BUFF_SIZE:
+            self.ring = array.array('c', self.ring[self.rx_offset : self.rx_offset + unparsed])
+            self.rd_offset = unparsed
+            self.rx_offset = 0
 
         # Bad solution. On python 2.7 and higher - use memoryview and bytearray
-        length = self.m_pipe.read(self.tmp_buff, self.tmp_buff.buffer_info()[1])
+        length = self.pipe.read(self.tmp_buff, self.tmp_buff.buffer_info()[1])
         if length <= 0:
             if length == 0: #Remote side has closed connection
-                self.m_service.unregister_read_event(self.m_pipe.fileno())
+                self.service.unregister_read_event(self.pipe.fileno())
             return
 
-        self.m_rd_offset += length
-        self.m_ring.extend(self.tmp_buff[:length])
+        self.rd_offset += length
+        self.ring.extend(self.tmp_buff[:length])
 
-        parsed = self.m_callback(self.m_ring[self.m_rx_offset : self.m_rd_offset])
-        self.m_rx_offset += parsed
+        parsed = self.callback(self.ring[self.rx_offset : self.rd_offset])
+        self.rx_offset += parsed
 
         # Enlarge buffer if messages are big
         if self.tmp_buff.buffer_info()[1] == length:
@@ -110,38 +110,38 @@ class ReadableStream(object):
 class WritableStream(object):
 
     def __init__(self, service, pipe):
-        self.m_service = service
-        self.m_pipe = pipe
+        self.service = service
+        self.pipe = pipe
         self.is_attached = False#service.register_write_event(self._on_event, pipe.fileno())
 
-        self.m_mutex = Lock()
+        self.mutex = Lock()
 
-        self.m_ring = array.array('c')
+        self.ring = array.array('c')
         self.tmp_buff = array.array('c','\0' * START_CHUNK_SIZE)
-        self.m_wr_offset = 0
-        self.m_tx_offset = 0
+        self.wr_offset = 0
+        self.tx_offset = 0
 
     def _on_event(self):
         print "WRIETE ON EVENT"
-        with self.m_mutex:
+        with self.mutex:
 
-            if len(self.m_ring) == 0 and self.is_attached:
-                self.m_service.unregister_write_event(self.m_pipe.fileno())
+            if len(self.ring) == 0 and self.is_attached:
+                self.service.unregister_write_event(self.pipe.fileno())
                 self.is_attached = False
                 return
 
-            unsent = self.m_wr_offset - self.m_tx_offset
+            unsent = self.wr_offset - self.tx_offset
 
-            sent = self.m_pipe.write(self.m_ring[self.m_tx_offset : self.m_tx_offset+unsent])
+            sent = self.pipe.write(self.ring[self.tx_offset : self.tx_offset+unsent])
 
             if sent > 0:
-                self.m_tx_offset += sent
+                self.tx_offset += sent
 
     @encode_dec
     def write(self, data, size):
-        with self.m_mutex:
-            if self.m_wr_offset == self.m_tx_offset:
-                sent = self.m_pipe.write(data)
+        with self.mutex:
+            if self.wr_offset == self.tx_offset:
+                sent = self.pipe.write(data)
 
                 if sent >= 0:
                     if sent == size:
@@ -149,16 +149,16 @@ class WritableStream(object):
 
                     size -= sent
 
-            if len(self.m_ring) > MAX_BUFF_SIZE:
-                self.m_ring = array.array('c', self.m_ring[self.m_tx_offset : self.m_tx_offset + unsent])
-                self.m_rd_offset = unsent
-                self.m_rx_offset = 0
+            if len(self.ring) > MAX_BUFF_SIZE:
+                self.ring = array.array('c', self.ring[self.tx_offset : self.tx_offset + unsent])
+                self.rd_offset = unsent
+                self.rx_offset = 0
 
 
-            self.m_wr_offset += size
-            self.m_ring.extend(data[sent:])
+            self.wr_offset += size
+            self.ring.extend(data[sent:])
 
 
             if False == self.is_attached:
-                self.m_service.register_write_event(self._on_event, self.m_pipe.fileno())
+                self.service.register_write_event(self._on_event, self.pipe.fileno())
                 self.is_attached = True
