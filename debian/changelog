@@ -1,3 +1,9 @@
+cocaine-framework-python (0.10.0-rc7ubuntu1) lucid; urgency=low
+
+  * service locator support
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Mon, 01 Apr 2013 16:05:38 +0400
+
 cocaine-framework-python (0.10.0-rc6) lucid; urgency=low
 
   * async
