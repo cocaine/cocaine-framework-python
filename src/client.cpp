@@ -21,11 +21,10 @@
 #include <cocaine/dealer/dealer.hpp>
 #include <cocaine/dealer/utils/error.hpp>
 
-#include <cocaine/helpers/track.hpp>
-
 #include "gil.hpp"
 #include "client.hpp"
 #include "response.hpp"
+#include "track.hpp"
 
 using namespace cocaine::dealer;
 

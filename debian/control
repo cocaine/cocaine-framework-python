@@ -11,7 +11,7 @@ Build-Depends:
 #libcocaine-dev (<< 0.10.0-b0),
 #libcocaine-dealer1 (<< 0.9.10000),
 #libcocaine-dealer-dev (<< 0.9.10000),
-#libssl-dev
+# libssl-dev
 Standards-Version: 3.8.4
 Vcs-Git: git://github.com/cocaine/cocaine-framework-python.git
 Vcs-Browser: https://github.com/cocaine/cocaine-framework-python
@@ -25,7 +25,7 @@ Depends:
  python-msgpack | msgpack-python,
  python-tornado
 #libcocaine-plugin-python (>= 0.9),
-#libcocaine-dealer1 (<< 0.9.10000)
+ libcocaine-dealer1 (>= 0.9.10005)
 Description: Cocaine - Python Framework
  A simple framework to ease the developing of Cocaine apps.
 XB-Python-Version: >= 2.6
