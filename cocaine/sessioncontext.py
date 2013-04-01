@@ -46,7 +46,7 @@ class Stream(object):
         self.worker = worker
         self.session = session
 
-    def push(self, chunk):
+    def write(self, chunk):
         if self._m_state is not None:
             self.worker.send_chunk(self.session, chunk)
             return
@@ -68,6 +68,7 @@ class Request(object):
     def __init__(self):
         self.cache = list()
         self._clbk = None
+        self._errbk = None
         self._state = 1
 
     def push(self, chunk):
@@ -87,17 +88,20 @@ class Request(object):
         self._state = None
 
     def read(self):
-        def wrapper(clbk):
-            self._read(clbk)
+        def wrapper(clbk, errorback=lambda x: True):
+            self._read(clbk, errorback)
         return wrapper
 
-    def _read(self, clbk):
+    def _read(self, clbk, errbk):
         if len(self.cache) > 0:
             #print "Push from cache:"
             clbk(self.cache.pop(0))
         elif self._state is not None:
             #print "Bind callback"
             self._clbk = clbk
+            self._errbk = errbk
+        else:
+            errbk(Exception("Closed request"))
         # else: Stream is closed by choke
         #Raise exception here because no chunks from cocaine-runtime are availaible
         #raise

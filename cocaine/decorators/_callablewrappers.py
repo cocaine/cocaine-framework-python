@@ -45,13 +45,6 @@ class _Proxy(object):
         return self._state is None
 
 
-def request_future(object):
-    """ Helper object. """
-    def read(self):
-        return self
-
-
-
 class _Coroutine(_Proxy):
     """Wrapper for coroutine function """
 
@@ -66,11 +59,21 @@ class _Coroutine(_Proxy):
         try:
             self._current_future_object = self._func.send(chunk)
             if self._current_future_object is not None:
-                self._current_future_object(self.push)
+                self._current_future_object(self.push, self.error)
         except StopIteration:
-            #print "Stop iteration in push"
             if not self._response.closed:
                 self._response.close()
+
+    def error(self, error):
+        try:
+            self._current_future_object = self._func.throw(error)
+            if self._current_future_object is not None:
+                self._current_future_object(self.push, self.error)
+        except StopIteration:
+            if not self._response.closed:
+                self._response.close()
+        except Exception as err:
+            print "Uncaught exception" + str(err)
 
     def invoke(self, request, stream):
         self._state = 1
@@ -82,17 +85,10 @@ class _Coroutine(_Proxy):
                 self._current_future_object(self.push)
             except Exception as err:
                 pass
-                #print str(err)
+                print str(err)
         return self
 
     def close(self):
-        try:
-            #print "CLOSE BY"
-            pass
-            #self._func.throw(Exception("close"))
-        except Exception as err:
-            #print str(err)
-            pass
         self._state = None
 
 #===========================================
