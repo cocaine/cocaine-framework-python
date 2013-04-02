@@ -68,10 +68,10 @@ class Request(object):
 
     def __init__(self):
         self.cache = list()
-        self._clbk = None # Callback - on chunk
-        self._errbk = None # Errorback - translate error to handler
+        self._clbk = None   # Callback - on chunk
+        self._errbk = None  # Errorback - translate error to handler
         self._errmsg = None # Store message
-        self._state = 1 # Status of stream (close/open)
+        self._state = 1     # Status of stream (close/open)
 
     def push(self, chunk):
         if self._clbk is None:
@@ -92,7 +92,7 @@ class Request(object):
         self._state = None
 
     def read(self):
-        def wrapper(clbk, errorback):
+        def wrapper(clbk, errorback=None):
             self._read(clbk, errorback)
         return wrapper
 
@@ -100,9 +100,8 @@ class Request(object):
         if len(self.cache) > 0:
             callback(self.cache.pop(0))
         elif self._errmsg is not None:
-            errorback(self._errmsg) #traslate error to worker
+            errorback(self._errmsg) #traslate error into worker
         elif self._state is not None:
-            #print "Bind callback"
             self._clbk = callback
             self._errbk = errorback
         else:

@@ -1,13 +1,17 @@
 {
   "type" : "python",
-    "slave" : "/home/noxiouz/cocaine-framework-python/examples/test_worker.py",
+    "slave" : "/home/noxiouz/cocaine-framework-python/test_worker.py",
     "drivers" : {
-        "io" : {
-            "type" : "blastbeat",
+        "D" : {
+            "type" : "native-server",
             "args": {
-                "emit": "hash",
-                "identity": "cocaine-node-0",
-                "endpoint": "tcp://localhost:5001"
+                "emit": "hash"
+            }
+        },
+        "E" : {
+            "type" : "native-server",
+            "args": {
+                "emit": "nodejs"
             }
         },
         "fs": {

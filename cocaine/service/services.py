@@ -63,7 +63,7 @@ class Service(object):
     def __init__(self, name, endpoint="localhost", port=10053):
         def closure(number):
             def wrapper(*args):
-                def register_callback(callback, errorback):
+                def register_callback(callback, errorback=None):
                     self.w_stream.write([number, self._counter, args])
                     self._subscribers[self._counter] = (callback, errorback)
                     # FIX: Move counter increment for supporting stream-loke services
@@ -73,6 +73,7 @@ class Service(object):
 
         service_endpoint, _, service_api = self._get_api(name, endpoint, port)
 
+        self._service_api = service_api
         self.servicename = name
 
         for number, methodname in service_api.iteritems():
@@ -103,20 +104,35 @@ class Service(object):
         locator_pipe.connect((endpoint, port))
         locator_pipe.send(packb([0, 1, [name]]))
         u = Unpacker()
-        is_received = False
-        while not is_received:
+        msg = None
+        while msg is None:
             response = locator_pipe.recv(80960)
             u.feed(response)
             msg = Message.initialize(u.next())
 
-            if msg is not None:
-                is_received = True
         locator_pipe.close()
         if msg.id == PROTOCOL_LIST.index("rpc::chunk"):
             return unpackb(msg.data)
         if msg.id == PROTOCOL_LIST.index("rpc::error"):
-            raise Exception("No service error")
+            raise Exception(msg.message)
 
+    def perform_sync(self, method, *args):
+        number = (_num for _num, _name in self._service_api.iteritems() if _name == method).next()
+        self.pipe.write(packb([number, 1, args]))
+        u = Unpacker()
+        msg = None
+        try:
+            self.pipe.settimeout(1.0) # DO IT SYNC
+            while msg is None:
+                response = self.pipe.recv(80960)
+                u.feed(response)
+                msg = Message.initialize(u.next())
+        finally:
+            self.pipe.settimeout(0) #return to non-blocking mode
+        if msg.id == PROTOCOL_LIST.index("rpc::chunk"):
+            return unpackb(msg.data)
+        elif msg.id == PROTOCOL_LIST.index("rpc::error"):
+            raise Exception(msg.message)
 
     def _on_message(self, args):
         msg = Message.initialize(args)
@@ -129,7 +145,6 @@ class Service(object):
             elif msg.id == PROTOCOL_LIST.index("rpc::choke"):
                 self._subscribers.pop(msg.session, None)
             elif msg.id == PROTOCOL_LIST.index("rpc::error"):
-                #print "error message: %s, error code: %d. Call Errorback" % (msg.message, msg.code)
                 self._subscribers[msg.session][1](ServiceError(self.servicename, msg.message, msg.code))
         except Exception as err:
             print "Exception in _on_message: %s" % str(err)

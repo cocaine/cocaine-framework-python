@@ -4,8 +4,8 @@ from hashlib import sha512
 
 from cocaine.worker import Worker
 from cocaine.decorators import *
-#from cocaine.service.urlfetcher import Urlfetcher
 from cocaine.service.logger import Log
+from cocaine.service.logger import Logger
 from cocaine.service.services import Service
 from cocaine.exceptions import *
 
@@ -15,6 +15,8 @@ from cocaine.exceptions import *
 #l.debug("DEBUG")
 #l.error("ERROR")
 #l.warn("WARN")
+
+L = Logger()
 
 urlfetcher_service = Service("urlfetch")
 storage_service = Service("storage")
@@ -28,6 +30,9 @@ def example(request, response):
         print "S: %s" % err
         ls = yield storage_service.list("manifests")
         print "From storage: %s" % ls
+    print "Now yield"
+    yield
+    print "After yield"
 
     print "Request www.ya.ru"
     webpage = yield urlfetcher_service.get("www.ya.ru",{}, True)
@@ -45,11 +50,31 @@ def example(request, response):
     webpage = yield urlfetcher_service.get("www.google.ru",{}, True)
     #l.info(sha512(webpage).hexdigest())
 
-    print "ANSWER"
-    response.write("ANSWER")
+    response.write("EXAMPLE")
     response.close()
 
+def nodejs(request, response):
+    """ Nodejs style """
+    def on_url(chunk):
+        def on_request(chunk):
+            print "Request chunk: %s" % chunk
+            response.write("NODEJS")
+            response.close()
+        print "Webpage hash: %s" % sha512(chunk).hexdigest()
+        future = request.read()
+        future(on_request)
+
+    def errorback(error):
+        print "errorback"
+        print error
+        future = urlfetcher_service.get("www.ya.ru",{}, True)
+        future(on_url)
+
+    print "INITIALIZE FUNCTION"
+    future = urlfetcher_service.get()
+    future(on_url, errorback)
 
 W = Worker()
 W.on("hash", example)
+W.on("nodejs", nodejs)
 W.run()

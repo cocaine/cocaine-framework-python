@@ -33,13 +33,7 @@ class _Proxy(object):
     def __init__(self, func): pass
 
     @abstractmethod
-    def push(self, chunk): pass
-
-    @abstractmethod
     def invoke(self, stream): pass
-
-    @abstractmethod
-    def close(self): pass
 
     @property
     def closed(self):
@@ -70,14 +64,16 @@ class _Coroutine(_Proxy):
     @exception_trap
     def push(self, chunk):
         self._current_future_object = self._func.send(chunk)
-        if self._current_future_object is not None:
-            self._current_future_object(self.push, self.error)
+        while self._current_future_object is None:
+            self._current_future_object = self._func.next()
+        self._current_future_object(self.push, self.error)
 
     @exception_trap
     def error(self, error):
         self._current_future_object = self._func.throw(error)
-        if self._current_future_object is not None:
-            self._current_future_object(self.push, self.error)
+        while self._current_future_object is None:
+            self._current_future_object = self._func.next()
+        self._current_future_object(self.push, self.error)
 
     def invoke(self, request, stream):
         self._state = 1
@@ -89,7 +85,6 @@ class _Coroutine(_Proxy):
                 self._current_future_object(self.push, self.error)
             except Exception as err:
                 print "Invoke error: %s " % str(err)
-        return self
 
     def close(self):
         self._state = None
@@ -100,15 +95,18 @@ class _Function(_Proxy):
     """Wrapper for function object"""
 
     def __init__(self, func):
-        self._state = None
+        #self._state = None
         self._func = func
-        self._response = None
+        #self._response = None
 
     def invoke(self, request, stream):
         self._state = 1
         self._response = stream
         self._request = request
-        return self
+        try:
+            self._func(self._request, self._response)
+        except Exception as err:
+            print str(err)
 
     def push(self, chunk):
         try:

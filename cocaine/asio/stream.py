@@ -122,7 +122,6 @@ class WritableStream(object):
         self.tx_offset = 0
 
     def _on_event(self):
-        print "WRIETE ON EVENT"
         with self.mutex:
 
             if len(self.ring) == 0 and self.is_attached:

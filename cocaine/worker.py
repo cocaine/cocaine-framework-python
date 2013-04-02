@@ -28,18 +28,20 @@ from asio.pipe import Pipe
 from asio.stream import ReadableStream
 from asio.stream import WritableStream
 from asio.stream import Decoder
-
 from asio.message import PROTOCOL_LIST
 from asio.message import Message
 
 from cocaine.sessioncontext import Sandbox
 from cocaine.sessioncontext import Stream
 from cocaine.sessioncontext import Request
+
+from cocaine.logger import Logger
 from cocaine.exceptions import RequestError
 
 class Worker(object):
 
     def __init__(self):
+        self._logger = Logger()
         self._init_endpoint()
 
         self.sessions = dict()
@@ -64,6 +66,7 @@ class Worker(object):
 
 
         self.service.register_read_event(self.r_stream._on_event, self.pipe.fileno())
+        self._logger.debug("Worker with %s send handshake" % self.id)
         self._send_handshake()
 
     def _init_endpoint(self):
@@ -72,6 +75,7 @@ class Worker(object):
             app_name = sys.argv[sys.argv.index("--app") + 1]
             self.endpoint = sys.argv[sys.argv.index("--endpoint") + 1]
         except Exception as err:
+            self._logger.error("Wrong cmdline argumensts: %s " % err)
             raise RuntimeError("Wrong cmdline arguments")
 
     def run(self):
@@ -92,42 +96,38 @@ class Worker(object):
     def on_message(self, args):
         msg = Message.initialize(args)
         if msg is None:
-            #print "Worker %s dropping unknown message %s" % (self.id, str(args))
             return
 
         elif msg.id == PROTOCOL_LIST.index("rpc::invoke"):
-            #print "Receive invoke: %s %s" % (msg.event, msg.session)
             try:
                 _request = Request()
                 _stream = Stream(msg.session, self)
                 self.sandbox.invoke(msg.event, _request, _stream)
                 self.sessions[msg.session] = _request
             except Exception as err:
-                print err
+                self._logger.error("On invoke error: %s" % err)
 
         elif msg.id == PROTOCOL_LIST.index("rpc::chunk"):
-            #print "Receive chunk: %s" % msg.session
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
-                _session.push(msg.data)
+                try:
+                    _session.push(msg.data)
+                except Exception as err:
+                    self._logger.error("On push error: %s" % str(err))
 
         elif msg.id == PROTOCOL_LIST.index("rpc::choke"):
-            #print "Receive choke: %s" % msg.session
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
                 _session.close()
                 self.sessions.pop(msg.session)
 
         elif msg.id == PROTOCOL_LIST.index("rpc::heartbeat"):
-            #print "Receive heartbeat. Restart disown timer"
             self.disown_timer.stop()
 
         elif msg.id == PROTOCOL_LIST.index("rpc::terminate"):
-            #print "Receive terminate"
             self.terminate(msg.reason, msg.message)
 
         elif msg.id == PROTOCOL_LIST.index("rpc::error"):
-            print "Receive Error"
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
                 _session.error(RequestError(msg.message))
