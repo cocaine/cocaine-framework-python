@@ -33,6 +33,7 @@ from cocaine.asio.stream import WritableStream
 from cocaine.asio.stream import Decoder
 from cocaine.asio.message import PROTOCOL_LIST
 from cocaine.asio.message import Message
+from cocaine.exceptions import ServiceError
 
 
 class _BaseService(object):
@@ -62,17 +63,20 @@ class Service(object):
     def __init__(self, name, endpoint="localhost", port=10053):
         def closure(number):
             def wrapper(*args):
-                def register_callback(clbk):
+                def register_callback(callback, errorback):
                     self.w_stream.write([number, self._counter, args])
-                    self._subscribers[self._counter] = clbk
+                    self._subscribers[self._counter] = (callback, errorback)
+                    # FIX: Move counter increment for supporting stream-loke services
                     self._counter += 1
                 return register_callback
             return wrapper
 
         service_endpoint, _, service_api = self._get_api(name, endpoint, port)
 
-        for number, name in service_api.iteritems():
-            setattr(self, name, closure(number))
+        self.servicename = name
+
+        for number, methodname in service_api.iteritems():
+            setattr(self, methodname, closure(number))
 
         self.service = ev.Service()
 
@@ -119,9 +123,13 @@ class Service(object):
         if msg is None:
             print "Drop invalid message"
             return
-        if msg.id == PROTOCOL_LIST.index("rpc::chunk"):
-            self._subscribers[msg.session](msg.data)
-        elif msg.id == PROTOCOL_LIST.index("rpc::choke"):
-            self._subscribers.pop(msg.session, None)
-        elif msg.id == PROTOCOL_LIST.index("rpc::error"):
-            print msg.message
+        try:
+            if msg.id == PROTOCOL_LIST.index("rpc::chunk"):
+                self._subscribers[msg.session][0](msg.data)
+            elif msg.id == PROTOCOL_LIST.index("rpc::choke"):
+                self._subscribers.pop(msg.session, None)
+            elif msg.id == PROTOCOL_LIST.index("rpc::error"):
+                #print "error message: %s, error code: %d. Call Errorback" % (msg.message, msg.code)
+                self._subscribers[msg.session][1](ServiceError(self.servicename, msg.message, msg.code))
+        except Exception as err:
+            print "Exception in _on_message: %s" % str(err)

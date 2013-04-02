@@ -22,6 +22,7 @@
 __all__ = ["proxy_factory"]
 
 from abc import ABCMeta, abstractmethod
+import compiler
 
 class _Proxy(object):
 
@@ -44,6 +45,17 @@ class _Proxy(object):
     def closed(self):
         return self._state is None
 
+def exception_trap(func):
+    def wrapper(self, *args, **kwargs):
+        try:
+            func(self, *args, **kwargs)
+        except StopIteration:
+            if not self._response.closed:
+                self._response.close()
+        except Exception as err:
+            print "Uncaught exception: %s " %  str(err)
+    return wrapper
+
 
 class _Coroutine(_Proxy):
     """Wrapper for coroutine function """
@@ -55,25 +67,17 @@ class _Coroutine(_Proxy):
         self._state = None
         self._current_future_object = None
 
+    @exception_trap
     def push(self, chunk):
-        try:
-            self._current_future_object = self._func.send(chunk)
-            if self._current_future_object is not None:
-                self._current_future_object(self.push, self.error)
-        except StopIteration:
-            if not self._response.closed:
-                self._response.close()
+        self._current_future_object = self._func.send(chunk)
+        if self._current_future_object is not None:
+            self._current_future_object(self.push, self.error)
 
+    @exception_trap
     def error(self, error):
-        try:
-            self._current_future_object = self._func.throw(error)
-            if self._current_future_object is not None:
-                self._current_future_object(self.push, self.error)
-        except StopIteration:
-            if not self._response.closed:
-                self._response.close()
-        except Exception as err:
-            print "Uncaught exception" + str(err)
+        self._current_future_object = self._func.throw(error)
+        if self._current_future_object is not None:
+            self._current_future_object(self.push, self.error)
 
     def invoke(self, request, stream):
         self._state = 1
@@ -82,10 +86,9 @@ class _Coroutine(_Proxy):
         self._current_future_object = self._func.next()
         if self._current_future_object is not None:
             try:
-                self._current_future_object(self.push)
+                self._current_future_object(self.push, self.error)
             except Exception as err:
-                pass
-                print str(err)
+                print "Invoke error: %s " % str(err)
         return self
 
     def close(self):
@@ -118,7 +121,6 @@ class _Function(_Proxy):
 
 #=========================================
 
-import compiler
 
 def type_traits(func_or_generator):
     """ Return class object depends on type of callable object """

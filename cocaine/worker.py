@@ -35,6 +35,7 @@ from asio.message import Message
 from cocaine.sessioncontext import Sandbox
 from cocaine.sessioncontext import Stream
 from cocaine.sessioncontext import Request
+from cocaine.exceptions import RequestError
 
 class Worker(object):
 
@@ -125,24 +126,25 @@ class Worker(object):
             #print "Receive terminate"
             self.terminate(msg.reason, msg.message)
 
+        elif msg.id == PROTOCOL_LIST.index("rpc::error"):
+            print "Receive Error"
+            _session = self.sessions.get(msg.session, None)
+            if _session is not None:
+                _session.error(RequestError(msg.message))
+
     def on_disown(self):
-        #print "Worker has lost controlling engine"
         self.service.stop()
 
     # Private:
     def _send_handshake(self):
-        #print "Send handshake"
         self.disown_timer.start()
         self.w_stream.write(Message("rpc::handshake", 0, self.id).pack())
 
     def _send_heartbeat(self):
-        #print "Send heartbeat"
         self.w_stream.write(Message("rpc::heartbeat", 0).pack())
 
     def send_choke(self, session):
-        #print "send choke"
         self.w_stream.write(Message("rpc::choke", session).pack())
 
     def send_chunk(self, session, data):
-        #print "send chunk"
         self.w_stream.write(Message("rpc::chunk", session, data).pack())

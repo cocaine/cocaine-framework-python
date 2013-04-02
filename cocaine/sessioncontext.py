@@ -21,6 +21,7 @@
 
 
 from decorators import default
+from cocaine.exceptions import *
 
 class Sandbox(object):
 
@@ -67,9 +68,10 @@ class Request(object):
 
     def __init__(self):
         self.cache = list()
-        self._clbk = None
-        self._errbk = None
-        self._state = 1
+        self._clbk = None # Callback - on chunk
+        self._errbk = None # Errorback - translate error to handler
+        self._errmsg = None # Store message
+        self._state = 1 # Status of stream (close/open)
 
     def push(self, chunk):
         if self._clbk is None:
@@ -83,25 +85,27 @@ class Request(object):
             self._clbk = None
             temp(chunk)
 
+    def error(self, errormsg):
+        self._errmsg = errormsg
+
     def close(self):
-        #print "close by choke"
         self._state = None
 
     def read(self):
-        def wrapper(clbk, errorback=lambda x: True):
+        def wrapper(clbk, errorback):
             self._read(clbk, errorback)
         return wrapper
 
-    def _read(self, clbk, errbk):
+    def _read(self, callback, errorback):
         if len(self.cache) > 0:
-            #print "Push from cache:"
-            clbk(self.cache.pop(0))
+            callback(self.cache.pop(0))
+        elif self._errmsg is not None:
+            errorback(self._errmsg) #traslate error to worker
         elif self._state is not None:
             #print "Bind callback"
-            self._clbk = clbk
-            self._errbk = errbk
+            self._clbk = callback
+            self._errbk = errorback
         else:
-            errbk(Exception("Closed request"))
-        # else: Stream is closed by choke
-        #Raise exception here because no chunks from cocaine-runtime are availaible
-        #raise
+            #Stream closed by choke
+            #Raise exception here because no chunks from cocaine-runtime are availaible
+            errorback(RequestError("No chunks available"))
