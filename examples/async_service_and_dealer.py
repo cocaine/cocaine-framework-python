@@ -64,7 +64,16 @@ def nodejs(request, response):
     future = urlfetcher_service.get()
     future(on_url, errorback)
 
+def fs(request, response):
+    stat = yield  request.read()
+    L.info("FS")
+    L.info(stat)
+    L.info("FS")
+    response.write("OK")
+    response.close()
+
 W = Worker()
 W.on("hash", example)
 W.on("nodejs", nodejs)
+W.on("fs", fs)
 W.run()
