@@ -84,7 +84,7 @@ class Service(object):
         self._counter = 1
         self._subscribers = dict()
 
-        self.pipe = ServicePipe((service_endpoint.split(':')[0], int(service_endpoint.split(':')[1])))
+        self.pipe = ServicePipe(service_endpoint)
 
         self.decoder = Decoder()
         self.decoder.bind(self._on_message)
