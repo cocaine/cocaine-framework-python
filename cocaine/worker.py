@@ -40,9 +40,10 @@ from cocaine.exceptions import RequestError
 
 class Worker(object):
 
-    def __init__(self):
+    def __init__(self, init_args=sys.argv):
+        print "AAAAA"
         self._logger = Logger()
-        self._init_endpoint()
+        self._init_endpoint(init_args)
 
         self.sessions = dict()
         self.sandbox = Sandbox()
@@ -69,11 +70,11 @@ class Worker(object):
         self._logger.debug("Worker with %s send handshake" % self.id)
         self._send_handshake()
 
-    def _init_endpoint(self):
+    def _init_endpoint(self, init_args):
         try:
-            self.id = sys.argv[sys.argv.index("--uuid") + 1]
-            app_name = sys.argv[sys.argv.index("--app") + 1]
-            self.endpoint = sys.argv[sys.argv.index("--endpoint") + 1]
+            self.id = init_args[init_args.index("--uuid") + 1]
+            app_name = init_args[init_args.index("--app") + 1]
+            self.endpoint = init_args[init_args.index("--endpoint") + 1]
         except Exception as err:
             self._logger.error("Wrong cmdline argumensts: %s " % err)
             raise RuntimeError("Wrong cmdline arguments")
