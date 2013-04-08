@@ -41,7 +41,7 @@ from cocaine.exceptions import RequestError
 class Worker(object):
 
     def __init__(self, init_args=sys.argv):
-        print "AAAAA"
+        print init_args
         self._logger = Logger()
         self._init_endpoint(init_args)
 
