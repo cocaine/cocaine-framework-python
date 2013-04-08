@@ -96,7 +96,10 @@ class Service(object):
         self.r_stream.bind(self.decoder.decode)
 
         self.service.register_read_event(self.r_stream._on_event, self.pipe.fileno())
-        self.app_name = sys.argv[sys.argv.index("--app") + 1]
+        try:
+            self.app_name = sys.argv[sys.argv.index("--app") + 1]
+        except ValueError:
+            self.app_name = "standalone"
 
     def _get_api(self, name, endpoint, port):
         locator_pipe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
