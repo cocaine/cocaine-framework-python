@@ -6,21 +6,26 @@ from cocaine.worker import Worker
 from cocaine.logger import Logger
 from cocaine.service.services import Service
 from cocaine.exceptions import *
+from cocaine.decorators import http, fs
+
 
 L = Logger()
 
 urlfetcher_service = Service("urlfetch")
 storage_service = Service("storage")
 
+import sys
+
 def example(request, response):
     L.info("INITIALIZE FUNCTION")
     try:
         ls = yield storage_service.list()
-        L.info("From storage: %s" % ls)
+        L.info("From storage: %s" % str(ls))
     except ServiceError as err:
         L.error("S: %s" % err)
         ls = yield storage_service.list("manifests")
-        L.info("From storage: %s" % ls)
+        L.info("AAA")
+        L.info("From storage: %s" % str(ls))
 
     L.info("Now yield")
     yield
@@ -64,11 +69,20 @@ def nodejs(request, response):
     future = urlfetcher_service.get()
     future(on_url, errorback)
 
+@http
+def http(request, response):
+    stat = yield request.read()
+    L.info("HTTP")
+    L.info(stat)
+    response.write_head(200, [('Content-type', 'text/plain')])
+    response.write("OK")
+    response.close()
+
+@fs
 def fs(request, response):
-    stat = yield  request.read()
+    stat = yield request.read()
     L.info("FS")
     L.info(stat)
-    L.info("FS")
     response.write("OK")
     response.close()
 
