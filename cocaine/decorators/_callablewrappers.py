@@ -129,23 +129,31 @@ def type_traits(func_or_generator):
 
 def decomaker(handler):
     def dec(func):
-        def wrapper(self, arg):
-            return func(self, handler(arg))
+        def wrapper(arg):
+            return func(handler(arg))
         return wrapper
     return dec
 
-def patch_invoke(cls, response_handler):
-    cls.invoke = decomaker(response_handler)(cls.invoke)
-    return cls
+def patch_response(obj, response_handler):
+    def decorator(handler):
+        def dec(func):
+            def wrapper(request, response):
+                return func(request, handler(response))
+            return wrapper
+        return dec
 
-def patch_push(cls, request_handler):
-    cls.push = decomaker(request_handler)(cls.push)
-    return cls
+    obj.invoke = decorator(response_handler)(obj.invoke)
+    return obj
+
+def patch_request(obj, request_handler):
+    obj.push = decomaker(request_handler)(obj.push)
+    return obj
 
 def proxy_factory(func, request_handler=None, response_handler=None):
     _factory = type_traits(func)
+    obj = _factory(func)
     if response_handler is not None:
-        _factory = patch_invoke(_factory, response_handler)
+        obj = patch_response(obj, response_handler)
     if request_handler is not None:
-        _factory = patch_push(_factory, request_handler)
-    return _factory(func)
+        obj = patch_request(obj, request_handler)
+    return obj

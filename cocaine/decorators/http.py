@@ -31,13 +31,17 @@ class _HTTPResponse(object):
         self._stream = stream
 
     def write(self, body):
-        self._stream.push(msgpack.packb(body))
+        self._stream.write(msgpack.packb(body))
 
     def write_head(self, code, headers):
-        self._stream.push(msgpack.packb({'code': code, 'headers' : headers.items()}))
+        self._stream.write(msgpack.packb({'code': code, 'headers' : headers.items()}))
 
     def close(self):
         self._stream.close()
+
+    @property
+    def closed(self):
+        return self._stream.closed
 
 def http(func):
     return proxy_factory(func, response_handler=_HTTPResponse)

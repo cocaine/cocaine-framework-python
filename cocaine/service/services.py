@@ -36,27 +36,6 @@ from cocaine.asio.message import Message
 from cocaine.exceptions import ServiceError
 
 
-class _BaseService(object):
-
-    def __init__(self, endpoint):
-        self.service = ev.Service()
-        self.pipe = ServicePipe(endpoint)
-        self.app_name = sys.argv[sys.argv.index("--app") + 1]
-
-        self.decoder = Decoder()
-        self.decoder.bind(self.on_message)
-
-        self.service.bind_on_fd(self.pipe.fileno())
-
-        self.w_stream = WritableStream(self.service, self.pipe)
-        self.r_stream = ReadableStream(self.service, self.pipe)
-        self.r_stream.bind(self.decoder.decode)
-
-        self.service.register_read_event(self.r_stream._on_event, self.pipe.fileno())
-
-    def on_message(self, *args):
-        pass
-
 
 class Service(object):
 
@@ -140,11 +119,10 @@ class Service(object):
     def _on_message(self, args):
         msg = Message.initialize(args)
         if msg is None:
-            print "Drop invalid message"
             return
         try:
             if msg.id == PROTOCOL_LIST.index("rpc::chunk"):
-                self._subscribers[msg.session][0](msg.data)
+                self._subscribers[msg.session][0](unpackb(msg.data))
             elif msg.id == PROTOCOL_LIST.index("rpc::choke"):
                 self._subscribers.pop(msg.session, None)
             elif msg.id == PROTOCOL_LIST.index("rpc::error"):

@@ -1,6 +1,5 @@
 import sys
 
-from cocaine.service.services import _BaseService
 from cocaine.service.services import Service
 from log_message import PROTOCOL_LIST
 from log_message import Message
