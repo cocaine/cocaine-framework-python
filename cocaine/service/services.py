@@ -135,7 +135,7 @@ class Service(object):
         if msg.id == PROTOCOL_LIST.index("rpc::chunk"):
             return unpackb(msg.data)
         elif msg.id == PROTOCOL_LIST.index("rpc::error"):
-            raise Exception(msg.message)
+            raise ServiceError(self.servicename, msg.message, msg.code)
 
     def _on_message(self, args):
         msg = Message.initialize(args)
