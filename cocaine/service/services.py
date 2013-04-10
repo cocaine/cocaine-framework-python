@@ -100,13 +100,14 @@ class Service(object):
 
     def perform_sync(self, method, *args):
         number = (_num for _num, _name in self._service_api.iteritems() if _name == method).next()
-        self.pipe.write(packb([number, 1, args]))
+        self.pipe.write(packb([number, self._counter, args]))
+        self._counter += 1
         u = Unpacker()
         msg = None
         try:
             self.pipe.settimeout(1.0) # DO IT SYNC
             while msg is None:
-                response = self.pipe.recv(80960)
+                response = self.pipe.recv(809600)
                 u.feed(response)
                 msg = Message.initialize(u.next())
         finally:

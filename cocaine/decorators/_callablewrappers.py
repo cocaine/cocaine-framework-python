@@ -24,10 +24,13 @@ __all__ = ["proxy_factory"]
 from abc import ABCMeta, abstractmethod
 import compiler
 
+from cocaine.logger import Logger
+
 class _Proxy(object):
 
     __metaclass__ = ABCMeta
     _wrapped = True
+    _logger = Logger()
 
     @abstractmethod
     def __init__(self, func): pass
@@ -47,7 +50,7 @@ def exception_trap(func):
             if not self._response.closed:
                 self._response.close()
         except Exception as err:
-            print "Uncaught exception: %s " %  str(err)
+            self._logger.error("Caught execption: %s" % str(err))
     return wrapper
 
 
@@ -63,6 +66,7 @@ class _Coroutine(_Proxy):
 
     @exception_trap
     def push(self, chunk):
+        self._logger.debug("Push chunk")
         self._current_future_object = self._func.send(chunk)
         while self._current_future_object is None:
             self._current_future_object = self._func.next()
@@ -70,6 +74,7 @@ class _Coroutine(_Proxy):
 
     @exception_trap
     def error(self, error):
+        self._logger.debug("Error: %s" % str(error))
         self._current_future_object = self._func.throw(error)
         while self._current_future_object is None:
             self._current_future_object = self._func.next()
@@ -81,10 +86,8 @@ class _Coroutine(_Proxy):
         self._func = self._obj(request, self._response) # prepare generator
         self._current_future_object = self._func.next()
         if self._current_future_object is not None:
-            try:
-                self._current_future_object(self.push, self.error)
-            except Exception as err:
-                print "Invoke error: %s " % str(err)
+            self._current_future_object(self.push, self.error)
+
 
     def close(self):
         self._state = None
@@ -95,7 +98,7 @@ class _Function(_Proxy):
     """Wrapper for function object"""
 
     def __init__(self, func):
-        #self._state = None
+        self._state = None
         self._func = func
         #self._response = None
 
@@ -106,13 +109,13 @@ class _Function(_Proxy):
         try:
             self._func(self._request, self._response)
         except Exception as err:
-            print str(err)
+            self._logger.error("Caught execption in invoke(): %s" % str(err))
 
     def push(self, chunk):
         try:
             self._func(chunk, self._response)
         except Exception as err:
-            print str(err)
+            self._logger.error("Caught execption in push(): %s" % str(err))
 
     def close(self):
         self._state = None

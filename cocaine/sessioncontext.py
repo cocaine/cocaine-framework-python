@@ -22,6 +22,7 @@
 
 from decorators import default
 from cocaine.exceptions import *
+from cocaine.logger import Logger
 
 class Sandbox(object):
 
@@ -67,6 +68,7 @@ class Stream(object):
 class Request(object):
 
     def __init__(self):
+        self._logger = Logger()
         self.cache = list()
         self._clbk = None   # Callback - on chunk
         self._errbk = None  # Errorback - translate error to handler
@@ -76,11 +78,13 @@ class Request(object):
     def push(self, chunk):
         if self._clbk is None:
             # If there is no attachment object, put chunk in the cache
+            self._logger.debug("Cache chunk")
             self.cache.append(chunk)
         else:
             # Copy callback to temp, clear current callback and perform temp
             # Do it so because self._clbk may change, while perfoming callback function.
             # Avoid double chunk sending to the task
+            self._logger.debug("Send chunk to application")
             temp = self._clbk
             self._clbk = None
             temp(chunk)
@@ -89,7 +93,16 @@ class Request(object):
         self._errmsg = errormsg
 
     def close(self):
+        self._logger.debug("Close request")
         self._state = None
+        if len(self.cache) == 0 and self._clbk is not None:
+            self._logger.warn("Chunks are over, but the application requests them")
+            if self._errbk is not None:
+                self._logger.error("Throw error")
+                self._errbk(RequestError("No chunks are available"))
+            else:
+                self._logger.error("No errorback. Can't throw error")
+
 
     def read(self):
         def wrapper(clbk, errorback=None):
@@ -107,4 +120,5 @@ class Request(object):
         else:
             #Stream closed by choke
             #Raise exception here because no chunks from cocaine-runtime are availaible
-            errorback(RequestError("No chunks available"))
+            self._logger.warn("Chunks are over, but the application requests them")
+            errorback(RequestError("No chunks are available"))

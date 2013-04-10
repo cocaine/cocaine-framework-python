@@ -108,6 +108,7 @@ class Worker(object):
                 self._logger.error("On invoke error: %s" % err)
 
         elif msg.id == PROTOCOL_LIST.index("rpc::chunk"):
+            self._logger.debug("Receive chunk: %d" % msg.session)
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
                 try:
@@ -116,6 +117,7 @@ class Worker(object):
                     self._logger.error("On push error: %s" % str(err))
 
         elif msg.id == PROTOCOL_LIST.index("rpc::choke"):
+            self._logger.debug("Receive choke: %d" % msg.session)
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
                 _session.close()
