@@ -40,12 +40,17 @@ if __name__ == "__main__":
 
     (options, args) = parser.parse_args()
     if len(args) == 0:
-        print USAGE
         print "Specify applications and profiles"
+        parser.print_usage()
+        parser.print_help()
         sys.exit(1)
     try:
         main(args, options.host, options.port)
     except Exception as err:
         if err.args[0] == errno.ECONNREFUSED:
             print "Invalid endpoint: %s:%d" % (options.host, options.port)
-            print USAGE
+            parser.print_usage()
+            parser.print_help()
+            sys.exit(1)
+        else:
+            print err

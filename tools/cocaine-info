@@ -20,8 +20,8 @@ def main(hostname, port):
 
 if __name__ == "__main__":
     parser = OptionParser(usage=USAGE, description=DESCRIPTION)
-    parser.add_option("--port", type = "int", default=DEFAULT_PORT, help="Port number")
-    parser.add_option("--host", type = "str", default=DEFAULT_HOST, help="Hostname")
+    parser.add_option("--port", type = "int", default=DEFAULT_PORT, help="Port number [default: %default]")
+    parser.add_option("--host", type = "str", default=DEFAULT_HOST, help="Hostname [default: %default]")
     (options, args) = parser.parse_args()
     try:
         main(options.host, options.port)

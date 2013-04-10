@@ -99,6 +99,7 @@ class Service(object):
             raise Exception(msg.message)
 
     def perform_sync(self, method, *args):
+        """ Only for initializing services """
         number = (_num for _num, _name in self._service_api.iteritems() if _name == method).next()
         self.pipe.write(packb([number, self._counter, args]))
         self._counter += 1
@@ -107,13 +108,15 @@ class Service(object):
         try:
             self.pipe.settimeout(1.0) # DO IT SYNC
             while msg is None:
-                response = self.pipe.recv(809600)
+                response = self.pipe.recv(80960)
                 u.feed(response)
                 msg = Message.initialize(u.next())
         finally:
             self.pipe.settimeout(0) #return to non-blocking mode
         if msg.id == PROTOCOL_LIST.index("rpc::chunk"):
             return unpackb(msg.data)
+        if msg.id == PROTOCOL_LIST.index("rpc::choke"):
+            return None
         elif msg.id == PROTOCOL_LIST.index("rpc::error"):
             raise ServiceError(self.servicename, msg.message, msg.code)
 
