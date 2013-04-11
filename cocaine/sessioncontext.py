@@ -19,6 +19,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
+import traceback
 
 from decorators import default
 from cocaine.exceptions import *
@@ -53,6 +54,7 @@ class Stream(object):
             self.worker.send_chunk(self.session, chunk)
             return
         assert (self._m_state is not None)
+        traceback.print_stack()
 
     def close(self):
         if self._m_state is not None:
@@ -60,6 +62,7 @@ class Stream(object):
             self._m_state = None
             return
         assert (self._m_state is None)
+        traceback.print_stack()
 
     @property
     def closed(self):

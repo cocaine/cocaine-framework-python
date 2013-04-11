@@ -23,6 +23,7 @@ __all__ = ["proxy_factory"]
 
 from abc import ABCMeta, abstractmethod
 import compiler
+import traceback
 
 from cocaine.logger import Logger
 
@@ -47,10 +48,10 @@ def exception_trap(func):
         try:
             func(self, *args, **kwargs)
         except StopIteration:
-            if not self._response.closed:
-                self._response.close()
+            pass
         except Exception as err:
             self._logger.error("Caught execption: %s" % str(err))
+            traceback.print_stack()
     return wrapper
 
 
@@ -110,12 +111,14 @@ class _Function(_Proxy):
             self._func(self._request, self._response)
         except Exception as err:
             self._logger.error("Caught execption in invoke(): %s" % str(err))
+            traceback.print_stack()
 
     def push(self, chunk):
         try:
             self._func(chunk, self._response)
         except Exception as err:
             self._logger.error("Caught execption in push(): %s" % str(err))
+            traceback.print_stack()
 
     def close(self):
         self._state = None
