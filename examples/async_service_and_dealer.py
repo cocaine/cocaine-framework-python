@@ -3,8 +3,8 @@
 from hashlib import sha512
 
 from cocaine.worker import Worker
-from cocaine.logger import Logger
-from cocaine.service.services import Service
+from cocaine.logging import Logger
+from cocaine.services import Service
 from cocaine.exceptions import *
 from cocaine.decorators import http, fs
 
@@ -24,15 +24,7 @@ def example(request, response):
     except ServiceError as err:
         L.error("S: %s" % err)
         ls = yield storage_service.list("manifests")
-        L.info("AAA")
         L.info("From storage: %s" % str(ls))
-
-    L.info("Now yield")
-    yield
-    L.info("After yield")
-
-    L.info("Request www.ya.ru")
-    webpage = yield urlfetcher_service.get("www.ya.ru",{}, True)
 
     chunk_from_cloud = yield request.read()
     L.info("from dealer: %s" % chunk_from_cloud)
@@ -87,7 +79,7 @@ def fs(request, response):
     response.close()
 
 W = Worker()
-W.on("hash", example)
-W.on("nodejs", nodejs)
-W.on("fs", fs)
-W.run()
+#W.on("hash", example)
+#W.on("nodejs", nodejs)
+#W.on("fs", fs)
+W.run({"hash" : example, "fs" : fs})

@@ -1,6 +1,6 @@
 import sys
 
-from cocaine.service.services import Service
+from cocaine.services import Service
 from log_message import PROTOCOL_LIST
 from log_message import Message
 
@@ -57,7 +57,10 @@ class Logger(object):
                 _logger = Service("logging")
                 verbosity = _logger.perform_sync("verbosity")
                 setattr(instanse, "_logger", _logger)
-                setattr(instanse, "target", "app/%s" % sys.argv[sys.argv.index("--app") + 1])
+                try:
+                    setattr(instanse, "target", "app/%s" % sys.argv[sys.argv.index("--app") + 1])
+                except ValueError: 
+                    setattr(instanse, "target", "app/%s" % "standalone" )
                 _construct_logger_methods(instanse, verbosity)
             except Exception as err:
                 instanse = _STDERR_Logger()

@@ -36,6 +36,7 @@ from cocaine.asio.message import Message
 from cocaine.exceptions import ServiceError
 
 
+__all__ = ["Service"]
 
 class Service(object):
 
