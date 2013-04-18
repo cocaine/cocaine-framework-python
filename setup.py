@@ -27,22 +27,18 @@ except ImportError:
 
 setup(
     name = "cocaine",
-    version = "0.10.0",
+    version = "0.10.1",
     description = "Cocaine Python Framework",
     long_description = "A simple framework to ease the development of Cocaine apps",
     url = "https://github.com/cocaine/cocaine-framework-python",
     author = "Andrey Sibiryov",
     author_email = "me@kobology.ru",
-    license = "BSD 2-Clause",
+    license = "LGPLv3+",
     platforms = ["Linux", "BSD", "MacOS"],
     packages = ["cocaine",
                 "cocaine.asio",
                 "cocaine.decorators",
                 "cocaine.services",
                 "cocaine.logging"],
-#    ext_modules = [Extension("cocaine._client",
-#                             ["src/module.cpp", "src/client.cpp", "src/response.cpp"],
-#                             include_dirs = ["include"],
-#                             libraries = ["cocaine-dealer"])],
     requires = ["msgpack", "tornado"]
 )
