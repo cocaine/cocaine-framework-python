@@ -35,7 +35,7 @@ from cocaine.sessioncontext import Sandbox
 from cocaine.sessioncontext import Stream
 from cocaine.sessioncontext import Request
 
-from cocaine.logger import Logger
+from cocaine.logging import Logger
 from cocaine.exceptions import RequestError
 
 class Worker(object):

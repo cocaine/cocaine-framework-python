@@ -25,7 +25,7 @@ from abc import ABCMeta, abstractmethod
 import compiler
 import traceback
 
-from cocaine.logger import Logger
+from cocaine.logging import Logger
 
 class _Proxy(object):
 

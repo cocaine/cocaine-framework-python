@@ -23,7 +23,7 @@ import traceback
 
 from decorators import default
 from cocaine.exceptions import *
-from cocaine.logger import Logger
+from cocaine.logging import Logger
 
 class Sandbox(object):
 
