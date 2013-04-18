@@ -22,7 +22,6 @@
 import sys
 import errno
 import socket
-import weakref
 
 from msgpack import Unpacker, packb, unpackb
 
@@ -40,7 +39,7 @@ __all__ = ["Service"]
 
 class Service(object):
 
-    def __init__(self, name, endpoint="localhost", port=10053):
+    def __init__(self, name, endpoint="localhost", port=10053, init_args=sys.argv):
         def closure(number):
             def wrapper(*args):
                 def register_callback(callback, errorback=None):
@@ -77,7 +76,7 @@ class Service(object):
 
         self.service.register_read_event(self.r_stream._on_event, self.pipe.fileno())
         try:
-            self.app_name = sys.argv[sys.argv.index("--app") + 1]
+            self.app_name = init_args[init_args.index("--app") + 1]
         except ValueError:
             self.app_name = "standalone"
 
@@ -99,27 +98,45 @@ class Service(object):
         if msg.id == PROTOCOL_LIST.index("rpc::error"):
             raise Exception(msg.message)
 
-    def perform_sync(self, method, *args):
-        """ Only for initializing services """
-        number = (_num for _num, _name in self._service_api.iteritems() if _name == method).next()
+    def perform_sync(self, method, *args, **kwargs):
+        """ Do not use the service synchronously after treatment to him asynchronously!
+        Use for these purposes the other instance of the service!
+        """
+
+        timeout = kwargs.get("timeout", 0.5)
+        # Get number of current method
+        try:
+            number = (_num for _num, _name in self._service_api.iteritems() if _name == method).next()
+        except StopIteration as err:
+            raise ServiceError(self.servicename, "method %s is not available" % method, -100)
+
         self.pipe.write(packb([number, self._counter, args]))
         self._counter += 1
         u = Unpacker()
         msg = None
+
+        # If we receive rpc::error, put ServiceError here, 
+        # and raise this error instead of StopIteration on rpc::choke,
+        # because after rpc::error we always receive choke.
+        _error = None
+
         try:
-            self.pipe.settimeout(1.0) # DO IT SYNC
-            while msg is None:
-                response = self.pipe.recv(80960)
+            self.pipe.settimeout(timeout) # DO IT SYNC
+            while True:
+                response = self.pipe.recv(4096)
                 u.feed(response)
-                msg = Message.initialize(u.next())
+                for _data in u:
+                    msg = Message.initialize(_data)
+                    if msg is None:
+                        continue
+                    if msg.id == PROTOCOL_LIST.index("rpc::chunk"):
+                        yield unpackb(msg.data)
+                    elif msg.id == PROTOCOL_LIST.index("rpc::choke"):
+                        raise _error or StopIteration
+                    elif msg.id == PROTOCOL_LIST.index("rpc::error"):
+                        _error = ServiceError(self.servicename, msg.message, msg.code)
         finally:
             self.pipe.settimeout(0) #return to non-blocking mode
-        if msg.id == PROTOCOL_LIST.index("rpc::chunk"):
-            return unpackb(msg.data)
-        if msg.id == PROTOCOL_LIST.index("rpc::choke"):
-            return None
-        elif msg.id == PROTOCOL_LIST.index("rpc::error"):
-            raise ServiceError(self.servicename, msg.message, msg.code)
 
     def _on_message(self, args):
         msg = Message.initialize(args)
