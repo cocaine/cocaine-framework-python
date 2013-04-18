@@ -1,17 +1,8 @@
 Source: cocaine-framework-python
 Section: utils
 Priority: extra
-Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
-Build-Depends:
- cdbs,
- debhelper (>= 7.0.13),
- python,
- python-central
-#python-dev,
-#libcocaine-dev (<< 0.10.0-b0),
-#libcocaine-dealer1 (<< 0.9.10000),
-#libcocaine-dealer-dev (<< 0.9.10000),
-# libssl-dev
+Maintainer: Anton Tyurin <noxiouz@yandex-team.ru>
+Build-Depends: cdbs, debhelper (>= 7.0.13), python, python-central
 Standards-Version: 3.8.4
 Vcs-Git: git://github.com/cocaine/cocaine-framework-python.git
 Vcs-Browser: https://github.com/cocaine/cocaine-framework-python
@@ -19,13 +10,7 @@ XS-Python-Version: >= 2.6
 
 Package: cocaine-framework-python
 Architecture: any
-Depends:
- ${misc:Depends},
- ${python:Depends},
- python-msgpack | msgpack-python,
- python-tornado
-#libcocaine-plugin-python (>= 0.9),
-# libcocaine-dealer1 (>= 0.9.10005)
+Depends: ${misc:Depends}, ${python:Depends}, python-msgpack | msgpack-python, python-tornado
 Description: Cocaine - Python Framework
  A simple framework to ease the developing of Cocaine apps.
 XB-Python-Version: >= 2.6
