@@ -1,41 +1,50 @@
+cocaine-framework-python (0.10.2) lucid; urgency=low
+
+  * Release 10.2.
+  * Dealer stuff moved out to the cocaine-dealer tree.
+  * Logging support.
+  * Bugfixes.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 25 Apr 2013 22:22:16 +0400
+
 cocaine-framework-python (0.10.1) lucid; urgency=low
 
-  * Release 10.1 
+  * Release 10.1.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 09 Apr 2013 13:38:35 +0400
 
 cocaine-framework-python (0.10.0-rc10) lucid; urgency=low
 
-  * Service endpoint is tuple now
+  * Service endpoint is tuple now.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Thu, 04 Apr 2013 13:14:18 +0400
 
 cocaine-framework-python (0.10.0-rc8) lucid; urgency=low
 
-  * Support singletone logger
-  * Support nodejs callback style for functions
-  * Add call/errorback handlers in futures
-  * Add some exceptions (ServiceError, RequestError)
-  * Remove urlfetcher specific service
-  * Add very cool example
+  * Support singletone logger.
+  * Support nodejs callback style for functions.
+  * Add call/errorback handlers in futures.
+  * Add some exceptions (ServiceError, RequestError).
+  * Remove urlfetcher specific service.
+  * Add very cool example.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 03 Apr 2013 03:20:50 +0400
 
 cocaine-framework-python (0.10.0-rc7) lucid; urgency=low
 
-  * service locator support
+  * Service locator support.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 03 Apr 2013 03:20:38 +0400
 
 cocaine-framework-python (0.10.0-rc6) lucid; urgency=low
 
-  * async
+  * Async.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 27 Mar 2013 16:38:39 +0400
 
 cocaine-framework-python (0.10.0-rc0) lucid; urgency=low
 
-  * init 
+  * Init.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Fri, 22 Mar 2013 21:26:37 +0400
 
