@@ -55,7 +55,8 @@ class Logger(object):
             instanse = object.__new__(cls)
             try:
                 _logger = Service("logging")
-                verbosity = _logger.perform_sync("verbosity")
+                for verbosity in _logger.perform_sync("verbosity"): #only one chunk and read choke also.
+                    pass
                 setattr(instanse, "_logger", _logger)
                 try:
                     setattr(instanse, "target", "app/%s" % sys.argv[sys.argv.index("--app") + 1])
