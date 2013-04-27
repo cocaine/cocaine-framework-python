@@ -142,14 +142,11 @@ class Worker(object):
 
     # Private:
     def _send_handshake(self):
-        self.disown_timer.start()
         self.w_stream.write(Message(message.RPC_HANDSHAKE, 0, self.id).pack())
 
     def _send_heartbeat(self):
-        try:
-            self.w_stream.write(Message(message.RPC_HEARTBEAT, 0).pack())
-        except Exception as err:
-            self.service.stop()
+        self.disown_timer.start()
+        self.w_stream.write(Message(message.RPC_HEARTBEAT, 0).pack())
 
     def send_choke(self, session):
         self.w_stream.write(Message(message.RPC_CHOKE, session).pack())
