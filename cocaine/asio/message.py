@@ -28,43 +28,54 @@ from itertools import izip
 #   Answer to C++ templates
 #
 
+#PROTOCOL_LIST = (
+#    "rpc::handshake",   #0
+#    "rpc::heartbeat",   #1
+#    "rpc::terminate",   #2
+#    "rpc::invoke",      #3
+#    "rpc::chunk",       #4
+#    "rpc::error",       #5
+#    "rpc::choke",       #6
+#    )
+
 PROTOCOL_LIST = (
-    "rpc::handshake",   #0
-    "rpc::heartbeat",   #1
-    "rpc::terminate",   #2
-    "rpc::invoke",      #3
-    "rpc::chunk",       #4
-    "rpc::error",       #5
-    "rpc::choke",       #6
-    )
+    RPC_HANDSHAKE,
+    RPC_HEARTBEAT,
+    RPC_TERMINATE,
+    RPC_INVOKE,
+    RPC_CHUNK,
+    RPC_ERROR,
+    RPC_CHOKE
+    ) = xrange(7)
+
 
 PROTOCOL = {
-    "rpc::handshake": {
-        "id" : PROTOCOL_LIST.index("rpc::handshake"),
+    RPC_HANDSHAKE: {
+        "id" : RPC_HANDSHAKE, #PROTOCOL_LIST.index("rpc::handshake"),
         "tuple_type": ("unique_id")
     },
-    "rpc::heartbeat": {
-        "id" : PROTOCOL_LIST.index("rpc::heartbeat"),
+    RPC_HEARTBEAT: {
+        "id" : RPC_HEARTBEAT, #PROTOCOL_LIST.index("rpc::heartbeat"),
         "tuple_type": ()
     },
-    "rpc::terminate"  : {
-        "id" : PROTOCOL_LIST.index("rpc::terminate"),
+    RPC_TERMINATE : {
+        "id" : RPC_TERMINATE, #PROTOCOL_LIST.index("rpc::terminate"),
         "tuple_type": ("reason", "message")
     },
-    "rpc::invoke"   : {
-        "id" : PROTOCOL_LIST.index("rpc::invoke"),
+    RPC_INVOKE   : {
+        "id" : RPC_INVOKE, #PROTOCOL_LIST.index("rpc::invoke"),
         "tuple_type": ("event",)
     },
-    "rpc::chunk"    : {
-        "id" : PROTOCOL_LIST.index("rpc::chunk"),
+    RPC_CHUNK    : {
+        "id" : RPC_CHUNK, #PROTOCOL_LIST.index("rpc::chunk"),
         "tuple_type": ("data",)
     },
-    "rpc::error"    : {
-        "id" : PROTOCOL_LIST.index("rpc::error"),
+    RPC_ERROR   : {
+        "id" : RPC_ERROR, #PROTOCOL_LIST.index("rpc::error"),
         "tuple_type": ("code", "message")
     },
-    "rpc::choke"    : {
-        "id" : PROTOCOL_LIST.index("rpc::choke"),
+    RPC_CHOKE   : {
+        "id" : RPC_CHOKE, #PROTOCOL_LIST.index("rpc::choke"),
         "tuple_type": ()
     }
 }

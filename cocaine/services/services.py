@@ -30,7 +30,7 @@ from cocaine.asio.pipe import ServicePipe
 from cocaine.asio.stream import ReadableStream
 from cocaine.asio.stream import WritableStream
 from cocaine.asio.stream import Decoder
-from cocaine.asio.message import PROTOCOL_LIST
+from cocaine.asio import message
 from cocaine.asio.message import Message
 from cocaine.exceptions import ServiceError
 
@@ -93,9 +93,9 @@ class Service(object):
             msg = Message.initialize(u.next())
 
         locator_pipe.close()
-        if msg.id == PROTOCOL_LIST.index("rpc::chunk"):
+        if msg.id == message.RPC_CHUNK: #PROTOCOL_LIST.index("rpc::chunk"):
             return unpackb(msg.data)
-        if msg.id == PROTOCOL_LIST.index("rpc::error"):
+        if msg.id == message.RPC_ERROR: #PROTOCOL_LIST.index("rpc::error"):
             raise Exception(msg.message)
 
     def perform_sync(self, method, *args, **kwargs):
@@ -129,11 +129,11 @@ class Service(object):
                     msg = Message.initialize(_data)
                     if msg is None:
                         continue
-                    if msg.id == PROTOCOL_LIST.index("rpc::chunk"):
+                    if msg.id == message.RPC_CHUNK: #PROTOCOL_LIST.index("rpc::chunk"):
                         yield unpackb(msg.data)
-                    elif msg.id == PROTOCOL_LIST.index("rpc::choke"):
+                    elif msg.id == message.RPC_CHOKE: #PROTOCOL_LIST.index("rpc::choke"):
                         raise _error or StopIteration
-                    elif msg.id == PROTOCOL_LIST.index("rpc::error"):
+                    elif msg.id == message.RPC_ERROR: #PROTOCOL_LIST.index("rpc::error"):
                         _error = ServiceError(self.servicename, msg.message, msg.code)
         finally:
             self.pipe.settimeout(0) #return to non-blocking mode
@@ -143,11 +143,11 @@ class Service(object):
         if msg is None:
             return
         try:
-            if msg.id == PROTOCOL_LIST.index("rpc::chunk"):
+            if msg.id == message.RPC_CHUNK: #PROTOCOL_LIST.index("rpc::chunk"):
                 self._subscribers[msg.session][0](unpackb(msg.data))
-            elif msg.id == PROTOCOL_LIST.index("rpc::choke"):
+            elif msg.id == message.RPC_CHOKE: #PROTOCOL_LIST.index("rpc::choke"):
                 self._subscribers.pop(msg.session, None)
-            elif msg.id == PROTOCOL_LIST.index("rpc::error"):
+            elif msg.id == message.RPC_ERROR: #PROTOCOL_LIST.index("rpc::error"):
                 self._subscribers[msg.session][1](ServiceError(self.servicename, msg.message, msg.code))
         except Exception as err:
             print "Exception in _on_message: %s" % str(err)
