@@ -110,7 +110,7 @@ class Service(object):
         except StopIteration as err:
             raise ServiceError(self.servicename, "method %s is not available" % method, -100)
 
-        self.pipe.write(packb([number, self._counter, args]))
+        self.pipe.writeall(packb([number, self._counter, args]))
         self._counter += 1
         u = Unpacker()
         msg = None
