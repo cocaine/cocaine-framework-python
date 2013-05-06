@@ -103,25 +103,25 @@ class Service(object):
         Use for these purposes the other instance of the service!
         """
 
-        timeout = kwargs.get("timeout", 0.5)
+        timeout = kwargs.get("timeout", 5)
         # Get number of current method
         try:
             number = (_num for _num, _name in self._service_api.iteritems() if _name == method).next()
         except StopIteration as err:
             raise ServiceError(self.servicename, "method %s is not available" % method, -100)
 
-        self.pipe.writeall(packb([number, self._counter, args]))
-        self._counter += 1
-        u = Unpacker()
-        msg = None
-
-        # If we receive rpc::error, put ServiceError here, 
-        # and raise this error instead of StopIteration on rpc::choke,
-        # because after rpc::error we always receive choke.
-        _error = None
-
         try:
             self.pipe.settimeout(timeout) # DO IT SYNC
+            self.pipe.writeall(packb([number, self._counter, args]))
+            self._counter += 1
+            u = Unpacker()
+            msg = None
+
+            # If we receive rpc::error, put ServiceError here, 
+            # and raise this error instead of StopIteration on rpc::choke,
+            # because after rpc::error we always receive choke.
+            _error = None
+
             while True:
                 response = self.pipe.recv(4096)
                 u.feed(response)
