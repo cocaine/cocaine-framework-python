@@ -63,3 +63,7 @@ class ServicePipe(socket.socket):
 
     def write(self, buff):
         return self.send(buff)
+
+    def writeall(self, buff):
+        """Only for synchronous calls"""
+        return self.sendall(buff)
