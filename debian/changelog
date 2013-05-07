@@ -1,3 +1,9 @@
+cocaine-framework-python (0.10.2-1) lucid; urgency=low
+
+  * Make uploads of more than 640KB possible.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 07 May 2013 23:35:54 +0400
+
 cocaine-framework-python (0.10.2) lucid; urgency=low
 
   * Release 10.2.
