@@ -27,8 +27,13 @@ from _callablewrappers import proxy_factory
 
 __all__ = ['fs']
 
-def _stat_request_hadler(chunk):
-    return posix.stat_result(msgpack.unpackb(chunk))
+def fs_request_decorator(obj):
+    def dec(func):
+        def _stat_request_hadler(chunk):
+            return func(posix.stat_result(msgpack.unpackb(chunk)))
+        return _stat_request_hadler
+    obj.push = dec(obj.push)
+    return obj
 
 def fs(func):
-    return proxy_factory(func, request_handler=_stat_request_hadler)
+    return proxy_factory(func, request_handler=fs_request_decorator)

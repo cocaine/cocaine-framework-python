@@ -134,13 +134,6 @@ def type_traits(func_or_generator):
     else:
         return _Function
 
-def decomaker(handler):
-    def dec(func):
-        def wrapper(arg):
-            return func(handler(arg))
-        return wrapper
-    return dec
-
 def patch_response(obj, response_handler):
     def decorator(handler):
         def dec(func):
@@ -153,7 +146,14 @@ def patch_response(obj, response_handler):
     return obj
 
 def patch_request(obj, request_handler):
-    obj.push = decomaker(request_handler)(obj.push)
+    def req_decorator(handler):
+        def dec(func):
+            def wrapper(request, response):
+                return func(handler(request), response)
+            return wrapper
+        return dec
+
+    obj.invoke = req_decorator(request_handler)(obj.invoke)
     return obj
 
 def proxy_factory(func, request_handler=None, response_handler=None):
