@@ -81,6 +81,7 @@ class _Coroutine(_Proxy):
             self._current_future_object = self._func.next()
         self._current_future_object(self.push, self.error)
 
+    @exception_trap
     def invoke(self, request, stream):
         self._state = 1
         self._response = stream # attach response stream
@@ -156,10 +157,12 @@ def patch_request(obj, request_handler):
     return obj
 
 def proxy_factory(func, request_handler=None, response_handler=None):
-    _factory = type_traits(func)
-    obj = _factory(func)
-    if response_handler is not None:
-        obj = patch_response(obj, response_handler)
-    if request_handler is not None:
-        obj = patch_request(obj, request_handler)
-    return obj
+    def wrapper():
+        _factory = type_traits(func)
+        obj = _factory(func)
+        if response_handler is not None:
+            obj = patch_response(obj, response_handler)
+        if request_handler is not None:
+            obj = patch_request(obj, request_handler)
+        return obj
+    return wrapper

@@ -22,6 +22,7 @@
 import json
 import time
 import sys
+import traceback
 
 from asio import ev
 from asio.pipe import Pipe
@@ -107,6 +108,7 @@ class Worker(object):
                 self.sessions[msg.session] = _request
             except Exception as err:
                 self._logger.error("On invoke error: %s" % err)
+                traceback.print_stack()
 
         elif msg.id == message.RPC_CHUNK: #PROTOCOL_LIST.index("rpc::chunk"):
             self._logger.debug("Receive chunk: %d" % msg.session)

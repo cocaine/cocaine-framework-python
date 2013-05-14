@@ -29,17 +29,28 @@ class Sandbox(object):
 
     def __init__(self):
         self._events = dict()
+        self._logger = Logger()
 
     def invoke(self, event_name, request, stream):
         """ Connect worker and decorator """
-        event_handler = self._events.get(event_name, None)
+        event_handler = self._events.get(event_name, None)()
         if event_name is not None:
             event_handler.invoke(request, stream)
-        assert (event_handler is not None)
+        else:
+            self._logger.error("Event %s has no handler" % event_name)
 
     def on(self, event_name, event_handler):
-        if not hasattr(event_handler, "_wrapped"):
-            event_handler = default(event_handler)
+        try:
+            # Try to construct handler.
+            closure = event_handler()
+        except Exception:
+            # If this callable object is not our wrapper - may raise Exception
+            closure = default(event_handler)()
+            if hasattr(closure, "_wrapped"):
+                event_handler = default(event_handler)
+        else:
+            if not hasattr(closure, "_wrapped"):
+                event_handler = default(event_handler)
         self._events[event_name] = event_handler
 
 class Stream(object):
