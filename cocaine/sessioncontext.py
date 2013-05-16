@@ -33,11 +33,12 @@ class Sandbox(object):
 
     def invoke(self, event_name, request, stream):
         """ Connect worker and decorator """
-        event_handler = self._events.get(event_name, None)()
-        if event_name is not None:
+        event_closure = self._events.get(event_name, None)
+        if event_closure is not None:
+            event_handler = event_closure()
             event_handler.invoke(request, stream)
         else:
-            self._logger.error("Event %s has no handler" % event_name)
+            self._logger.warn("There is no handler for event %s" % event_name)
 
     def on(self, event_name, event_handler):
         try:
