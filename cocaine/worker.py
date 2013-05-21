@@ -49,24 +49,24 @@ class Worker(object):
         self.sessions = dict()
         self.sandbox = Sandbox()
 
-        self.service = ev.Service()
+        self.loop = ev.Loop()
 
-        self.disown_timer = ev.Timer(self.on_disown, 2, self.service)
-        self.heartbeat_timer = ev.Timer(self.on_heartbeat, 5, self.service)
+        self.disown_timer = ev.Timer(self.on_disown, 2, self.loop)
+        self.heartbeat_timer = ev.Timer(self.on_heartbeat, 5, self.loop)
         self.disown_timer.start()
         self.heartbeat_timer.start()
 
         self.pipe = Pipe(self.endpoint)
-        self.service.bind_on_fd(self.pipe.fileno())
+        self.loop.bind_on_fd(self.pipe.fileno())
 
         self.decoder = Decoder()
         self.decoder.bind(self.on_message)
 
-        self.w_stream = WritableStream(self.service, self.pipe)
-        self.r_stream = ReadableStream(self.service, self.pipe)
+        self.w_stream = WritableStream(self.loop, self.pipe)
+        self.r_stream = ReadableStream(self.loop, self.pipe)
         self.r_stream.bind(self.decoder.decode)
 
-        self.service.register_read_event(self.r_stream._on_event, self.pipe.fileno())
+        self.loop.register_read_event(self.r_stream._on_event, self.pipe.fileno())
         self._logger.debug("Worker with %s send handshake" % self.id)
         self._send_handshake()
 
@@ -82,11 +82,11 @@ class Worker(object):
     def run(self, binds={}):
         for event, name in binds.iteritems():
             self.on(event, name)
-        self.service.run()
+        self.loop.run()
 
     def terminate(self, reason, msg):
         self.w_stream.write(Message(message.RPC_TERMINATE, 0, reason, msg).pack())
-        self.service.stop()
+        self.loop.stop()
 
     # Event machine
     def on(self, event, callback):
@@ -140,7 +140,7 @@ class Worker(object):
 
     def on_disown(self):
         self._logger.error("Disowned")
-        self.service.stop()
+        self.loop.stop()
 
     # Private:
     def _send_handshake(self):

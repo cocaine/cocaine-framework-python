@@ -23,7 +23,7 @@ from tornado import ioloop as ev
 
 from time import time
 
-class Service(object):
+class Loop(object):
     """ Event loop wrapper"""
 
     def __init__(self, ioloop=None):
@@ -88,9 +88,7 @@ class Service(object):
     @property
     def ioloop(self):
         return self._ioloop
-#
-#
-#
+
 
 class Timer(ev.PeriodicCallback):
     """ Timer wrapper """

@@ -59,7 +59,7 @@ class Service(object):
         for number, methodname in service_api.iteritems():
             setattr(self, methodname, closure(number))
 
-        self.service = ev.Service()
+        self.loop = ev.Loop()
 
         self._counter = 1
         self._subscribers = dict()
@@ -70,13 +70,13 @@ class Service(object):
         self.decoder = Decoder()
         self.decoder.bind(self._on_message)
 
-        self.service.bind_on_fd(self.pipe.fileno())
+        self.loop.bind_on_fd(self.pipe.fileno())
 
-        self.w_stream = WritableStream(self.service, self.pipe)
-        self.r_stream = ReadableStream(self.service, self.pipe)
+        self.w_stream = WritableStream(self.loop, self.pipe)
+        self.r_stream = ReadableStream(self.loop, self.pipe)
         self.r_stream.bind(self.decoder.decode)
 
-        self.service.register_read_event(self.r_stream._on_event, self.pipe.fileno())
+        self.loop.register_read_event(self.r_stream._on_event, self.pipe.fileno())
         try:
             self.app_name = init_args[init_args.index("--app") + 1]
         except ValueError:

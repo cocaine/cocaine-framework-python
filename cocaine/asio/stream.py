@@ -49,7 +49,6 @@ class Decoder(object):
         try:
             for res in unpacker:
                 parsed_len += len(msgpack.packb(res))
-                #print "Decode:",  res
                 self.callback(res)
         except Exception as err:
             pass # hook - view later
@@ -59,8 +58,8 @@ class Decoder(object):
 
 class ReadableStream(object):
 
-    def __init__(self, service, pipe):
-        self.service = service
+    def __init__(self, loop, pipe):
+        self.loop = loop
         self.pipe = pipe
 
         self.callback = None
@@ -75,12 +74,12 @@ class ReadableStream(object):
     def bind(self, callback):
         assert callable(callback)
         self.callback = callback
-        self.is_attached = self.service.register_read_event(self._on_event, self.pipe.fileno())
+        self.is_attached = self.loop.register_read_event(self._on_event, self.pipe.fileno())
 
     def unbind(self):
         self.callback = None
         if self.is_attached:
-            self.service.unregister_read_evnt(self.pipe.fileno())
+            self.loop.unregister_read_evnt(self.pipe.fileno())
 
     def _on_event(self):
         with self.mutex:
@@ -94,7 +93,7 @@ class ReadableStream(object):
             length = self.pipe.read(self.tmp_buff, self.tmp_buff.buffer_info()[1])
             if length <= 0:
                 if length == 0: #Remote side has closed connection
-                    self.service.unregister_read_event(self.pipe.fileno())
+                    self.loop.unregister_read_event(self.pipe.fileno())
                 return
 
             self.rd_offset += length
@@ -110,15 +109,14 @@ class ReadableStream(object):
 
 class WritableStream(object):
 
-    def __init__(self, service, pipe):
-        self.service = service
+    def __init__(self, loop, pipe):
+        self.loop = loop
         self.pipe = pipe
-        self.is_attached = False#service.register_write_event(self._on_event, pipe.fileno())
+        self.is_attached = False
 
         self.mutex = Lock()
 
         self.ring = array.array('c')
-        #self.tmp_buff = array.array('c','\0' * START_CHUNK_SIZE)
         self.wr_offset = 0
         self.tx_offset = 0
 
@@ -126,7 +124,7 @@ class WritableStream(object):
         with self.mutex:
 
             if len(self.ring) == 0 and self.is_attached:
-                self.service.unregister_write_event(self.pipe.fileno())
+                self.loop.unregister_write_event(self.pipe.fileno())
                 self.is_attached = False
                 return
 
@@ -160,5 +158,5 @@ class WritableStream(object):
 
 
             if False == self.is_attached:
-                self.service.register_write_event(self._on_event, self.pipe.fileno())
+                self.loop.register_write_event(self._on_event, self.pipe.fileno())
                 self.is_attached = True
