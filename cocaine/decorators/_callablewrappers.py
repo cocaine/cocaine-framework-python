@@ -27,6 +27,7 @@ import traceback
 
 from cocaine.logging import Logger
 
+
 class _Proxy(object):
 
     __metaclass__ = ABCMeta
@@ -84,8 +85,8 @@ class _Coroutine(_Proxy):
     @exception_trap
     def invoke(self, request, stream):
         self._state = 1
-        self._response = stream # attach response stream
-        self._func = self._obj(request, self._response) # prepare generator
+        self._response = stream  # attach response stream
+        self._func = self._obj(request, self._response)  # prepare generator
         self._current_future_object = self._func.next()
         if self._current_future_object is not None:
             self._current_future_object(self.push, self.error)
@@ -102,7 +103,6 @@ class _Function(_Proxy):
     def __init__(self, func):
         self._state = None
         self._func = func
-        #self._response = None
 
     def invoke(self, request, stream):
         self._state = 1

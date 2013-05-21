@@ -16,7 +16,7 @@
 #    GNU Lesser General Public License for more details.
 #
 #    You should have received a copy of the GNU Lesser General Public License
-#    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+#    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
 import json
@@ -38,6 +38,7 @@ from cocaine.sessioncontext import Request
 
 from cocaine.logging import Logger
 from cocaine.exceptions import RequestError
+
 
 class Worker(object):
 
@@ -64,7 +65,6 @@ class Worker(object):
         self.w_stream = WritableStream(self.service, self.pipe)
         self.r_stream = ReadableStream(self.service, self.pipe)
         self.r_stream.bind(self.decoder.decode)
-
 
         self.service.register_read_event(self.r_stream._on_event, self.pipe.fileno())
         self._logger.debug("Worker with %s send handshake" % self.id)
@@ -100,7 +100,7 @@ class Worker(object):
         msg = Message.initialize(args)
         if msg is None:
             return
-        elif msg.id == message.RPC_INVOKE: #PROTOCOL_LIST.index("rpc::invoke"):
+        elif msg.id == message.RPC_INVOKE:
             try:
                 _request = Request()
                 _stream = Stream(msg.session, self)
@@ -110,7 +110,7 @@ class Worker(object):
                 self._logger.error("On invoke error: %s" % err)
                 traceback.print_stack()
 
-        elif msg.id == message.RPC_CHUNK: #PROTOCOL_LIST.index("rpc::chunk"):
+        elif msg.id == message.RPC_CHUNK:
             self._logger.debug("Receive chunk: %d" % msg.session)
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
@@ -119,21 +119,21 @@ class Worker(object):
                 except Exception as err:
                     self._logger.error("On push error: %s" % str(err))
 
-        elif msg.id == message.RPC_CHOKE: #PROTOCOL_LIST.index("rpc::choke"):
+        elif msg.id == message.RPC_CHOKE:
             self._logger.debug("Receive choke: %d" % msg.session)
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
                 _session.close()
                 self.sessions.pop(msg.session)
 
-        elif msg.id == message.RPC_HEARTBEAT: #PROTOCOL_LIST.index("rpc::heartbeat"):
+        elif msg.id == message.RPC_HEARTBEAT:
             self.disown_timer.stop()
 
-        elif msg.id == message.RPC_TERMINATE: #PROTOCOL_LIST.index("rpc::terminate"):
+        elif msg.id == message.RPC_TERMINATE:
             self._logger.debug("Receive terminate. Reason: %s, message: %s " % (msg.reason, msg.message))
             self.terminate(msg.reason, msg.message)
 
-        elif msg.id == message.RPC_ERROR: #PROTOCOL_LIST.index("rpc::error"):
+        elif msg.id == message.RPC_ERROR:
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
                 _session.error(RequestError(msg.message))

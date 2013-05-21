@@ -16,7 +16,7 @@
 #    GNU Lesser General Public License for more details.
 #
 #    You should have received a copy of the GNU Lesser General Public License
-#    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+#    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
 import sys
@@ -36,6 +36,7 @@ from cocaine.exceptions import ServiceError
 
 
 __all__ = ["Service"]
+
 
 class Service(object):
 
@@ -62,8 +63,9 @@ class Service(object):
 
         self._counter = 1
         self._subscribers = dict()
-
-        self.pipe = ServicePipe(service_endpoint)
+        
+        # msgpack convert in list or tuple depend on version - make it tuple
+        self.pipe = ServicePipe(tuple(service_endpoint))
 
         self.decoder = Decoder()
         self.decoder.bind(self._on_message)
@@ -93,9 +95,9 @@ class Service(object):
             msg = Message.initialize(u.next())
 
         locator_pipe.close()
-        if msg.id == message.RPC_CHUNK: #PROTOCOL_LIST.index("rpc::chunk"):
+        if msg.id == message.RPC_CHUNK:
             return unpackb(msg.data)
-        if msg.id == message.RPC_ERROR: #PROTOCOL_LIST.index("rpc::error"):
+        if msg.id == message.RPC_ERROR:
             raise Exception(msg.message)
 
     def perform_sync(self, method, *args, **kwargs):
@@ -103,7 +105,7 @@ class Service(object):
         Use for these purposes the other instance of the service!
         """
 
-        timeout = kwargs.get("timeout", 5)
+        timeout = kwargs.get("timeout", 2)
         # Get number of current method
         try:
             number = (_num for _num, _name in self._service_api.iteritems() if _name == method).next()
@@ -111,13 +113,13 @@ class Service(object):
             raise ServiceError(self.servicename, "method %s is not available" % method, -100)
 
         try:
-            self.pipe.settimeout(timeout) # DO IT SYNC
+            self.pipe.settimeout(timeout)  # DO IT SYNC
             self.pipe.writeall(packb([number, self._counter, args]))
             self._counter += 1
             u = Unpacker()
             msg = None
 
-            # If we receive rpc::error, put ServiceError here, 
+            # If we receive rpc::error, put ServiceError here,
             # and raise this error instead of StopIteration on rpc::choke,
             # because after rpc::error we always receive choke.
             _error = None
@@ -129,25 +131,25 @@ class Service(object):
                     msg = Message.initialize(_data)
                     if msg is None:
                         continue
-                    if msg.id == message.RPC_CHUNK: #PROTOCOL_LIST.index("rpc::chunk"):
+                    if msg.id == message.RPC_CHUNK:
                         yield unpackb(msg.data)
-                    elif msg.id == message.RPC_CHOKE: #PROTOCOL_LIST.index("rpc::choke"):
+                    elif msg.id == message.RPC_CHOKE:
                         raise _error or StopIteration
-                    elif msg.id == message.RPC_ERROR: #PROTOCOL_LIST.index("rpc::error"):
+                    elif msg.id == message.RPC_ERROR:
                         _error = ServiceError(self.servicename, msg.message, msg.code)
         finally:
-            self.pipe.settimeout(0) #return to non-blocking mode
+            self.pipe.settimeout(0)  # return to non-blocking mode
 
     def _on_message(self, args):
         msg = Message.initialize(args)
         if msg is None:
             return
         try:
-            if msg.id == message.RPC_CHUNK: #PROTOCOL_LIST.index("rpc::chunk"):
+            if msg.id == message.RPC_CHUNK:
                 self._subscribers[msg.session][0](unpackb(msg.data))
-            elif msg.id == message.RPC_CHOKE: #PROTOCOL_LIST.index("rpc::choke"):
+            elif msg.id == message.RPC_CHOKE:
                 self._subscribers.pop(msg.session, None)
-            elif msg.id == message.RPC_ERROR: #PROTOCOL_LIST.index("rpc::error"):
+            elif msg.id == message.RPC_ERROR:
                 self._subscribers[msg.session][1](ServiceError(self.servicename, msg.message, msg.code))
         except Exception as err:
             print "Exception in _on_message: %s" % str(err)

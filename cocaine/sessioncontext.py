@@ -16,7 +16,7 @@
 #    GNU Lesser General Public License for more details.
 #
 #    You should have received a copy of the GNU Lesser General Public License
-#    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+#    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
 import traceback
@@ -24,6 +24,7 @@ import traceback
 from decorators import default
 from cocaine.exceptions import *
 from cocaine.logging import Logger
+
 
 class Sandbox(object):
 
@@ -54,6 +55,7 @@ class Sandbox(object):
                 event_handler = default(event_handler)
         self._events[event_name] = event_handler
 
+
 class Stream(object):
 
     def __init__(self, session, worker):
@@ -80,6 +82,7 @@ class Stream(object):
     def closed(self):
         return self._m_state is None
 
+
 class Request(object):
 
     def __init__(self):
@@ -87,8 +90,8 @@ class Request(object):
         self.cache = list()
         self._clbk = None   # Callback - on chunk
         self._errbk = None  # Errorback - translate error to handler
-        self._errmsg = None # Store message
-        self._state = 1     # Status of stream (close/open)
+        self._errmsg = None  # Store message
+        self._state = 1      # Status of stream (close/open)
 
     def push(self, chunk):
         if self._clbk is None:
@@ -97,7 +100,8 @@ class Request(object):
             self.cache.append(chunk)
         else:
             # Copy callback to temp, clear current callback and perform temp
-            # Do it so because self._clbk may change, while perfoming callback function.
+            # Do it so because self._clbk may change,
+            # while perfoming callback function.
             # Avoid double chunk sending to the task
             self._logger.debug("Send chunk to application")
             temp = self._clbk
@@ -111,13 +115,13 @@ class Request(object):
         self._logger.debug("Close request")
         self._state = None
         if len(self.cache) == 0 and self._clbk is not None:
-            self._logger.warn("Chunks are over, but the application requests them")
+            self._logger.warn("Chunks are over,\
+                                but the application requests them")
             if self._errbk is not None:
                 self._logger.error("Throw error")
                 self._errbk(RequestError("No chunks are available"))
             else:
                 self._logger.error("No errorback. Can't throw error")
-
 
     def read(self):
         def wrapper(clbk, errorback=None):
@@ -128,12 +132,14 @@ class Request(object):
         if len(self.cache) > 0:
             callback(self.cache.pop(0))
         elif self._errmsg is not None:
-            errorback(self._errmsg) #traslate error into worker
+            errorback(self._errmsg)  # traslate error into worker
         elif self._state is not None:
             self._clbk = callback
             self._errbk = errorback
         else:
-            #Stream closed by choke
-            #Raise exception here because no chunks from cocaine-runtime are availaible
-            self._logger.warn("Chunks are over, but the application requests them")
+            # Stream closed by choke
+            # Raise exception here because no chunks
+            # from cocaine-runtime are availaible
+            self._logger.warn("Chunks are over,\
+                                but the application requests them")
             errorback(RequestError("No chunks are available"))
