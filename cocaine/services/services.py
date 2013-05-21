@@ -22,6 +22,7 @@
 import sys
 import errno
 import socket
+from threading import Lock
 
 from msgpack import Unpacker, packb, unpackb
 
@@ -37,18 +38,45 @@ from cocaine.exceptions import ServiceError
 
 __all__ = ["Service"]
 
+class Future(object):
+
+    def __init__(self):
+        self._clb = None
+        self._errbk = None
+        self._on_done = None
+
+    @property
+    def callback(self):
+        return self._clb
+
+    @property
+    def errorback(self):
+        return self._errbk
+
+    def bind(self, callback, erroback=None, on_done=None):
+        self._clb = callback
+        self._errbk = erroback
+        self._on_done = on_done
 
 class Service(object):
 
     def __init__(self, name, endpoint="localhost", port=10053, init_args=sys.argv):
+
+        self.lock = Lock()
         def closure(number):
             def wrapper(*args):
-                def register_callback(callback, errorback=None):
-                    self.w_stream.write([number, self._counter, args])
-                    self._subscribers[self._counter] = (callback, errorback)
+                #def register_callback(callback, errorback=None):
+                #    self.w_stream.write([number, self._counter, args])
+                #    self._subscribers[self._counter] = (callback, errorback)
                     # FIX: Move counter increment for supporting stream-loke services
+                #    self._counter += 1
+                #return register_callback
+                future = Future()
+                with self.lock:
                     self._counter += 1
-                return register_callback
+                    self.w_stream.write([number, self._counter, args])
+                    self._subscribers[self._counter] = future
+                return future
             return wrapper
 
         service_endpoint, _, service_api = self._get_api(name, endpoint, port)
@@ -146,10 +174,10 @@ class Service(object):
             return
         try:
             if msg.id == message.RPC_CHUNK:
-                self._subscribers[msg.session][0](unpackb(msg.data))
+                self._subscribers[msg.session].callback(unpackb(msg.data))
             elif msg.id == message.RPC_CHOKE:
                 self._subscribers.pop(msg.session, None)
             elif msg.id == message.RPC_ERROR:
-                self._subscribers[msg.session][1](ServiceError(self.servicename, msg.message, msg.code))
+                self._subscribers[msg.session].errorback(ServiceError(self.servicename, msg.message, msg.code))
         except Exception as err:
             print "Exception in _on_message: %s" % str(err)

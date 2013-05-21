@@ -124,11 +124,14 @@ class Request(object):
                 self._logger.error("No errorback. Can't throw error")
 
     def read(self):
-        def wrapper(clbk, errorback=None):
-            self._read(clbk, errorback)
-        return wrapper
+        #def wrapper(clbk, errorback=None):
+        #    self._read(clbk, errorback)
+        #return wrapper
+        self._logger.error("READ")
+        return self
 
-    def _read(self, callback, errorback):
+    def bind(self, callback, errorback=None, on_done=None):
+        self._logger.error("BIND")
         if len(self.cache) > 0:
             callback(self.cache.pop(0))
         elif self._errmsg is not None:
