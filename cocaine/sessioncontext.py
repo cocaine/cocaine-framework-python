@@ -124,21 +124,24 @@ class Request(object):
                 self._logger.error("No errorback. Can't throw error")
 
     def read(self):
-        #def wrapper(clbk, errorback=None):
-        #    self._read(clbk, errorback)
-        #return wrapper
-        self._logger.error("READ")
         return self
 
+    def default_errorback(self, err):
+        self._logger.error("No errorback.\
+                Can't throw error: %s" % str(self._errmsg))
+
     def bind(self, callback, errorback=None, on_done=None):
-        self._logger.error("BIND")
+        self._logger.debug("Bind request")
         if len(self.cache) > 0:
             callback(self.cache.pop(0))
         elif self._errmsg is not None:
-            errorback(self._errmsg)  # traslate error into worker
+            if errorback is not None:
+                errorback(self._errmsg)  # traslate error into worker
+            else:
+                self.default_errorback(self._errmsg)
         elif self._state is not None:
             self._clbk = callback
-            self._errbk = errorback
+            self._errbk = errorback or self.default_errorback
         else:
             # Stream closed by choke
             # Raise exception here because no chunks
