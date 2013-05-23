@@ -31,14 +31,15 @@ setup(
     description = "Cocaine Python Framework",
     long_description = "A simple framework to ease the development of Cocaine apps",
     url = "https://github.com/cocaine/cocaine-framework-python",
-    author = "Andrey Sibiryov",
-    author_email = "me@kobology.ru",
+    author = "Anton Tyurin",
+    author_email = "noxiouz@yandex.ru",
     license = "LGPLv3+",
     platforms = ["Linux", "BSD", "MacOS"],
     packages = ["cocaine",
                 "cocaine.asio",
                 "cocaine.decorators",
                 "cocaine.services",
+                "cocaine.futures",
                 "cocaine.logging"],
     requires = ["msgpack", "tornado"]
 )
