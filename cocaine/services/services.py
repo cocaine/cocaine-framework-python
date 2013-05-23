@@ -48,10 +48,9 @@ class Future(object):
         self._on_done_is_emited = False
         self.cache = list()
         self._state = 1
-        self._has_chunks = False # Flag for on_done callback
+        self._is_raised_error = False # Flag for on_done callback
 
     def callback(self, chunk):
-        self._has_chunks = True # Even one chunk
         if self._clbk is None:
             self.cache.append(chunk)
         else:
@@ -60,6 +59,7 @@ class Future(object):
             temp(chunk)
 
     def error(self, err):
+        self._is_raised_error = True # Flag for on_done callback
         if self._errbk is None:
             self._errmsg = err
         else:
@@ -78,7 +78,7 @@ class Future(object):
         if len(self.cache) == 0 and self._clbk is not None:
             # No chunks are available at all,
             # then call on_done(), because choke always arrives after all chunks
-            if self._on_done is not None:
+            if self._on_done is not None and not self._is_raised_error:
                 self._on_done()
             elif self._errbk is not None:
                 self._errbk(RequestError("No chunks are available"))
@@ -90,24 +90,27 @@ class Future(object):
             callback(self.cache.pop(0))
         elif self._errmsg is not None:
             if erroback is not None:
-                errorback(self._errmsg)  # traslate error into worker
+                temp = self._errmsg
+                self._errmsg = None
+                errorback(temp)  # traslate error into worker
             else:
                 self.default_errorback(self._errmsg)
         elif self._state is not None:
             self._clbk = callback
             self._errbk = errorback or self.default_errorback
             self._on_done = on_done or self.default_on_done
-        elif self._state is None:
+        elif self._state is None: # Flag for on_done callback
             if on_done is not None:
                 on_done()
-        else:
-            # Stream closed by choke
-            # Raise exception here because no chunks
-            # from cocaine-runtime are availaible
-            if erroback is not None:
-                errorback(RequestError("No chunks are available"))
-            else:
-                self.default_errorback(RequestError("No chunks are available"))
+        # Never reachs this now
+        #else:
+        #    # Stream closed by choke
+        #    # Raise exception here because no chunks
+        #    # from cocaine-runtime are availaible
+        #    if erroback is not None:
+        #        errorback(RequestError("No chunks are available"))
+        #    else:
+        #        self.default_errorback(RequestError("No chunks are available"))
 
 
 class Service(object):
@@ -224,7 +227,7 @@ class Service(object):
             elif msg.id == message.RPC_CHOKE:
                 future = self._subscribers.pop(msg.session, None)
                 if future is not None:
-                    future.emit_on_done()
+                    future.close()
             elif msg.id == message.RPC_ERROR:
                 self._subscribers[msg.session].error(ServiceError(self.servicename, msg.message, msg.code))
         except Exception as err:
