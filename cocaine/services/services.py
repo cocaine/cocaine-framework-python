@@ -128,6 +128,14 @@ class Service(object):
                 return future
             return wrapper
 
+        if '--locator' in init_args:
+            try:
+                port = int(init_args[init_args.index('--locator') + 1])
+            except ValueError as err:
+                port = 10053
+            except IndexError as err:
+                port = 10053
+
         service_endpoint, _, service_api = self._get_api(name, endpoint, port)
 
         self._service_api = service_api
