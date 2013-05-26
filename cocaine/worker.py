@@ -42,7 +42,7 @@ from cocaine.exceptions import RequestError
 
 class Worker(object):
 
-    def __init__(self, init_args=sys.argv):
+    def __init__(self, init_args=sys.argv, disown_timeout=2, heartbeat_timeout=5):
         self._logger = Logger()
         self._init_endpoint(init_args)
 
@@ -51,8 +51,8 @@ class Worker(object):
 
         self.loop = ev.Loop()
 
-        self.disown_timer = ev.Timer(self.on_disown, 2, self.loop)
-        self.heartbeat_timer = ev.Timer(self.on_heartbeat, 5, self.loop)
+        self.disown_timer = ev.Timer(self.on_disown, disown_timeout, self.loop)
+        self.heartbeat_timer = ev.Timer(self.on_heartbeat, heartbeat_timeout, self.loop)
         self.disown_timer.start()
         self.heartbeat_timer.start()
 
