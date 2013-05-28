@@ -1,0 +1,5 @@
+#!/bin/bash
+
+/bin/bash /etc/bash_completion.d/cocaine-tool
+
+#DEBHELPER#

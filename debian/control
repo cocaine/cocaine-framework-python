@@ -2,7 +2,7 @@ Source: cocaine-framework-python
 Section: utils
 Priority: extra
 Maintainer: Anton Tyurin <noxiouz@yandex-team.ru>
-Build-Depends: cdbs, debhelper (>= 7.0.13), python, python-central
+Build-Depends: cdbs, debhelper (>= 7.0.13), python, python-central, python-setuptools | python-distutils
 Standards-Version: 3.8.4
 Vcs-Git: git://github.com/cocaine/cocaine-framework-python.git
 Vcs-Browser: https://github.com/cocaine/cocaine-framework-python
@@ -10,7 +10,14 @@ XS-Python-Version: >= 2.6
 
 Package: cocaine-framework-python
 Architecture: any
-Depends: ${misc:Depends}, ${python:Depends}, python-msgpack | msgpack-python, python-tornado
+Depends: ${python:Depends}, python-msgpack | msgpack-python, python-tornado
+XB-Python-Version: >= 2.6
 Description: Cocaine - Python Framework
  A simple framework to ease the developing of Cocaine apps.
+
+Package: cocaine-tools
+Architecture: any
+Depends: cocaine-framework-python (>= 0.10.2-1), python-opster (>= 3.8)
 XB-Python-Version: >= 2.6
+Description: Cocaine - Toolset
+ Various tools to query and manipulate running Cocaine instances.
