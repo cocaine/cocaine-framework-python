@@ -40,6 +40,7 @@ setup(
                 "cocaine.decorators",
                 "cocaine.services",
                 "cocaine.futures",
-                "cocaine.logging"],
-    requires = ["msgpack", "tornado"]
+                "cocaine.logging",
+                "cocaine.tools"],
+    requires = ["msgpack", "tornado", 'opster']
 )
