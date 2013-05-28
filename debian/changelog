@@ -1,3 +1,17 @@
+cocaine-framework-python (0.10.5) lucid; urgency=low
+
+  * Add Sleep and NextTick futures
+  * Add option to Worker class for tuning hearbeat and disown timeouts
+  * Now future could accept 3 callbacks (callback, errorback, on_done)
+  * Remake @http decorator (add body, request and meta properties)
+  * Support of --locator option
+  * Add package cocaine.tool for cocaine-tools
+  * Fix bug with processing multiple sessions of the
+  same event.
+  * Small bugfixes
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 28 May 2013 21:55:37 +0400
+
 cocaine-framework-python (0.10.2) lucid; urgency=low
 
   * Release 10.2.

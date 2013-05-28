@@ -1,5 +1,5 @@
 #!/bin/bash
-_cocaine_tools()
+_cocaine_tool()
 {
     local cur prev special i
     
@@ -293,4 +293,4 @@ _cocaine_tools()
     esac
     return 0
 } &&
-complete -F _cocaine_tools cocaine-tools
+complete -F _cocaine_tool cocaine-tool

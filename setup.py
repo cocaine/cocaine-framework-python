@@ -27,7 +27,7 @@ except ImportError:
 
 setup(
     name = "cocaine",
-    version = "0.10.2",
+    version = "0.10.5",
     description = "Cocaine Python Framework",
     long_description = "A simple framework to ease the development of Cocaine apps",
     url = "https://github.com/cocaine/cocaine-framework-python",
