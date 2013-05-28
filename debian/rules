@@ -8,6 +8,4 @@ include /usr/share/cdbs/1/class/python-distutils.mk
 install/cocaine-tools::
 	install -d $(DEB_DESTDIR)usr/bin
 	install -m755 scripts/cocaine-tool $(DEB_DESTDIR)usr/bin/cocaine-tool
-	install -d $(DEB_DESTDIR)etc/bash_completion.d
-	install -m755 scripts/bash_completion.d/cocaine-tool $(DEB_DESTDIR)etc/bash_completion.d/cocaine-tool
-
+	dh_bash-completion
