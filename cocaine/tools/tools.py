@@ -613,13 +613,17 @@ class PrettyPrintableAppCheckAction(AppCheckAction):
         future.bind(callback=self.onChunkReceived, errorback=self.onErrorReceived)
 
     def onChunkReceived(self, chunk):
-        for k, v in chunk.items():
-            print('{0}: {1}'.format(k, v))
+        app = self.name
+        state = chunk[app]
+        print('{0}: {1}'.format(app, state))
         IOLoop.instance().stop()
+        if 'running' not in state:
+            exit(1)
 
     def onErrorReceived(self, exception):
         printError('Error occurred: {what}'.format(what=exception))
         IOLoop.instance().stop()
+        exit(1)
 
 AVAILABLE_NODE_ACTIONS = {
     'info': NodeActionPrettyWrapper()(NodeInfoAction),

@@ -6,7 +6,7 @@ _cocaine_tool()
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     subcommands_1="info app profile runlist crashlog help"
-    subcommands_app="start pause list view upload remove"
+    subcommands_app="start pause check list view upload remove"
     subcommands_profile="list view upload remove"
     subcommands_runlist="list view upload remove"
     subcommands_crashlog="list view remove removeall"
@@ -95,6 +95,18 @@ _cocaine_tool()
 	    case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
 	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+                return 0
+                ;;
+            *)
+                COMPREPLY=($(compgen -W "--name" -- ${cur}))
+                return 0
+                ;;
+            esac
+            ;;
+	check)
+            case "${COMP_WORDS[COMP_CWORD-1]}" in
+            --name)
+		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
                 return 0
                 ;;
             *)
