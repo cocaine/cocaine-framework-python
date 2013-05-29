@@ -116,7 +116,7 @@ class WritableStream(object):
 
         self.mutex = Lock()
 
-        self.ring = array.array('c')
+        self.ring = bytearray()
         self.wr_offset = 0
         self.tx_offset = 0
 
@@ -148,7 +148,7 @@ class WritableStream(object):
                     size -= sent
 
             if len(self.ring) > MAX_BUFF_SIZE:
-                self.ring = array.array('c', self.ring[self.tx_offset : self.tx_offset + unsent])
+                self.ring = self.ring[self.tx_offset : self.tx_offset + unsent]
                 self.rd_offset = unsent
                 self.rx_offset = 0
 
