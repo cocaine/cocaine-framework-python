@@ -57,9 +57,11 @@ class Loop(object):
 
     def _register_event(self, fd, event):
         self._fd_events[fd] |= event
+        self._ioloop.update_handler(fd, self._fd_events[fd])
 
     def _unregister_event(self, fd, event):
         self._fd_events[fd] ^= event
+        self._ioloop.update_handler(fd, self._fd_events[fd])
 
     def register_write_event(self, callback, fd):
         self._register_event(fd, self.WRITE)

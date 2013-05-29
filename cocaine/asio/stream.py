@@ -123,7 +123,7 @@ class WritableStream(object):
     def _on_event(self):
         with self.mutex:
 
-            if len(self.ring) == 0 and self.is_attached:
+            if self.wr_offset == self.tx_offset and self.is_attached:
                 self.loop.unregister_write_event(self.pipe.fileno())
                 self.is_attached = False
                 return
