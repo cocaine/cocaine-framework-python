@@ -605,9 +605,9 @@ class Executor(object):
             action.execute()
             IOLoop.instance().start()
         except CocaineError as err:
-            raise ToolsError(err.message)
+            raise ToolsError(err)
         except ValueError as err:
-            raise ToolsError(err.message)
+            raise ToolsError(err)
         except KeyError as err:
             raise ToolsError('Action {0} is not available'.format(err))
         except Exception as err:

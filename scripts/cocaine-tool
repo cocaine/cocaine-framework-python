@@ -234,4 +234,4 @@ if __name__ == '__main__':
     try:
         d.dispatch()
     except ToolsError as err:
-        printError(err.message)
+        printError(err)
