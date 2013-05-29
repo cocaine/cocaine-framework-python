@@ -1,3 +1,10 @@
+cocaine-framework-python (0.10.4-4) lucid; urgency=low
+
+  * Correctly register POLLOUT handlers in the I/O loop to allow large app
+    uploads, etc.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 30 May 2013 00:14:51 +0400
+
 cocaine-framework-python (0.10.4-3) unstable; urgency=low
 
   [ Anton Tyurin ]
