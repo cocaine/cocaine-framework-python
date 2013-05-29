@@ -1,5 +1,4 @@
 #!/usr/bin/python
-#TODO: Add opster to package requirements
 from opster import Dispatcher
 #TODO: Package name cocaine.tools.tools is not funny. May be move it one layer up?
 from cocaine.tools.tools import ToolsExecutor, NodeExecutor, coloredOutput, ToolsError, printError
@@ -90,7 +89,7 @@ def app_start(host=('h', DEFAULT_HOST, 'hostname'),
 
 
 @appDispatcher.command(name='pause')
-def app_start(host=('h', DEFAULT_HOST, 'hostname'),
+def app_pause(host=('h', DEFAULT_HOST, 'hostname'),
               port=('p', DEFAULT_PORT, 'port'),
               name=('n', '', 'application name')):
     """
@@ -98,6 +97,17 @@ def app_start(host=('h', DEFAULT_HOST, 'hostname'),
     """
     node = NodeExecutor()
     node.executeAction('app:pause', **{'host': host, 'port': port, 'name': name})
+
+
+@appDispatcher.command()
+def check(host=('h', DEFAULT_HOST, 'hostname'),
+          port=('p', DEFAULT_PORT, 'port'),
+          name=('n', '', 'application name')):
+    """
+    Checks application status
+    """
+    node = NodeExecutor()
+    node.executeAction('app:check', **{'host': host, 'port': port, 'name': name})
 
 
 @profileDispatcher.command(name='list')

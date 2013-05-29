@@ -32,3 +32,13 @@ class ServiceError(CocaineError):
 
     def __str__(self):
         return "ServiceException [%d] %s: %s" % (self.code, self.servicename, self.msg)
+
+
+class ConnectionError(CocaineError):
+    pass
+
+
+class ConnectionRefusedError(ConnectionError):
+    def __init__(self, host, port):
+        message = 'Invalid cocaine-runtime endpoint: {host}:{port}'.format(host=host, port=port)
+        super(ConnectionRefusedError, self).__init__(message)

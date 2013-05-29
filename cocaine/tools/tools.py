@@ -10,8 +10,8 @@ from cocaine.services import Service
 import msgpack
 from tornado.ioloop import IOLoop
 
-from cocaine.tools.exceptions import ConnectionRefusedError, ConnectionError
-from cocaine.tools.exceptions import Error as CocaineError
+from cocaine.exceptions import ConnectionRefusedError, ConnectionError
+from cocaine.exceptions import CocaineError
 
 
 APPS_TAGS = ("apps",)
@@ -570,10 +570,62 @@ def NodeActionPrettyWrapper():
     return Patch
 
 
+class AppCheckAction(NodeAction):
+    def __init__(self, node, **config):
+        super(AppCheckAction, self).__init__(node, **config)
+        self.name = config.get('name')
+        if not self.name:
+            raise ValueError('Please specify application name')
+
+    def execute(self):
+        class Future(object):
+            def __init__(self, action, future):
+                self.action = action
+                self.messagesLeft = 0
+                future.bind(self.onChunk, self.onError)
+
+            def bind(self, callback, errorback=None):
+                self.callback = callback
+                self.errorback = errorback
+
+            def onChunk(self, chunk):
+                state = 'stopped or missing'
+                try:
+                    apps = chunk['apps']
+                    app = apps[self.action.name]
+                    state = app['state']
+                except KeyError:
+                    pass
+                finally:
+                    self.callback({self.action.name: state})
+
+            def onError(self, exception):
+                self.errorback(exception)
+
+        future = self.node.info()
+        parseInfoFuture = Future(self, future)
+        return parseInfoFuture
+
+
+class PrettyPrintableAppCheckAction(AppCheckAction):
+    def execute(self):
+        future = super(PrettyPrintableAppCheckAction, self).execute()
+        future.bind(callback=self.onChunkReceived, errorback=self.onErrorReceived)
+
+    def onChunkReceived(self, chunk):
+        for k, v in chunk.items():
+            print('{0}: {1}'.format(k, v))
+        IOLoop.instance().stop()
+
+    def onErrorReceived(self, exception):
+        printError('Error occurred: {what}'.format(what=exception))
+        IOLoop.instance().stop()
+
 AVAILABLE_NODE_ACTIONS = {
     'info': NodeActionPrettyWrapper()(NodeInfoAction),
     'app:start': NodeActionPrettyWrapper()(AppStartAction),
-    'app:pause': NodeActionPrettyWrapper()(AppPauseAction)
+    'app:pause': NodeActionPrettyWrapper()(AppPauseAction),
+    'app:check': PrettyPrintableAppCheckAction
 }
 
 

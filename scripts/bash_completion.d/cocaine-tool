@@ -34,7 +34,7 @@ _cocaine_tool()
         view)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-		COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -66,7 +66,7 @@ _cocaine_tool()
 	remove)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-	        COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -78,11 +78,11 @@ _cocaine_tool()
 	start)
 	    case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-	        COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
                 return 0
                 ;;
 	    --profile)
-	        COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/profiles/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/profiles/ | grep ^- | awk '{print $9}'`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -94,7 +94,7 @@ _cocaine_tool()
 	pause)
 	    case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-	        COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -123,7 +123,7 @@ _cocaine_tool()
         view)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-		COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/profiles/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/profiles/ | grep ^- | awk '{print $9}'`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -150,7 +150,7 @@ _cocaine_tool()
 	remove)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-	        COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/profiles/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/profiles/ | grep ^- | awk '{print $9}'`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -178,7 +178,7 @@ _cocaine_tool()
         view)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-		COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/runlists/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/runlists/ | grep ^- | awk '{print $9}'`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -205,7 +205,7 @@ _cocaine_tool()
 	remove)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-	        COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/runlists/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/runlists/ | grep ^- | awk '{print $9}'`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -229,7 +229,7 @@ _cocaine_tool()
         list)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-		COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -241,11 +241,11 @@ _cocaine_tool()
 	view)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-		COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
                 return 0
                 ;;
 	    --timestamp)
-		COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/crashlogs/ | grep ^- | awk '{print $9}' | sed 's/:.*$//g'`" -- ${cur}))
+		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/crashlogs/ | grep ^- | awk '{print $9}' | sed 's/:.*$//g'`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -257,11 +257,11 @@ _cocaine_tool()
 	remove)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-	        COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
                 return 0
                 ;;
 	    --timestamp)
-		COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/crashlogs/ | grep ^- | awk '{print $9}' | sed 's/:.*$//g'`" -- ${cur}))
+		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/crashlogs/ | grep ^- | awk '{print $9}' | sed 's/:.*$//g'`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -273,7 +273,7 @@ _cocaine_tool()
 	removeall)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-	        COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
                 return 0
                 ;;
             *)
