@@ -14,9 +14,9 @@ from cocaine.exceptions import ConnectionRefusedError, ConnectionError
 from cocaine.exceptions import CocaineError
 
 
-APPS_TAGS = ("apps",)
-RUNLISTS_TAGS = ("runlists",)
-PROFILES_TAGS = ("profiles",)
+APPS_TAGS = ("app",)
+RUNLISTS_TAGS = ("runlist",)
+PROFILES_TAGS = ("profile",)
 
 
 class COLORED:

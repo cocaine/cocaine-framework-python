@@ -34,9 +34,9 @@ DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 10053
 DEFAULT_TIMEOUT = 2
 
-APPS_TAGS = ("apps",)
-RUNLISTS_TAGS = ("runlists",)
-PROFILES_TAGS = ("profiles",)
+APPS_TAGS = ("app",)
+RUNLISTS_TAGS = ("runlist",)
+PROFILES_TAGS = ("profile",)
 
 
 def sync_decorator(func, timeout):
