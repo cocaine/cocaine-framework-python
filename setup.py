@@ -26,19 +26,23 @@ except ImportError:
     from distutils.core import setup, Extension
 
 setup(
-    name = "cocaine",
-    version = "0.10.1",
-    description = "Cocaine Python Framework",
-    long_description = "A simple framework to ease the development of Cocaine apps",
-    url = "https://github.com/cocaine/cocaine-framework-python",
-    author = "Andrey Sibiryov",
-    author_email = "me@kobology.ru",
-    license = "LGPLv3+",
-    platforms = ["Linux", "BSD", "MacOS"],
-    packages = ["cocaine",
-                "cocaine.asio",
-                "cocaine.decorators",
-                "cocaine.services",
-                "cocaine.logging"],
-    requires = ["msgpack", "tornado"]
+    name="cocaine",
+    version="0.10.4-3",
+    description="Cocaine Python Framework",
+    long_description="A simple framework to ease the development of Cocaine apps",
+    url="https://github.com/cocaine/cocaine-framework-python",
+    author="Anton Tyurin",
+    author_email="noxiouz@yandex.ru",
+    license="LGPLv3+",
+    platforms=["Linux", "BSD", "MacOS"],
+    packages=[
+        "cocaine",
+        "cocaine.asio",
+        "cocaine.decorators",
+        "cocaine.services",
+        "cocaine.futures",
+        "cocaine.logging",
+        "cocaine.tools"
+    ],
+    requires=["msgpack_python", "tornado", 'opster']
 )

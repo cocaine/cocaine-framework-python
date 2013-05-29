@@ -1,0 +1,229 @@
+# cocaine-tool(1) completion
+
+_cocaine_tool()
+{
+    local cur prev special i
+    
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    subcommands_1="info app profile runlist crashlog help"
+    subcommands_app="start pause check list view upload remove"
+    subcommands_profile="list view upload remove"
+    subcommands_runlist="list view upload remove"
+    subcommands_crashlog="list view remove removeall"
+
+    if [[ ${COMP_CWORD} == 1 ]] ; then 
+        COMPREPLY=( $(compgen -W "${subcommands_1}" -- ${cur}) )
+        return 0
+    fi
+
+    subcmd_1="${COMP_WORDS[1]}"
+    case "${subcmd_1}" in
+    app)
+
+        if [[ ${COMP_CWORD} == 2 ]] ; then 
+            COMPREPLY=( $(compgen -W "${subcommands_app}" -- ${cur}) )
+            return 0
+        fi
+
+        subcmd_2="${COMP_WORDS[2]}"
+        case "${subcmd_2}" in 
+        list)
+	    COMPREPLY=()
+            return 0
+            ;;
+        view|check|remove|pause)
+            case "${COMP_WORDS[COMP_CWORD-1]}" in
+            --name)
+		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+                return 0
+                ;;
+            *)
+                COMPREPLY=($(compgen -W "--name" -- ${cur}))
+                return 0
+                ;;
+            esac
+            ;;
+	upload)
+            case "${COMP_WORDS[COMP_CWORD-1]}" in
+            --name)
+		COMPREPLY=()
+                return 0
+                ;;
+	    --manifest) 
+                _filedir
+                return 0
+                ;;
+	    --package) 
+                _filedir
+                return 0
+                ;;
+            *)
+                COMPREPLY=($(compgen -W "--name --manifest --package" -- ${cur}))
+                return 0
+                ;;
+            esac
+            ;;
+	start)
+	    case "${COMP_WORDS[COMP_CWORD-1]}" in
+            --name)
+	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+                return 0
+                ;;
+	    --profile)
+	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/profiles/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+                return 0
+                ;;
+            *)
+                COMPREPLY=($(compgen -W "--name --profile" -- ${cur}))
+                return 0
+                ;;
+            esac
+            ;;
+        *)
+            ;;
+        esac
+        ;;
+    profile)
+
+        if [[ ${COMP_CWORD} == 2 ]] ; then 
+            COMPREPLY=( $(compgen -W "${subcommands_profile}" -- ${cur}) )
+            return 0
+        fi
+
+        subcmd_2="${COMP_WORDS[2]}"
+        case "${subcmd_2}" in 
+        list)
+	    COMPREPLY=()
+            return 0
+            ;;
+        view|remove)
+            case "${COMP_WORDS[COMP_CWORD-1]}" in
+            --name)
+		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/profiles/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+                return 0
+                ;;
+            *)
+                COMPREPLY=($(compgen -W "--name" -- ${cur}))
+                return 0
+                ;;
+            esac
+            ;;
+	upload)
+            case "${COMP_WORDS[COMP_CWORD-1]}" in
+            --name)
+                return 0
+                ;;
+	    --profile) 
+                _filedir
+                return 0
+                ;;
+            *)
+                COMPREPLY=($(compgen -W "--name --profile" -- ${cur}))
+                return 0
+                ;;
+            esac
+            ;;
+        *)
+            ;;
+        esac
+        ;;
+    runlist)
+        if [[ ${COMP_CWORD} == 2 ]] ; then 
+            COMPREPLY=( $(compgen -W "${subcommands_runlist}" -- ${cur}) )
+            return 0
+        fi
+
+        subcmd_2="${COMP_WORDS[2]}"
+        case "${subcmd_2}" in 
+        list)
+	    COMPREPLY=()
+            return 0
+            ;;
+        view|remove)
+            case "${COMP_WORDS[COMP_CWORD-1]}" in
+            --name)
+		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/runlists/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+                return 0
+                ;;
+            *)
+                COMPREPLY=($(compgen -W "--name" -- ${cur}))
+                return 0
+                ;;
+            esac
+            ;;
+	upload)
+            case "${COMP_WORDS[COMP_CWORD-1]}" in
+            --name)
+                return 0
+                ;;
+	    --runlist) 
+                _filedir
+                return 0
+                ;;
+            *)
+                COMPREPLY=($(compgen -W "--name --runlist" -- ${cur}))
+                return 0
+                ;;
+            esac
+            ;;
+        *)
+            ;;
+        esac
+        ;;
+    crashlog)
+        if [[ ${COMP_CWORD} == 2 ]] ; then 
+            COMPREPLY=( $(compgen -W "${subcommands_crashlog}" -- ${cur}) )
+            return 0
+        fi
+
+        subcmd_2="${COMP_WORDS[2]}"
+        case "${subcmd_2}" in 
+        list|removeall)
+            case "${COMP_WORDS[COMP_CWORD-1]}" in
+            --name)
+		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+                return 0
+                ;;
+            *)
+                COMPREPLY=($(compgen -W "--name" -- ${cur}))
+                return 0
+                ;;
+            esac
+            ;;
+	view|remove)
+            case "${COMP_WORDS[COMP_CWORD-1]}" in
+            --name)
+		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
+                return 0
+                ;;
+	    --timestamp)
+		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/crashlogs/ | grep ^- | awk '{print $9}' | sed 's/:.*$//g'`" -- ${cur}))
+                return 0
+                ;;
+            *)
+                COMPREPLY=($(compgen -W "--name --timestamp" -- ${cur}))
+                return 0
+                ;;
+            esac
+            ;;
+        *)
+            ;;
+        esac
+        ;;
+    help)
+    COMPREPLY=( $(compgen -W "${subcommands_1}" -- ${cur}))
+    return 0
+        ;;
+    esac
+    return 0
+} &&
+complete -F _cocaine_tool cocaine-tool
+
+# Local variables:
+# mode: shell-script
+# sh-basic-offset: 4
+# sh-indent-comment: t
+# indent-tabs-mode: nil
+# End:
+# ex: ts=4 sw=4 et filetype=sh

@@ -31,7 +31,7 @@ class _HTTPResponse(object):
         self._stream = stream
 
     def write(self, body):
-        self._stream.write(msgpack.packb(body))
+        self._stream.write(body)
 
     def write_head(self, code, headers):
         self._stream.write(msgpack.packb({'code': code, 'headers' : headers}))
@@ -43,5 +43,48 @@ class _HTTPResponse(object):
     def closed(self):
         return self._stream.closed
 
+class _HTTPRequest(object):
+
+    def __init__(self, data):
+        self._data = msgpack.unpackb(data)
+
+    @property
+    def body(self):
+        """Return request body"""
+        return self._data['body']
+
+    @property
+    def meta(self):
+        """ Return dict like:
+        {'cookies': {},
+        'headers': {'ACCEPT': '*/*',
+        'CONTENT-TYPE': '',
+        'HOST': 'somehost',
+        'USER-AGENT': 'curl/7.19.7 (x86_64-pc-linux-gnu) libcurl/7.19.7 OpenSSL/0.9.8k zlib/1.2.3.3 libidn/1.15'},
+        'host': 'someurl.com',
+        'method': 'GET',
+        'path_info': '',
+        'query_string': 'partnerID=ntp_tb',
+        'remote_addr': '1.11.111.111',
+        'script_name': '/someone/get/',
+        'secure': False,
+        'server_addr': '1.1.1.1',
+        'url': 'someurl'}
+        """
+        return self._data['meta']
+
+    @property
+    def request(self):
+        return self._data['request']
+
+
+def http_request_decorator(obj):
+    def dec(func):
+        def wrapper(chunk):
+            return func(_HTTPRequest(chunk))
+        return wrapper
+    obj.push = dec(obj.push)
+    return obj
+
 def http(func):
-    return proxy_factory(func, response_handler=_HTTPResponse)
+    return proxy_factory(func, response_handler=_HTTPResponse, request_handler=http_request_decorator)

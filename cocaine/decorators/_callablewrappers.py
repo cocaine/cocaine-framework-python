@@ -27,6 +27,7 @@ import traceback
 
 from cocaine.logging import Logger
 
+
 class _Proxy(object):
 
     __metaclass__ = ABCMeta
@@ -66,12 +67,12 @@ class _Coroutine(_Proxy):
         self._current_future_object = None
 
     @exception_trap
-    def push(self, chunk):
+    def push(self, chunk=None):
         self._logger.debug("Push chunk")
         self._current_future_object = self._func.send(chunk)
         while self._current_future_object is None:
             self._current_future_object = self._func.next()
-        self._current_future_object(self.push, self.error)
+        self._current_future_object.bind(self.push, self.error, self.push)
 
     @exception_trap
     def error(self, error):
@@ -79,15 +80,16 @@ class _Coroutine(_Proxy):
         self._current_future_object = self._func.throw(error)
         while self._current_future_object is None:
             self._current_future_object = self._func.next()
-        self._current_future_object(self.push, self.error)
+        self._current_future_object.bind(self.push, self.error, self.push)
 
+    @exception_trap
     def invoke(self, request, stream):
         self._state = 1
-        self._response = stream # attach response stream
-        self._func = self._obj(request, self._response) # prepare generator
+        self._response = stream  # attach response stream
+        self._func = self._obj(request, self._response)  # prepare generator
         self._current_future_object = self._func.next()
         if self._current_future_object is not None:
-            self._current_future_object(self.push, self.error)
+            self._current_future_object.bind(self.push, self.error, self.push)
 
 
     def close(self):
@@ -101,7 +103,6 @@ class _Function(_Proxy):
     def __init__(self, func):
         self._state = None
         self._func = func
-        #self._response = None
 
     def invoke(self, request, stream):
         self._state = 1
@@ -133,13 +134,6 @@ def type_traits(func_or_generator):
     else:
         return _Function
 
-def decomaker(handler):
-    def dec(func):
-        def wrapper(arg):
-            return func(handler(arg))
-        return wrapper
-    return dec
-
 def patch_response(obj, response_handler):
     def decorator(handler):
         def dec(func):
@@ -152,14 +146,23 @@ def patch_response(obj, response_handler):
     return obj
 
 def patch_request(obj, request_handler):
-    obj.push = decomaker(request_handler)(obj.push)
+    def req_decorator(handler):
+        def dec(func):
+            def wrapper(request, response):
+                return func(handler(request), response)
+            return wrapper
+        return dec
+
+    obj.invoke = req_decorator(request_handler)(obj.invoke)
     return obj
 
 def proxy_factory(func, request_handler=None, response_handler=None):
-    _factory = type_traits(func)
-    obj = _factory(func)
-    if response_handler is not None:
-        obj = patch_response(obj, response_handler)
-    if request_handler is not None:
-        obj = patch_request(obj, request_handler)
-    return obj
+    def wrapper():
+        _factory = type_traits(func)
+        obj = _factory(func)
+        if response_handler is not None:
+            obj = patch_response(obj, response_handler)
+        if request_handler is not None:
+            obj = patch_request(obj, request_handler)
+        return obj
+    return wrapper

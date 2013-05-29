@@ -1,0 +1,250 @@
+#!/usr/bin/python
+from opster import Dispatcher
+#TODO: Package name cocaine.tools.tools is not funny. May be move it one layer up?
+from cocaine.tools.tools import ToolsExecutor, NodeExecutor, coloredOutput, ToolsError, printError
+
+DESCRIPTION = ''
+DEFAULT_HOST = 'localhost'
+DEFAULT_PORT = 10053
+
+
+class Locator(object):
+    options = [
+        ('', 'colored', 'no', 'colorize error and warning output')
+    ]
+
+
+d = Dispatcher()
+appDispatcher = Dispatcher()
+profileDispatcher = Dispatcher()
+runlistDispatcher = Dispatcher()
+crashlogDispatcher = Dispatcher()
+
+
+@d.command()
+def info(host=('h', DEFAULT_HOST, 'hostname'),
+         port=('p', DEFAULT_PORT, 'port')):
+    """
+    Shows information about cocaine runtime
+    """
+    node = NodeExecutor()
+    node.executeAction('info', **{'host': host, 'port': port})
+
+
+@appDispatcher.command(name='list')
+def app_list(host=('h', DEFAULT_HOST, 'hostname'),
+             port=('p', DEFAULT_PORT, 'port')):
+    """
+    Shows installed applications list
+    """
+    tools.executeAction('app:list', **{'host': host, 'port': port})
+
+
+@appDispatcher.command(usage='--name=NAME', name='view')
+def app_view(host=('h', DEFAULT_HOST, 'hostname'),
+             port=('p', DEFAULT_PORT, 'port'),
+             name=('n', '', 'application name')):
+    """
+    Shows manifest context for application
+    """
+    tools.executeAction('app:view', **{'host': host, 'port': port, 'name': name})
+
+
+@appDispatcher.command(name='upload')
+def app_upload(host=('h', DEFAULT_HOST, 'hostname'),
+               port=('p', DEFAULT_PORT, 'port'),
+               name=('n', '', 'application name'),
+               manifest=('', '', 'manifest file name'),
+               package=('', '', 'location of the app source package')):
+    """
+    Uploads application into storage
+    """
+    tools.executeAction('app:upload', **{
+        'host': host,
+        'port': port,
+        'name': name,
+        'manifest': manifest,
+        'package': package
+    })
+
+
+@appDispatcher.command(name='remove')
+def app_remove(host=('h', DEFAULT_HOST, 'hostname'),
+               port=('p', DEFAULT_PORT, 'port'),
+               name=('n', '', 'application name')):
+    """
+    Removes application from storage
+    """
+    tools.executeAction('app:remove', **{'host': host, 'port': port, 'name': name})
+
+
+@appDispatcher.command(name='start')
+def app_start(host=('h', DEFAULT_HOST, 'hostname'),
+              port=('p', DEFAULT_PORT, 'port'),
+              name=('n', '', 'application name'),
+              profile=('r', '', 'profile name')):
+    """
+    Starts application
+    """
+    node = NodeExecutor()
+    node.executeAction('app:start', **{'host': host, 'port': port, 'name': name, 'profile': profile})
+
+
+@appDispatcher.command(name='pause')
+def app_pause(host=('h', DEFAULT_HOST, 'hostname'),
+              port=('p', DEFAULT_PORT, 'port'),
+              name=('n', '', 'application name')):
+    """
+    Pauses application
+    """
+    node = NodeExecutor()
+    node.executeAction('app:pause', **{'host': host, 'port': port, 'name': name})
+
+
+@appDispatcher.command()
+def check(host=('h', DEFAULT_HOST, 'hostname'),
+          port=('p', DEFAULT_PORT, 'port'),
+          name=('n', '', 'application name')):
+    """
+    Checks application status
+    """
+    node = NodeExecutor()
+    node.executeAction('app:check', **{'host': host, 'port': port, 'name': name})
+
+
+@profileDispatcher.command(name='list')
+def profile_list(host=('h', DEFAULT_HOST, 'hostname'),
+                 port=('p', DEFAULT_PORT, 'port')):
+    """
+    Shows installed profiles list
+    """
+    tools.executeAction('profile:list', **{'host': host, 'port': port})
+
+
+@profileDispatcher.command(name='view')
+def profile_view(host=('h', DEFAULT_HOST, 'hostname'),
+                 port=('p', DEFAULT_PORT, 'port'),
+                 name=('n', '', 'profile name')):
+    """
+    Shows configuration context
+    """
+    tools.executeAction('profile:view', **{'host': host, 'port': port, 'name': name})
+
+
+@profileDispatcher.command(name='upload')
+def profile_upload(host=('h', DEFAULT_HOST, 'hostname'),
+                   port=('p', DEFAULT_PORT, 'port'),
+                   name=('n', '', 'profile name'),
+                   profile=('', '', 'path to profile file')):
+    """
+    Uploads profile into storage
+    """
+    tools.executeAction('profile:upload', **{'host': host, 'port': port, 'name': name, 'manifest': profile})
+
+
+@profileDispatcher.command(name='remove')
+def profile_upload(host=('h', DEFAULT_HOST, 'hostname'),
+                   port=('p', DEFAULT_PORT, 'port'),
+                   name=('n', '', 'profile name')):
+    """
+    Removes profile from storage
+    """
+    tools.executeAction('profile:remove', **{'host': host, 'port': port, 'name': name})
+
+
+@runlistDispatcher.command(name='list')
+def runlist_list(host=('h', DEFAULT_HOST, 'hostname'),
+                 port=('p', DEFAULT_PORT, 'port')):
+    """
+    Shows uploaded runlists
+    """
+    tools.executeAction('runlist:list', **{'host': host, 'port': port})
+
+
+@runlistDispatcher.command(name='view')
+def runlist_view(host=('h', DEFAULT_HOST, 'hostname'),
+                 port=('p', DEFAULT_PORT, 'port'),
+                 name=('n', '', 'name')):
+    """
+    Shows configuration context for runlist
+    """
+    tools.executeAction('runlist:view', **{'host': host, 'port': port, 'name': name})
+
+
+@runlistDispatcher.command(name='upload')
+def runlist_upload(host=('h', DEFAULT_HOST, 'hostname'),
+                   port=('p', DEFAULT_PORT, 'port'),
+                   name=('n', '', 'name'),
+                   runlist=('', '', 'runlist')):
+    """
+    Uploads runlist with context into storage
+    """
+    tools.executeAction('runlist:upload', **{'host': host, 'port': port, 'name': name, 'manifest': runlist})
+
+
+@runlistDispatcher.command(name='remove')
+def runlist_remove(host=('h', DEFAULT_HOST, 'hostname'),
+                   port=('p', DEFAULT_PORT, 'port'),
+                   name=('n', '', 'name')):
+    """
+    Removes runlist from storage
+    """
+    tools.executeAction('runlist:remove', **{'host': host, 'port': port, 'name': name})
+
+
+@crashlogDispatcher.command(name='list')
+def crashlog_list(host=('h', DEFAULT_HOST, 'hostname'),
+                  port=('p', DEFAULT_PORT, 'port'),
+                  name=('n', '', 'name')):
+    """
+    Shows crashlogs list for application
+    """
+    tools.executeAction('crashlog:list', **{'host': host, 'port': port, 'name': name})
+
+
+@crashlogDispatcher.command(name='view')
+def crashlog_view(host=('h', DEFAULT_HOST, 'hostname'),
+                  port=('p', DEFAULT_PORT, 'port'),
+                  name=('n', '', 'name'),
+                  timestamp=('t', '', 'timestamp')):
+    """
+    Shows crashlog for application with specified timestamp
+    """
+    tools.executeAction('crashlog:view', **{'host': host, 'port': port, 'name': name, 'manifest': timestamp})
+
+
+@crashlogDispatcher.command(name='remove')
+def crashlog_remove(host=('h', DEFAULT_HOST, 'hostname'),
+                    port=('p', DEFAULT_PORT, 'port'),
+                    name=('n', '', 'name'),
+                    timestamp=('t', '', 'timestamp')):
+    """
+    Removes crashlog for application with specified timestamp
+    """
+    tools.executeAction('crashlog:remove', **{'host': host, 'port': port, 'name': name, 'manifest': timestamp})
+
+
+@crashlogDispatcher.command(name='removeall')
+def crashlog_removeall(host=('h', DEFAULT_HOST, 'hostname'),
+                       port=('p', DEFAULT_PORT, 'port'),
+                       name=('n', '', 'name')):
+    """
+    Removes all crashlogs for application
+    """
+    tools.executeAction('crashlog:removeall', **{'host': host, 'port': port, 'name': name, 'manifest': None})
+
+
+d.nest('app', appDispatcher, 'application commands')
+d.nest('profile', profileDispatcher, 'profile commands')
+d.nest('runlist', runlistDispatcher, 'runlist commands')
+d.nest('crashlog', crashlogDispatcher, 'crashlog commands')
+
+
+if __name__ == '__main__':
+    #coloredOutput.disable()
+    tools = ToolsExecutor()
+    try:
+        d.dispatch()
+    except ToolsError as err:
+        printError(err)
+        exit(1)

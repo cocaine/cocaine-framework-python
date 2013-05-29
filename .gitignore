@@ -1,3 +1,11 @@
 *.pyo
 *.pyc
 *.sw[o-s]
+
+# [IDE Specific]
+.idea/
+
+# [Build]
+build/
+dist/
+*.egg-info/

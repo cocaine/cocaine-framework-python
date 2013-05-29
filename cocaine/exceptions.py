@@ -1,8 +1,10 @@
 __all__ = ["ServiceError", "RequestError"]
 
+
 class CocaineError(Exception):
     """ Base exception """
     pass
+
 
 class RequestError(CocaineError):
     """Exception raised when u try to request chunks from closed request """
@@ -15,6 +17,7 @@ class RequestError(CocaineError):
 
     def __str__(self):
         return "RequestError: %s" % self.msg
+
 
 class ServiceError(CocaineError):
     """Exception raised when error message is received from service"""
@@ -29,3 +32,13 @@ class ServiceError(CocaineError):
 
     def __str__(self):
         return "ServiceException [%d] %s: %s" % (self.code, self.servicename, self.msg)
+
+
+class ConnectionError(CocaineError):
+    pass
+
+
+class ConnectionRefusedError(ConnectionError):
+    def __init__(self, host, port):
+        message = 'Invalid cocaine-runtime endpoint: {host}:{port}'.format(host=host, port=port)
+        super(ConnectionRefusedError, self).__init__(message)
