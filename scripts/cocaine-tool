@@ -24,7 +24,9 @@ crashlogDispatcher = Dispatcher()
 @d.command()
 def info(host=('h', DEFAULT_HOST, 'hostname'),
          port=('p', DEFAULT_PORT, 'port')):
-    """Shows information about cocaine runtime"""
+    """
+    Shows information about cocaine runtime
+    """
     node = NodeExecutor()
     node.executeAction('info', **{'host': host, 'port': port})
 

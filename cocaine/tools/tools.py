@@ -356,7 +356,7 @@ class PrettyPrintableCrashlogListAction(CrashlogListAction):
         future.bind(callback=self.onChunkReceived, errorback=self.onErrorReceived)
 
     def onChunkReceived(self, chunk):
-        print("Currently available crashlogs for application '%s' \n" % self.name)
+        print("Currently available crashlogs for application '%s'" % self.name)
         for item in parseCrashlogs(chunk):
             print ' '.join(item)
         IOLoop.instance().stop()

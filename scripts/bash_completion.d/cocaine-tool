@@ -1,4 +1,5 @@
-#!/bin/bash
+# cocaine-tool(1) completion
+
 _cocaine_tool()
 {
     local cur prev special i
@@ -31,7 +32,7 @@ _cocaine_tool()
 	    COMPREPLY=()
             return 0
             ;;
-        view)
+        view|check|remove|pause)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
 		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
@@ -63,18 +64,6 @@ _cocaine_tool()
                 ;;
             esac
             ;;
-	remove)
-            case "${COMP_WORDS[COMP_CWORD-1]}" in
-            --name)
-	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
-                return 0
-                ;;
-            *)
-                COMPREPLY=($(compgen -W "--name" -- ${cur}))
-                return 0
-                ;;
-            esac
-            ;;
 	start)
 	    case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
@@ -87,30 +76,6 @@ _cocaine_tool()
                 ;;
             *)
                 COMPREPLY=($(compgen -W "--name --profile" -- ${cur}))
-                return 0
-                ;;
-            esac
-            ;;
-	pause)
-	    case "${COMP_WORDS[COMP_CWORD-1]}" in
-            --name)
-	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
-                return 0
-                ;;
-            *)
-                COMPREPLY=($(compgen -W "--name" -- ${cur}))
-                return 0
-                ;;
-            esac
-            ;;
-	check)
-            case "${COMP_WORDS[COMP_CWORD-1]}" in
-            --name)
-		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
-                return 0
-                ;;
-            *)
-                COMPREPLY=($(compgen -W "--name" -- ${cur}))
                 return 0
                 ;;
             esac
@@ -132,7 +97,7 @@ _cocaine_tool()
 	    COMPREPLY=()
             return 0
             ;;
-        view)
+        view|remove)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
 		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/profiles/ | grep ^- | awk '{print $9}'`" -- ${cur}))
@@ -159,18 +124,6 @@ _cocaine_tool()
                 ;;
             esac
             ;;
-	remove)
-            case "${COMP_WORDS[COMP_CWORD-1]}" in
-            --name)
-	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/profiles/ | grep ^- | awk '{print $9}'`" -- ${cur}))
-                return 0
-                ;;
-            *)
-                COMPREPLY=($(compgen -W "--name" -- ${cur}))
-                return 0
-                ;;
-            esac
-            ;;
         *)
             ;;
         esac
@@ -187,7 +140,7 @@ _cocaine_tool()
 	    COMPREPLY=()
             return 0
             ;;
-        view)
+        view|remove)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
 		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/runlists/ | grep ^- | awk '{print $9}'`" -- ${cur}))
@@ -214,18 +167,6 @@ _cocaine_tool()
                 ;;
             esac
             ;;
-	remove)
-            case "${COMP_WORDS[COMP_CWORD-1]}" in
-            --name)
-	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/runlists/ | grep ^- | awk '{print $9}'`" -- ${cur}))
-                return 0
-                ;;
-            *)
-                COMPREPLY=($(compgen -W "--name" -- ${cur}))
-                return 0
-                ;;
-            esac
-            ;;
         *)
             ;;
         esac
@@ -238,7 +179,7 @@ _cocaine_tool()
 
         subcmd_2="${COMP_WORDS[2]}"
         case "${subcmd_2}" in 
-        list)
+        list|removeall)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
 		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
@@ -250,7 +191,7 @@ _cocaine_tool()
                 ;;
             esac
             ;;
-	view)
+	view|remove)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
 		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
@@ -262,34 +203,6 @@ _cocaine_tool()
                 ;;
             *)
                 COMPREPLY=($(compgen -W "--name --timestamp" -- ${cur}))
-                return 0
-                ;;
-            esac
-            ;;
-	remove)
-            case "${COMP_WORDS[COMP_CWORD-1]}" in
-            --name)
-	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
-                return 0
-                ;;
-	    --timestamp)
-		#COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/crashlogs/ | grep ^- | awk '{print $9}' | sed 's/:.*$//g'`" -- ${cur}))
-                return 0
-                ;;
-            *)
-                COMPREPLY=($(compgen -W "--name --timestamp" -- ${cur}))
-                return 0
-                ;;
-            esac
-            ;;
-	removeall)
-            case "${COMP_WORDS[COMP_CWORD-1]}" in
-            --name)
-	        #COMPREPLY=($(compgen -W "`ls -l /var/lib/cocaine/apps/ | grep ^- | awk '{print $9}'`" -- ${cur}))
-                return 0
-                ;;
-            *)
-                COMPREPLY=($(compgen -W "--name" -- ${cur}))
                 return 0
                 ;;
             esac
@@ -306,3 +219,11 @@ _cocaine_tool()
     return 0
 } &&
 complete -F _cocaine_tool cocaine-tool
+
+# Local variables:
+# mode: shell-script
+# sh-basic-offset: 4
+# sh-indent-comment: t
+# indent-tabs-mode: nil
+# End:
+# ex: ts=4 sw=4 et filetype=sh
