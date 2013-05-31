@@ -100,6 +100,9 @@ def app_pause(host=('h', DEFAULT_HOST, 'hostname'),
     node = NodeExecutor()
     node.executeAction('app:pause', **{'host': host, 'port': port, 'name': name})
 
+#todo: implement app restart command
+#todo: add this command to bash completion
+
 
 @appDispatcher.command()
 def check(host=('h', DEFAULT_HOST, 'hostname'),
@@ -192,6 +195,24 @@ def runlist_remove(host=('h', DEFAULT_HOST, 'hostname'),
     tools.executeAction('runlist:remove', **{'host': host, 'port': port, 'name': name})
 
 
+@runlistDispatcher.command(name='add-app')
+def runlist_add_app(host=('h', DEFAULT_HOST, 'hostname'),
+                   port=('p', DEFAULT_PORT, 'port'),
+                   name=('n', '', 'runlist name'),
+                   app=('', '', 'application name'),
+                   profile=('', '', 'suggested profile')):
+    """
+    Adds specified application with profile to runlist
+    """
+    tools.executeAction('runlist:add-app', **{
+        'host': host,
+        'port': port,
+        'name': name,
+        'app': app,
+        'profile': profile
+    })
+
+
 @crashlogDispatcher.command(name='list')
 def crashlog_list(host=('h', DEFAULT_HOST, 'hostname'),
                   port=('p', DEFAULT_PORT, 'port'),
@@ -241,7 +262,7 @@ d.nest('crashlog', crashlogDispatcher, 'crashlog commands')
 
 
 if __name__ == '__main__':
-    #coloredOutput.disable()
+    coloredOutput.disable()
     tools = ToolsExecutor()
     try:
         d.dispatch()

@@ -236,7 +236,7 @@ def AwaitDoneWrapper(onDoneMessage=None, onErrorMessage=None):
             def execute(self):
                 futures = super(Wrapper, self).execute()
                 if not isinstance(futures, collections.Iterable):
-                    futures = [futures]
+                    futures = [futures,]
 
                 self.received = 0
                 self.awaits = len(futures)
@@ -317,11 +317,15 @@ class RunlistUploadAction(SpecificRunlistAction):
     def __init__(self, storage, **config):
         super(RunlistUploadAction, self).__init__(storage, **config)
         self.runlist = config.get('manifest')
-        if not self.runlist:
+        self.runlist_raw = config.get('runlist-raw')
+        if not any([self.runlist, self.runlist_raw]):
             raise ValueError('Please specify runlist profile file path')
 
     def execute(self):
-        runlist = self.encodeJson(self.runlist)
+        if self.runlist:
+            runlist = self.encodeJson(self.runlist)
+        else:
+            runlist = msgpack.dumps(self.runlist_raw)
         future = self.storage.write('runlists', self.name, runlist, RUNLISTS_TAGS)
         return future
 
@@ -330,6 +334,51 @@ class RunlistRemoveAction(SpecificRunlistAction):
     def execute(self):
         future = self.storage.remove('runlists', self.name)
         return future
+
+
+class RunlistAddAppAction(SpecificRunlistAction):
+    def __init__(self, storage, **config):
+        super(RunlistAddAppAction, self).__init__(storage, **config)
+        self.app = config.get('app')
+        self.profile = config.get('profile')
+        if not self.app:
+            raise ValueError('Please specify application name')
+        if not self.profile:
+            raise ValueError('Please specify profile')
+
+    def execute(self):
+        def chain(action):
+            class Future(object):
+                def __init__(self, future):
+                    self.future = future
+                    self.future.bind(self.on, self.error)
+
+                def bind(self, callback, errorback, on_done):
+                    self.callback = callback
+                    self.errorback = errorback
+                    self.doneback = on_done
+
+                def on(self, chunk):
+                    try:
+                        runlist = msgpack.loads(chunk)
+                        runlist[action.app] = action.profile
+                        uploadRunlistAction = RunlistUploadAction(action.storage, **{
+                            'name': action.name,
+                            'runlist-raw': runlist
+                        })
+                        future = uploadRunlistAction.execute()
+                        future.bind(self.callback, self.errorback, self.doneback)
+                    except Exception as err:
+                        self.errorback(err)
+
+                def error(self, error):
+                    printError('Runlist location failed - {0}'.format(error))
+                    self.errorback()
+            return Future
+
+        getRunlistAction = RunlistViewAction(self.storage, **{'name': self.name})
+        future = getRunlistAction.execute()
+        return chain(self)(future)
 
 
 class CrashlogListAction(StorageAction):
@@ -501,6 +550,7 @@ AVAILABLE_TOOLS_ACTIONS = {
     'runlist:view': AwaitJsonWrapper()(RunlistViewAction),
     'runlist:upload': AwaitDoneWrapper(RUNLIST_UPLOAD_SUCCESS, RUNLIST_UPLOAD_FAIL)(RunlistUploadAction),
     'runlist:remove': AwaitDoneWrapper(RUNLIST_REMOVE_SUCCESS, RUNLIST_REMOVE_FAIL)(RunlistRemoveAction),
+    'runlist:add-app': AwaitDoneWrapper()(RunlistAddAppAction),
     'crashlog:list': PrettyPrintableCrashlogListAction,
     'crashlog:view': PrettyPrintableCrashlogViewAction,
     'crashlog:remove': makePrettyCrashlogRemove(CrashlogRemoveAction, CRASHLOG_REMOVE_SUCCESS),
