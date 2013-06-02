@@ -1,3 +1,23 @@
+#
+#   Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
+#    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
+#
+#    This file is part of Cocaine.
+#
+#    Cocaine is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU Lesser General Public License as published by
+#    the Free Software Foundation; either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Cocaine is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#    GNU Lesser General Public License for more details.
+#
+#    You should have received a copy of the GNU Lesser General Public License
+#    along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+
 import sys
 
 from cocaine.services import Service
@@ -13,22 +33,6 @@ VERBOSITY_LEVELS = {
     3 : "info",
     4 : "debug"
 }
-
-def _construct_logger_methods(cls, verbosity_level):
-    def closure(_lvl):
-        if _lvl <= verbosity_level:
-            def func(data):
-                cls._counter += 1
-                cls._logger.w_stream.write(Message("Message", cls._counter, _lvl,  cls.target, str(data)).pack())
-            return func
-        else:
-            def func(data):
-                pass
-            return func
-
-    setattr(cls, "_counter", 0)
-    for level, name in VERBOSITY_LEVELS.iteritems():
-        setattr(cls, name, closure(level))
 
 class _STDERR_Logger(object):
 
@@ -46,6 +50,22 @@ class _STDERR_Logger(object):
 
     def ignore(self, data):
         print >> sys.stderr, data
+
+def _construct_logger_methods(cls, verbosity_level):
+    def closure(_lvl):
+        if _lvl <= verbosity_level:
+            def func(data):
+                cls._counter += 1
+                cls._logger.w_stream.write(Message("Message", cls._counter, _lvl,  cls.target, str(data)).pack())
+            return func
+        else:
+            def func(data):
+                pass
+            return func
+
+    setattr(cls, "_counter", 0)
+    for level, name in VERBOSITY_LEVELS.iteritems():
+        setattr(cls, name, closure(level))
 
 
 class Logger(object):

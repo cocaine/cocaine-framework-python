@@ -34,6 +34,7 @@ from cocaine.asio.stream import Decoder
 from cocaine.asio import message
 from cocaine.asio.message import Message
 from cocaine.exceptions import ServiceError
+from locator import Locator
 from cocaine.futures import Future
 
 
@@ -63,7 +64,9 @@ class Service(object):
             except IndexError as err:
                 port = 10053
 
-        service_endpoint, _, service_api = self._get_api(name, endpoint, port)
+
+        locator = Locator()
+        service_endpoint, _, service_api = locator.resolve(name, endpoint, port)
 
         self._service_api = service_api
         self.servicename = name
@@ -93,24 +96,6 @@ class Service(object):
             self.app_name = init_args[init_args.index("--app") + 1]
         except ValueError:
             self.app_name = "standalone"
-
-    def _get_api(self, name, endpoint, port):
-        locator_pipe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        locator_pipe.settimeout(4.0)
-        locator_pipe.connect((endpoint, port))
-        locator_pipe.send(packb([0, 1, [name]]))
-        u = Unpacker()
-        msg = None
-        while msg is None:
-            response = locator_pipe.recv(80960)
-            u.feed(response)
-            msg = Message.initialize(u.next())
-
-        locator_pipe.close()
-        if msg.id == message.RPC_CHUNK:
-            return unpackb(msg.data)
-        if msg.id == message.RPC_ERROR:
-            raise Exception(msg.message)
 
     def perform_sync(self, method, *args, **kwargs):
         """ Do not use the service synchronously after treatment to him asynchronously!
