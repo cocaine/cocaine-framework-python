@@ -19,6 +19,6 @@
 #
 
 from services import Service
-from services import Locator
 
-__all__ = ["Service", "Locator"]
+__all__ = ["Service"]
+

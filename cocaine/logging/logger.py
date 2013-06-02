@@ -20,7 +20,7 @@
 
 import sys
 
-from cocaine.services import Service
+from cocaine.asio.baseservice import BaseService
 from log_message import PROTOCOL_LIST
 from log_message import Message
 
@@ -67,6 +67,17 @@ def _construct_logger_methods(cls, verbosity_level):
     for level, name in VERBOSITY_LEVELS.iteritems():
         setattr(cls, name, closure(level))
 
+class _Logger(BaseService):
+
+    def __init__(self, endpoint="localhost", port=10053, init_args=sys.argv):
+        super(_Logger, self).__init__("logging", endpoint, port, init_args)
+        try:
+            self.app_name = init_args[init_args.index("--app") + 1]
+        except ValueError:
+            self.app_name = "standalone"
+
+    def _on_message(self, args):
+        pass
 
 class Logger(object):
 
@@ -74,7 +85,7 @@ class Logger(object):
         if not hasattr(cls, "_instanse"):
             instanse = object.__new__(cls)
             try:
-                _logger = Service("logging")
+                _logger = _Logger()
                 for verbosity in _logger.perform_sync("verbosity"): #only one chunk and read choke also.
                     pass
                 setattr(instanse, "_logger", _logger)
@@ -84,6 +95,7 @@ class Logger(object):
                     setattr(instanse, "target", "app/%s" % "standalone" )
                 _construct_logger_methods(instanse, verbosity)
             except Exception as err:
+                raise
                 instanse = _STDERR_Logger()
                 instanse.warn("Logger init error: %s. Use stderr logger" % err)
             cls._instanse = instanse
