@@ -71,10 +71,6 @@ class _Logger(BaseService):
 
     def __init__(self, endpoint="localhost", port=10053, init_args=sys.argv):
         super(_Logger, self).__init__("logging", endpoint, port, init_args)
-        try:
-            self.app_name = init_args[init_args.index("--app") + 1]
-        except ValueError:
-            self.app_name = "standalone"
 
     def _on_message(self, args):
         pass
@@ -95,7 +91,6 @@ class Logger(object):
                     setattr(instanse, "target", "app/%s" % "standalone" )
                 _construct_logger_methods(instanse, verbosity)
             except Exception as err:
-                raise
                 instanse = _STDERR_Logger()
                 instanse.warn("Logger init error: %s. Use stderr logger" % err)
             cls._instanse = instanse

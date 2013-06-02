@@ -56,12 +56,6 @@ class Service(BaseService):
         for number, methodname in self._service_api.iteritems():
             setattr(self, methodname, closure(number))
 
-        # Only for logger - drop it
-        try:
-            self.app_name = init_args[init_args.index("--app") + 1]
-        except ValueError:
-            self.app_name = "standalone"
-
     
     def _on_message(self, args):
         msg = Message.initialize(args)
