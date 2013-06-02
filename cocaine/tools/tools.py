@@ -4,7 +4,10 @@ import socket
 import errno
 import sys
 import tarfile
-from time import ctime
+from time import ctime, time
+from warnings import warn
+from cocaine.futures import chain
+from cocaine.futures.chain import ChainFactory
 
 from cocaine.services import Service
 import msgpack
@@ -338,6 +341,7 @@ class RunlistRemoveAction(SpecificRunlistAction):
 
 class RunlistAddAppAction(SpecificRunlistAction):
     def __init__(self, storage, **config):
+        warn('This class is deprecated. You should use "AddApplicationToRunlistAction" instead', DeprecationWarning)
         super(RunlistAddAppAction, self).__init__(storage, **config)
         self.app = config.get('app')
         self.profile = config.get('profile')
@@ -380,6 +384,53 @@ class RunlistAddAppAction(SpecificRunlistAction):
         future = getRunlistAction.execute()
         return chain(self)(future)
 
+
+class AddApplicationToRunlistAction(SpecificRunlistAction):
+    def __init__(self, storage, **config):
+        super(AddApplicationToRunlistAction, self).__init__(storage, **config)
+        self.app = config.get('app')
+        self.profile = config.get('profile')
+        if not self.app:
+            raise ValueError('Please specify application name')
+        if not self.profile:
+            raise ValueError('Please specify profile')
+
+    def execute(self):
+        chain = ChainFactory().then(self.getRunlist).then(self.parseRunlist).then(self.uploadRunlist)
+        return chain
+
+    def getRunlist(self):
+        action = RunlistViewAction(self.storage, **{'name': self.name})
+        future = action.execute()
+        return future
+
+    @chain.synchronous
+    def parseRunlist(self, result):
+        runlist = msgpack.loads(result.get())
+        runlist[self.app] = self.profile
+        return runlist
+
+    def uploadRunlist(self, runlist):
+        action = RunlistUploadAction(self.storage, **{
+            'name': self.name,
+            'runlist-raw': runlist.get()
+        })
+        future = action.execute()
+        return future
+
+
+class ConsoleAddApplicationToRunlistAction(AddApplicationToRunlistAction):
+    def execute(self):
+        super(ConsoleAddApplicationToRunlistAction, self).execute().then(self.printResult).run()
+
+    def printResult(self, result):
+        try:
+            MESSAGE = 'Application "{app}" with profile "{profile}" has been successfully added to runlist "{runlist}"'
+            print(MESSAGE.format(app=self.app, profile=self.profile, runlist=self.name))
+        except Exception as err:
+            printError(err)
+        finally:
+            IOLoop.instance().stop()
 
 class CrashlogListAction(StorageAction):
     def __init__(self, storage, **config):
@@ -550,7 +601,7 @@ AVAILABLE_TOOLS_ACTIONS = {
     'runlist:view': AwaitJsonWrapper()(RunlistViewAction),
     'runlist:upload': AwaitDoneWrapper(RUNLIST_UPLOAD_SUCCESS, RUNLIST_UPLOAD_FAIL)(RunlistUploadAction),
     'runlist:remove': AwaitDoneWrapper(RUNLIST_REMOVE_SUCCESS, RUNLIST_REMOVE_FAIL)(RunlistRemoveAction),
-    'runlist:add-app': AwaitDoneWrapper()(RunlistAddAppAction),
+    'runlist:add-app': ConsoleAddApplicationToRunlistAction,
     'crashlog:list': PrettyPrintableCrashlogListAction,
     'crashlog:view': PrettyPrintableCrashlogViewAction,
     'crashlog:remove': makePrettyCrashlogRemove(CrashlogRemoveAction, CRASHLOG_REMOVE_SUCCESS),
@@ -694,6 +745,7 @@ class Executor(object):
     def __init__(self, serviceName, availableActions):
         self.serviceName = serviceName
         self.availableActions = availableActions
+        self.loop = IOLoop.instance()
 
     def executeAction(self, actionName, **options):
         """
@@ -709,6 +761,7 @@ class Executor(object):
             Action = self.availableActions[actionName]
             action = Action(service, **options)
             action.execute()
+            self.loop.add_timeout(time() + options.get('timeout', 1.0), self.timeoutErrorback)
             IOLoop.instance().start()
         except CocaineError as err:
             raise ToolsError(err)
@@ -728,6 +781,10 @@ class Executor(object):
                 raise ConnectionRefusedError(host, port)
             else:
                 raise ConnectionError('Unknown connection error: {0}'.format(err))
+
+    def timeoutErrorback(self):
+        printError('Timeout')
+        self.loop.stop()
 
 
 class ToolsExecutor(Executor):
