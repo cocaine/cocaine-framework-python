@@ -1,3 +1,14 @@
+cocaine-framework-python (0.10.4-5) lucid; urgency=low
+
+  * Chain futures idion was introduced.
+  * Improve performance of WritableStream with large messages (~100Mb)
+  * Adapt initialization behavior: send first heatbeat directly after handshake  
+  * Locator stores services API in cache.
+  * Decouple Logger and Service implementations
+  * Add tests for cocaine.tools.
+
+ -- Anton Tyurin <noxiouz@yandex.team.ru>  Mon, 03 Jun 2013 21:48:19 +0400
+
 cocaine-framework-python (0.10.4-4) lucid; urgency=low
 
   * Correctly register POLLOUT handlers in the I/O loop to allow large app
