@@ -68,7 +68,10 @@ class Worker(object):
 
         self.loop.register_read_event(self.r_stream._on_event, self.pipe.fileno())
         self._logger.debug("Worker with %s send handshake" % self.id)
+        # Send both messages - to run timers properly. This messages will be sent
+        # only after all initialization, so they have same purpose.
         self._send_handshake()
+        self._send_heartbeat()
 
     def _init_endpoint(self, init_args):
         try:
