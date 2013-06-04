@@ -48,7 +48,7 @@ class Cache(object):
         if res is None or (time.time() - res[0]) > self._cache_lifetime:
             return None
         else:
-            return res[1] 
+            return res[1]
 
     def cache_it(self, key, value):
         with self.lock:
@@ -64,10 +64,13 @@ class Locator(object):
 
     cache = Cache()
 
-    def __init__(self, cache_lifetime=10):
+    def __init__(self, cached=False, cache_lifetime=10):
         self.cache.set_cache_lifetime(cache_lifetime)
+        self.cached = cached
 
     def resolve(self, name, endpoint, port):
+        if not self.cached:
+            return self._get_api(name, endpoint, port)
         res = self.cache.get_item((name, endpoint, port))
         if res is not None:
             return res
