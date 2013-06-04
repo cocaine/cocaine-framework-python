@@ -6,6 +6,7 @@ cocaine-framework-python (0.10.4-5) lucid; urgency=low
   * Locator stores services API in cache.
   * Decouple Logger and Service implementations
   * Add tests for cocaine.tools.
+  * http decorator now packs body with msgpack
 
  -- Anton Tyurin <noxiouz@yandex.team.ru>  Mon, 03 Jun 2013 21:48:19 +0400
 

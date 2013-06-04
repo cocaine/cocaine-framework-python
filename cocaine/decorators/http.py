@@ -31,7 +31,7 @@ class _HTTPResponse(object):
         self._stream = stream
 
     def write(self, body):
-        self._stream.write(body)
+        self._stream.write(msgpack.packb(body))
 
     def write_head(self, code, headers):
         self._stream.write(msgpack.packb({'code': code, 'headers' : headers}))
