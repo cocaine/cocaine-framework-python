@@ -263,9 +263,11 @@ d.nest('crashlog', crashlogDispatcher, 'crashlog commands')
 
 
 if __name__ == '__main__':
-    if '--no-colored' in sys.argv:
+    if '--color' in sys.argv:
+        # We have to remove this extra option because opster will be unhappy to see unknown (to him) option
+        sys.argv.remove('--color')
+    else:
         coloredOutput.disable()
-        sys.argv.remove('--no-colored')
 
     if not sys.stdin.isatty():
         coloredOutput.disable()
