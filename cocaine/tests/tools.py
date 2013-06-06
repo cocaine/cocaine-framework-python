@@ -224,7 +224,7 @@ class SomeTests(FunctionalTests):
                                           '--name=test'])
         self.assertEqual(expected, actual)
 
-    def test_1AppStart(self):
+    def test_2AppStart(self):
         expected = {
             'test': 'the app has been started'
         }
@@ -233,16 +233,16 @@ class SomeTests(FunctionalTests):
                                           '--profile=default'])
         self.assertEqualContent(json.dumps(expected), actual)
 
-    def test_2AppStartAlreadyRunning(self):
+    def test_3AppStartAlreadyRunning(self):
         expected = {
             'test': 'the app is already running'
         }
         actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'app', 'start',
                                           '--name=test',
-                                          '--profile=profile'])
+                                          '--profile=default'])
         self.assertEqualContent(json.dumps(expected), actual)
 
-    def test_2AppStartNotDeployed(self):
+    def test_1AppStartNotDeployed(self):
         expected = {
             'fail': ('unable to fetch the \'manifests/fail\' object from the storage - '
                      'the specified object has not been found')
@@ -252,20 +252,46 @@ class SomeTests(FunctionalTests):
                                           '--profile=profile'])
         self.assertEqualContent(json.dumps(expected), actual)
 
-    #todo: Test start app with wrong profile
-    #todo: Test stopping running app
-    #todo: Test stopping already stopped app
-    #todo: Test stopping not deployed app
-    #todo: Make full test fixture for 'app check'
-    #todo: Make app runlist upload feature
+    def test_1AppStartWithWrongProfile(self):
+        expected = {
+            'test': 'unable to fetch the \'profiles/wrongProfile\' object from the storage - '
+                    'the specified object has not been found'
+        }
+        actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'app', 'start',
+                                          '--name=test',
+                                          '--profile=wrongProfile'])
+        self.assertEqualContent(json.dumps(expected), actual)
 
-    def test_z1AppPause(self):
+    def test_5AppStop(self):
         expected = {
             'test': 'the app has been stopped'
         }
         actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'app', 'pause',
                                           '--name=test'])
         self.assertEqualContent(json.dumps(expected), actual)
+
+    def test_6AppStopStoppedApp(self):
+        expected = {
+            'test': 'the app is not running'
+        }
+        actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'app', 'pause',
+                                          '--name=test'])
+        self.assertEqualContent(json.dumps(expected), actual)
+
+    def test_5AppStopNotDeployedApp(self):
+        expected = {
+            'fail': 'the app is not running'
+        }
+        actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'app', 'pause',
+                                          '--name=fail'])
+        self.assertEqualContent(json.dumps(expected), actual)
+
+    #todo: Test: Test stopping not deployed app
+    #todo: Test: Make full test fixture for 'app check'
+    #todo: Test: Make app runlist upload feature
+
+    #todo: Feature: Add feature to bash completion to complete application name. Completer must analyze --host --port
+    # options and invoke 'cocaine-tool app list --host=HOST --port=PORT' with error suppressing and smart stdout parsing
 
     # ################# PROFILES #################
     def test_0ProfileUpload(self):
@@ -344,7 +370,7 @@ class InvalidArgumentsTestCase(FunctionalTests):
         expected = 'Please specify application name\n'
         self.runBadlyAndCheckResult(['app', 'start', '--name='], expected, 1)
 
-    def test_z0AppStartEmptyProfile(self):
+    def test_AppStartEmptyProfile(self):
         expected = 'Please specify profile name\n'
         self.runBadlyAndCheckResult(['app', 'start', '--name=default', '--profile='], expected, 1)
 
