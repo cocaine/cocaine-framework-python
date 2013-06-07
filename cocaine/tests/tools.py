@@ -286,16 +286,26 @@ class SomeTests(FunctionalTests):
                                           '--name=fail'])
         self.assertEqualContent(json.dumps(expected), actual)
 
-    #todo: Test: Test stopping not deployed app
-    #todo: Test: Make full test fixture for 'app check'
-    #todo: Test: Make app runlist upload feature
+    def test_AppCheckNotRunning(self):
+        expected = 'test: stopped or missing'
+        actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'app', 'check',
+                                         '--name=test'])
+        self.assertEqualContent(expected, actual)
 
-    #todo: Feature: Add feature to bash completion to complete application name. Completer must analyze --host --port
-    # options and invoke 'cocaine-tool app list --host=HOST --port=PORT' with error suppressing and smart stdout parsing
+    def test_AppCheckNotAvailable(self):
+        expected = 'NotAvailableApp: stopped or missing'
+        actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'app', 'check',
+                                         '--name=NotAvailableApp'])
+        self.assertEqualContent(expected, actual)
+
+    def test_4AppCheckRunning(self):
+        expected = 'test: running'
+        actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'app', 'check',
+                                         '--name=test'])
+        self.assertEqualContent(expected, actual)
 
     # ################# PROFILES #################
     def test_0ProfileUpload(self):
-        print(self.profileFilename)
         expected = 'The profile "default" has been successfully uploaded\n'
         actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'profile', 'upload',
                                           '--name=default',
@@ -335,6 +345,37 @@ class SomeTests(FunctionalTests):
         actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'runlist', 'view',
                                           '--name=default_r'])
         self.assertEqualContent(json.dumps(Context.RUNLIST), actual)
+
+    #todo: Test: Make app runlist upload feature ::
+    #todo: Test: Check add-app name (runlist) broken
+    #todo: Test: Check add-app successful
+
+    def test_2RunlistAddNonExistingApp(self):
+        expected = ('Application "NonExistingApp" with profile "default" has been successfully added to runlist '
+                   '"default_r"')
+        actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'runlist', 'add-app',
+                                          '--name=default_r',
+                                          '--app=NonExistingApp',
+                                          '--profile=default'])
+        self.assertEqualContent(expected, actual)
+
+    def test_2RunlistAddAppWithNonExistingProfile(self):
+        expected = ('Application "test" with profile "NonExisting" has been successfully added to runlist '
+                   '"default_r"')
+        actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'runlist', 'add-app',
+                                          '--name=default_r',
+                                          '--app=test',
+                                          '--profile=NonExisting'])
+        self.assertEqualContent(expected, actual)
+
+    def test_2RunlistAddAppWithNonExistingRunlist(self):
+        expected = 'ServiceException [1] storage: the specified object has not been found'
+        process = subprocess.Popen([PYTHON, COCAINE_TOOLS, 'runlist', 'add-app',
+                                          '--name=NonExisting',
+                                          '--app=test',
+                                          '--profile=default'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = process.communicate()
+        self.assertEqualContent(expected, err)
 
     def test_9RunlistRemove(self):
         expected = 'The runlist "default_r" has been successfully removed\n'
@@ -378,6 +419,10 @@ class InvalidArgumentsTestCase(FunctionalTests):
         expected = 'Please specify application name\n'
         self.runBadlyAndCheckResult(['app', 'pause', '--name='], expected, 1)
 
+    def test_AppCheckEmptyName(self):
+        expected = 'Please specify application name\n'
+        self.runBadlyAndCheckResult(['app', 'check', '--name='], expected, 1)
+
     # ################# PROFILES #################
     def test_ProfileUploadEmptyName(self):
         expected = 'Please specify profile name\n'
@@ -411,6 +456,14 @@ class InvalidArgumentsTestCase(FunctionalTests):
     def test_RunlistRemoveEmptyName(self):
         expected = 'Please specify runlist name\n'
         self.runBadlyAndCheckResult(['runlist', 'remove', '--name='], expected, 1)
+
+    def test_RunlistAddAppEmptyName(self):
+        expected = 'Please specify runlist name\n'
+        self.runBadlyAndCheckResult(['runlist', 'add-app', '--name='], expected, 1)
+
+    def test_RunlistAddAppEmptyProfile(self):
+        expected = 'Please specify application name\n'
+        self.runBadlyAndCheckResult(['runlist', 'add-app', '--name=test', '--app='], expected, 1)
 
     # ################# CRASHLOGS #################
     def test_CrashlogListEmptyName(self):

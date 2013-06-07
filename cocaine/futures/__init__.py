@@ -1,5 +1,6 @@
 from time import time
 from tornado import ioloop
+from cocaine.exceptions import RequestError
 
 
 class Future(object):
@@ -42,18 +43,16 @@ class Future(object):
         if len(self.cache) == 0 and self._clbk is not None:
             # No chunks are available at all,
             # then call on_done(), because choke always arrives after all chunks
-            if self._on_done is not None and not self._is_raised_error:
+            if self._on_done and not self._is_raised_error:
                 self._on_done()
-            elif self._errbk is not None:
+            elif self._errbk:
                 self._errbk(RequestError("No chunks are available"))
-            else:
-                print("No errorback. Can't throw error")
 
     def bind(self, callback, errorback=None, on_done=None):
         if len(self.cache) > 0:
             callback(self.cache.pop(0))
         elif self._errmsg is not None:
-            if erroback is not None:
+            if errorback is not None:
                 temp = self._errmsg
                 self._errmsg = None
                 errorback(temp)  # traslate error into worker

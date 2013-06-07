@@ -425,6 +425,7 @@ class ConsoleAddApplicationToRunlistAction(AddApplicationToRunlistAction):
 
     def printResult(self, result):
         try:
+            result.get()
             MESSAGE = 'Application "{app}" with profile "{profile}" has been successfully added to runlist "{runlist}"'
             print(MESSAGE.format(app=self.app, profile=self.profile, runlist=self.name))
         except Exception as err:
@@ -761,7 +762,7 @@ class Executor(object):
             Action = self.availableActions[actionName]
             action = Action(service, **options)
             action.execute()
-            self.loop.add_timeout(time() + options.get('timeout', 1.0), self.timeoutErrorback)
+            #self.loop.add_timeout(time() + options.get('timeout', 1.0), self.timeoutErrorback)
             IOLoop.instance().start()
         except CocaineError as err:
             raise ToolsError(err)
