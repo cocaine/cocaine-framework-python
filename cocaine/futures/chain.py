@@ -1,4 +1,3 @@
-# coding=utf-8
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
