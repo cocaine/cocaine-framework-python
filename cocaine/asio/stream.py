@@ -42,18 +42,15 @@ class Decoder(object):
         assert callable(callback)
         self.callback = callback
 
-    def decode(self, data):
-        unpacker = msgpack.Unpacker()
-        unpacker.feed(data)
-        parsed_len = 0
+    def decode(self, buffer):
+        """
+         buffer is msgpack.Unpacker (stream unpacker)
+        """
         try:
-            for res in unpacker:
-                parsed_len += len(msgpack.packb(res))
+            for res in buffer: # if not enough data - 0 iterations
                 self.callback(res)
         except Exception as err:
             pass # hook - view later
-        finally:
-            return parsed_len
 
 
 class ReadableStream(object):
@@ -65,10 +62,8 @@ class ReadableStream(object):
         self.callback = None
         self.is_attached = False
 
-        self.ring = array.array('c')
+        self.buffer = msgpack.Unpacker()
         self.tmp_buff = array.array('c','\0' * START_CHUNK_SIZE)
-        self.rd_offset = 0
-        self.rx_offset = 0
         self.mutex = Lock()
 
     def bind(self, callback):
@@ -79,28 +74,20 @@ class ReadableStream(object):
     def unbind(self):
         self.callback = None
         if self.is_attached:
-            self.loop.unregister_read_evnt(self.pipe.fileno())
+            self.loop.unregister_read_event(self.pipe.fileno())
 
     def _on_event(self):
         with self.mutex:
-            unparsed = self.rd_offset - self.rx_offset
-            if len(self.ring) > MAX_BUFF_SIZE:
-                self.ring = array.array('c', self.ring[self.rx_offset : self.rx_offset + unparsed])
-                self.rd_offset = unparsed
-                self.rx_offset = 0
-
             # Bad solution. On python 2.7 and higher - use memoryview and bytearray
             length = self.pipe.read(self.tmp_buff, self.tmp_buff.buffer_info()[1])
+
             if length <= 0:
                 if length == 0: #Remote side has closed connection
                     self.loop.unregister_read_event(self.pipe.fileno())
                 return
 
-            self.rd_offset += length
-            self.ring.extend(self.tmp_buff[:length])
-
-            parsed = self.callback(self.ring[self.rx_offset : self.rd_offset])
-            self.rx_offset += parsed
+            self.buffer.feed(self.tmp_buff[:length])
+            self.callback(self.buffer)
 
             # Enlarge buffer if messages are big
             if self.tmp_buff.buffer_info()[1] == length:
@@ -130,7 +117,7 @@ class WritableStream(object):
 
             unsent = self.wr_offset - self.tx_offset
 
-            sent = self.pipe.write(self.ring[self.tx_offset : self.tx_offset+unsent])
+            sent = self.pipe.write(self.ring[self.tx_offset : self.tx_offset + unsent])
 
             if sent > 0:
                 self.tx_offset += sent
@@ -147,7 +134,9 @@ class WritableStream(object):
 
                     size -= sent
 
+
             if len(self.ring) > MAX_BUFF_SIZE:
+                unsent = self.wr_offset - self.tx_offset
                 self.ring = self.ring[self.tx_offset : self.tx_offset + unsent]
                 self.rd_offset = unsent
                 self.rx_offset = 0
