@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 from opster import Dispatcher
 #TODO: Package name cocaine.tools.tools is not funny. May be move it one layer up?
 import sys

@@ -24,7 +24,7 @@ import sys
 import os
 import re
 
-from setuptools import setup, Extension
+from setuptools import setup
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 try:
@@ -32,7 +32,7 @@ try:
         _version = re.findall(r"\(([^)]*)\)", f.readline())[0]
         print("Find version %s in debian/changelog" % _version)
 except Exception:
-    _version = "0.10.4-5"
+    _version = "0.10.5"
 
 if "--without-tools" in sys.argv:
     tools_requires = []
@@ -61,6 +61,8 @@ setup(
         "cocaine.tools"
     ],
     install_requires=["msgpack_python", "tornado"] + tools_requires,
-    data_files=[( '/usr/bin/', ["scripts/cocaine-tool"])]
+    data_files=[
+                ('/usr/bin/', ["scripts/cocaine-tool"])
+    ]
 )
 
