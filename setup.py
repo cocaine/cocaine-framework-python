@@ -20,16 +20,32 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
+import sys
+import os
+import re
+
+from setuptools import setup, Extension
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 try:
-    from setuptools import setup, Extension
-except ImportError:
-    from distutils.core import setup, Extension
+    with open("%s/debian/changelog" % BASE_DIR, 'r') as f:
+        _version = re.findall(r"\(([^)]*)\)", f.readline())[0]
+        print("Find version %s in debian/changelog" % _version)
+except Exception:
+    _version = "0.10.4-5"
+
+if "--without-tools" in sys.argv:
+    tools_requires = []
+    sys.argv.remove("--without-tools")
+else:
+    tools_requires = ['opster >= 4.7']
 
 setup(
     name="cocaine",
-    version="0.10.4-3",
-    description="Cocaine Python Framework",
-    long_description="A simple framework to ease the development of Cocaine apps",
+    version=_version,
+    description="Cocaine Python Framework and Tools for Cocaine Application Cloud",
+    long_description="A simple framework to ease the development of Cocaine apps\
+    and tools for deploying applications in the cloud",
     url="https://github.com/cocaine/cocaine-framework-python",
     author="Anton Tyurin",
     author_email="noxiouz@yandex.ru",
@@ -44,5 +60,7 @@ setup(
         "cocaine.logging",
         "cocaine.tools"
     ],
-    requires=["msgpack_python", "tornado", 'opster']
+    install_requires=["msgpack_python", "tornado"] + tools_requires,
+    data_files=[( '/usr/bin/', ["scripts/cocaine-tool"])]
 )
+

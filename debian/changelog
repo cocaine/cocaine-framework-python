@@ -1,3 +1,9 @@
+cocaine-framework-python (0.10.5) lucid; urgency=low
+
+  * Reimplement ReadableStream with msgpack.Unpacker
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Sun, 09 Jun 2013 22:43:10 +0400
+
 cocaine-framework-python (0.10.4-5) lucid; urgency=low
 
   * Chain futures idion was introduced.
@@ -8,7 +14,7 @@ cocaine-framework-python (0.10.4-5) lucid; urgency=low
   * Add tests for cocaine.tools.
   * http decorator now packs body with msgpack
 
- -- Anton Tyurin <noxiouz@yandex.team.ru>  Mon, 03 Jun 2013 21:48:19 +0400
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Mon, 03 Jun 2013 21:48:19 +0400
 
 cocaine-framework-python (0.10.4-4) lucid; urgency=low
 
