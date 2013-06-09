@@ -38,7 +38,7 @@ if "--without-tools" in sys.argv:
     tools_requires = []
     sys.argv.remove("--without-tools")
 else:
-    tools_requires = ['opster >= 4.7']
+    tools_requires = ['opster >= 4.0']
 
 setup(
     name="cocaine",
