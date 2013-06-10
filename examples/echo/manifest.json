@@ -1,0 +1,4 @@
+{
+    "type" : "python",
+    "slave" : "/home/evgeny/sandbox/cocaine-framework-python/examples/echo/echo.py"
+}
