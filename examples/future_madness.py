@@ -34,6 +34,8 @@ def f4(result):
     future = service.find('manifests', ('app',))
     return future
 
+#todo: Incapsulate this
+#todo: Что будет если функция ждет больше одного значения (через yield), а они никогда не придут?
 @chain.synchronous
 def f5(result):
     log.info('Entered at f5. I am sync! My input = {0}. Sleeping for 1 sec ...'.format(result.get()))
@@ -45,6 +47,7 @@ def f6(future, result):
     log.info('Entered at f6. I am async and invoke callback by tornado timeout! My input = {0}'.format(result.get()))
     loop.add_timeout(time.time() + 1.0, lambda: future.ready(10000))
 
+#todo: Там, где выбрасывается исключение, там плохо, т.к. скорее всего вызывается onDone еще раз.
 def f7(result):
     log.info('Entered at f7. I am sync and I raise exception! My input = {0}'.format(result.get()))
     raise Exception('Fuck you all!')
@@ -102,6 +105,7 @@ def main():
     Единственное требование к функциям: возвращаемый объект должен иметь метод bind(callback, errorback, on_done).
     """
     chain.ChainFactory().then(f1).then(f2).then(f3).then(f4).then(f5).then(f6).then(f7).then(f8).then(f_finish).run()
+    # Service("abc").do("abc").then(lambda f: f.get()).then(...)
     #ChainFactory().then(f1).then(f2).then(f3).then(f4).then(f5).then(f6).then(f7).then(f8).run()
     #c1 = Chain(f1, Chain(f2, Chain(f3))).run()
 
