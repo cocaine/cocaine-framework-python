@@ -4,7 +4,7 @@ _cocaine_tool()
 {
     local cur prev special i
 
-    LOCATOR=/usr/bin/cocaine-bc-helper.py
+    LOCATOR=cocaine.tools.helpers.completer
 
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
@@ -37,7 +37,7 @@ _cocaine_tool()
         view|check|remove|pause)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-                COMPREPLY=($(compgen -W "`python ${LOCATOR} ${COMP_WORDS[*]} --locator_type=app`" -- ${cur}))
+                COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type=app`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -69,6 +69,7 @@ _cocaine_tool()
 	start)
 	    case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
+                COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type=app`" -- ${cur}))
                 return 0
                 ;;
 	    --profile)

@@ -58,7 +58,8 @@ setup(
         "cocaine.services",
         "cocaine.futures",
         "cocaine.logging",
-        "cocaine.tools"
+        "cocaine.tools",
+        "cocaine.tools.helpers"
     ],
     install_requires=["msgpack_python", "tornado"] + tools_requires,
     data_files=[
