@@ -36,9 +36,20 @@ except Exception:
 
 if "--without-tools" in sys.argv:
     tools_requires = []
+    tools_data = []
+    tools_packages = []
     sys.argv.remove("--without-tools")
 else:
     tools_requires = ['opster >= 4.0']
+    tools_packages = ["cocaine.tools", "cocaine.tools.helpers"]
+    tools_data = [
+                ('/usr/bin/', ["scripts/cocaine-tool"])
+    ]
+    if not 'DEB_BUILD_GNU_TYPE' in os.environ:
+        tools_data.append(
+                ('/etc/bash_completion.d/', ["scripts/bash_completion.d/cocaine-tool"])
+        )
+
 
 setup(
     name="cocaine",
@@ -57,13 +68,9 @@ setup(
         "cocaine.decorators",
         "cocaine.services",
         "cocaine.futures",
-        "cocaine.logging",
-        "cocaine.tools",
-        "cocaine.tools.helpers"
-    ],
+        "cocaine.logging"
+    ] + tools_packages,
     install_requires=["msgpack_python", "tornado"] + tools_requires,
-    data_files=[
-                ('/usr/bin/', ["scripts/cocaine-tool"])
-    ]
+    data_files=tools_data
 )
 
