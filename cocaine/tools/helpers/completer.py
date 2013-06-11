@@ -26,6 +26,8 @@ if __name__ == '__main__':
         from cocaine.services import Service
         import os
 
+        ADEQUATE_TIMEOUT = 0.25
+
         locateItems = {
             'app': ['manifests', ('app', )],
             'profile': ['profiles', ('runlist',)],
@@ -48,7 +50,7 @@ if __name__ == '__main__':
         storage = Service('storage', config['host'], int(config['port']))
         ChainFactory().then(locateApps).then(printResult).run()
         loop = IOLoop.instance()
-        loop.add_timeout(time() + 0.25, lambda: loop.stop())
+        loop.add_timeout(time() + ADEQUATE_TIMEOUT, lambda: loop.stop())
         loop.start()
     except Exception as err:
         # Hidden log feature :)
