@@ -717,9 +717,13 @@ class PrettyPrintableAppCheckAction(AppCheckAction):
     def onChunkReceived(self, chunk):
         app = self.name
         state = chunk[app]
-        print('{0}: {1}'.format(app, state))
-        IOLoop.instance().stop()
-        if 'running' not in state:
+        outputMessage = '{0}: {1}'.format(app, state)
+        if 'running' in state:
+            print(outputMessage)
+            IOLoop.instance().stop()
+        else:
+            printError(outputMessage)
+            IOLoop.instance().stop()
             exit(1)
 
     def onErrorReceived(self, exception):

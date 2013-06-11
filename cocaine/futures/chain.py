@@ -1,3 +1,5 @@
+from cocaine.futures import Future
+
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
@@ -30,7 +32,8 @@ class Chain(object):
 
     def run(self, *args, **kwargs):
         try:
-            future = self.func(*args, **kwargs)
+            result = self.func(*args, **kwargs)
+            future = result
             future.bind(self.on, self.error, self.done)
         except Exception as err:
             self.error(err)
@@ -68,15 +71,16 @@ class ChainFactory():
         self.chains[0].run()
 
 
-class FutureMock():
+class FutureMock(Future):
     def __init__(self, obj=None):
         """
         This class represents simple future wrapper on some result. It simple calls `callback` function with single
         `obj` parameter when `bind` method is called or `errorback` when some error occurred during `callback` invoking.
         """
+        super(FutureMock, self).__init__()
         self.obj = obj
 
-    def bind(self, callback, errorback, on_done=None):
+    def bind(self, callback, errorback=None, on_done=None):
         """
         NOTE: `on_done` callback is not used because it's not needed. You have to use this object only to store any
         data. Doneback hasn't any result, so it left here only for properly working `Chain` class.
@@ -84,15 +88,16 @@ class FutureMock():
         try:
             callback(self.obj)
         except Exception as err:
-            errorback(err)
+            if errorback:
+                errorback(err)
 
 
-class FutureCallableMock():
+class FutureCallableMock(Future):
     """
     This class represents future wrapper over your asynchronous functions (i.e. tornado async callee).
     Once done, you must call `ready` method and pass the result to it.
     """
-    def bind(self, callback, errorback, on_done=None):
+    def bind(self, callback, errorback=None, on_done=None):
         self.callback = callback
         self.errorback = errorback
         self.on_done = on_done
@@ -103,7 +108,8 @@ class FutureCallableMock():
             if self.on_done:
                 self.on_done()
         except Exception as err:
-            self.errorback(err)
+            if self.errorback:
+                self.errorback(err)
 
 
 def synchronous(func):

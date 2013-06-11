@@ -287,16 +287,12 @@ class SomeTests(FunctionalTests):
         self.assertEqualContent(json.dumps(expected), actual)
 
     def test_AppCheckNotRunning(self):
-        expected = 'test: stopped or missing'
-        actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'app', 'check',
-                                         '--name=test'])
-        self.assertEqualContent(expected, actual)
+        expected = 'test: stopped or missing\n'
+        self.runBadlyAndCheckResult(['app', 'check', '--name=test'], expected, 1)
 
     def test_AppCheckNotAvailable(self):
-        expected = 'NotAvailableApp: stopped or missing'
-        actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'app', 'check',
-                                         '--name=NotAvailableApp'])
-        self.assertEqualContent(expected, actual)
+        expected = 'NotAvailableApp: stopped or missing\n'
+        self.runBadlyAndCheckResult(['app', 'check', '--name=NotAvailableApp'], expected, 1)
 
     def test_4AppCheckRunning(self):
         expected = 'test: running'

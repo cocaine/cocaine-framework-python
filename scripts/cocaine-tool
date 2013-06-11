@@ -4,6 +4,10 @@ from opster import Dispatcher
 import sys
 from cocaine.tools.tools import ToolsExecutor, NodeExecutor, coloredOutput, ToolsError, printError
 
+
+__author__ = 'EvgenySafronov <division494@gmail.com>'
+
+
 DESCRIPTION = ''
 DEFAULT_HOST = 'localhost'
 DEFAULT_PORT = 10053

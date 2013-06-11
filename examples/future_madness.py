@@ -104,17 +104,15 @@ def main():
 
     Единственное требование к функциям: возвращаемый объект должен иметь метод bind(callback, errorback, on_done).
     """
-    chain.ChainFactory().then(f1).then(f2).then(f3).then(f4).then(f5).then(f6).then(f7).then(f8).then(f_finish).run()
-    # Service("abc").do("abc").then(lambda f: f.get()).then(...)
-    #ChainFactory().then(f1).then(f2).then(f3).then(f4).then(f5).then(f6).then(f7).then(f8).run()
-    #c1 = Chain(f1, Chain(f2, Chain(f3))).run()
+    pass
+
 
 if __name__ == '__main__':
     try:
         service = Service('storage', 'localhost', 10053)
         loop = IOLoop.instance()
         log.info('Entering tornado event loop. It will be stopped after 10 seconds')
-        loop.add_timeout(time.time() + 0.0, main)
+        chain.ChainFactory().then(f1).then(f2).then(f3).then(f4).then(f5).then(f6).then(f7).then(f8).then(f_finish).run()
         loop.add_timeout(time.time() + 10.0, loop.stop)
         loop.start()
     except socket.error as err:
