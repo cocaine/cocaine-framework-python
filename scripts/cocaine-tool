@@ -100,7 +100,7 @@ def app_upload(locator,
     """
     Uploads application into storage
     """
-    tools.executeAction('app:upload', **{
+    locator.tools.executeAction('app:upload', **{
         'host': locator.host,
         'port': locator.port,
         'name': name,
@@ -115,7 +115,7 @@ def app_remove(locator,
     """
     Removes application from storage
     """
-    tools.executeAction('app:remove', **{
+    locator.tools.executeAction('app:remove', **{
         'host': locator.host,
         'port': locator.port,
         'name': name
@@ -174,7 +174,7 @@ def profile_list(locator):
     """
     Shows installed profiles list
     """
-    tools.executeAction('profile:list', **{
+    locator.tools.executeAction('profile:list', **{
         'host': locator.host,
         'port': locator.port
     })
@@ -186,7 +186,7 @@ def profile_view(locator,
     """
     Shows configuration context
     """
-    tools.executeAction('profile:view', **{
+    locator.tools.executeAction('profile:view', **{
         'host': locator.host,
         'port': locator.port,
         'name': name
@@ -200,7 +200,7 @@ def profile_upload(locator,
     """
     Uploads profile into storage
     """
-    tools.executeAction('profile:upload', **{
+    locator.tools.executeAction('profile:upload', **{
         'host': locator.host,
         'port': locator.port,
         'name': name,
@@ -214,7 +214,7 @@ def profile_upload(locator,
     """
     Removes profile from storage
     """
-    tools.executeAction('profile:remove', **{
+    locator.tools.executeAction('profile:remove', **{
         'host': locator.host,
         'port': locator.port,
         'name': name
@@ -226,7 +226,7 @@ def runlist_list(locator):
     """
     Shows uploaded runlists
     """
-    tools.executeAction('runlist:list', **{
+    locator.tools.executeAction('runlist:list', **{
         'host': locator.host,
         'port': locator.port
     })
@@ -238,7 +238,7 @@ def runlist_view(locator,
     """
     Shows configuration context for runlist
     """
-    tools.executeAction('runlist:view', **{
+    locator.tools.executeAction('runlist:view', **{
         'host': locator.host,
         'port': locator.port,
         'name': name
@@ -252,7 +252,7 @@ def runlist_upload(locator,
     """
     Uploads runlist with context into storage
     """
-    tools.executeAction('runlist:upload', **{
+    locator.tools.executeAction('runlist:upload', **{
         'host': locator.host,
         'port': locator.port,
         'name': name,
@@ -266,7 +266,7 @@ def runlist_remove(locator,
     """
     Removes runlist from storage
     """
-    tools.executeAction('runlist:remove', **{
+    locator.tools.executeAction('runlist:remove', **{
         'host': locator.host,
         'port': locator.port,
         'name': name
@@ -281,7 +281,7 @@ def runlist_add_app(locator,
     """
     Adds specified application with profile to runlist
     """
-    tools.executeAction('runlist:add-app', **{
+    locator.tools.executeAction('runlist:add-app', **{
         'host': locator.host,
         'port': locator.port,
         'name': name,
@@ -296,7 +296,7 @@ def crashlog_list(locator,
     """
     Shows crashlogs list for application
     """
-    tools.executeAction('crashlog:list', **{
+    locator.tools.executeAction('crashlog:list', **{
         'host': locator.host,
         'port': locator.port,
         'name': name
@@ -310,7 +310,7 @@ def crashlog_view(locator,
     """
     Shows crashlog for application with specified timestamp
     """
-    tools.executeAction('crashlog:view', **{
+    locator.tools.executeAction('crashlog:view', **{
         'host': locator.host,
         'port': locator.port,
         'name': name,
@@ -325,7 +325,7 @@ def crashlog_remove(locator,
     """
     Removes crashlog for application with specified timestamp
     """
-    tools.executeAction('crashlog:remove', **{
+    locator.tools.executeAction('crashlog:remove', **{
         'host': locator.host,
         'port': locator.port,
         'name': name,
@@ -339,7 +339,7 @@ def crashlog_removeall(locator,
     """
     Removes all crashlogs for application
     """
-    tools.executeAction('crashlog:removeall', **{
+    locator.tools.executeAction('crashlog:removeall', **{
         'host': locator.host,
         'port': locator.port,
         'name': name,
@@ -357,7 +357,6 @@ if __name__ == '__main__':
     if not sys.stdin.isatty():
         coloredOutput.disable()
 
-    tools = ToolsExecutor()
     try:
         d.dispatch()
     except ToolsError as err:
