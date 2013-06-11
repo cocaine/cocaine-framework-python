@@ -15,15 +15,43 @@ DEFAULT_PORT = 10053
 
 class Locator(object):
     options = [
-        ('', 'colored', 'no', 'colorize error and warning output')
+        ('h', 'host', DEFAULT_HOST, 'hostname'),
+        ('p', 'port', DEFAULT_PORT, 'port'),
+        ('', 'color', False, 'enable colored output'),
+        ('', 'timeout', 1.0, 'timeout, s')
     ]
+
+    def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, color=False, timeout=False):
+        self.host = host
+        self.port = port
+        self.color = color
+        self.timeout = timeout
+        self.tools = ToolsExecutor()
+        if not color:
+            coloredOutput.disable()
+
+
+def middleware(func):
+    def extract_dict(source, *keys):
+        dest = {}
+        for k in keys:
+            dest[k] = source.pop(k, None)
+        return dest
+
+    def inner(*args, **kwargs):
+        opts = extract_dict(kwargs, 'host', 'port', 'color', 'timeout')
+        if func.__name__ == 'help_inner':
+            return func(*args, **kwargs)
+        locator = Locator(**opts)
+        return func(locator, *args, **kwargs)
+    return inner
 
 
 d = Dispatcher()
-appDispatcher = Dispatcher()
-profileDispatcher = Dispatcher()
-runlistDispatcher = Dispatcher()
-crashlogDispatcher = Dispatcher()
+appDispatcher = Dispatcher(globaloptions=Locator.options, middleware=middleware)
+profileDispatcher = Dispatcher(globaloptions=Locator.options, middleware=middleware)
+runlistDispatcher = Dispatcher(globaloptions=Locator.options, middleware=middleware)
+crashlogDispatcher = Dispatcher(globaloptions=Locator.options, middleware=middleware)
 
 
 @d.command()
@@ -33,31 +61,39 @@ def info(host=('h', DEFAULT_HOST, 'hostname'),
     Shows information about cocaine runtime
     """
     node = NodeExecutor()
-    node.executeAction('info', **{'host': host, 'port': port})
+    node.executeAction('info', **{
+        'host': host,
+        'port': port
+    })
 
 
 @appDispatcher.command(name='list')
-def app_list(host=('h', DEFAULT_HOST, 'hostname'),
-             port=('p', DEFAULT_PORT, 'port')):
+def app_list(locator):
     """
     Shows installed applications list
     """
-    tools.executeAction('app:list', **{'host': host, 'port': port})
+    locator.tools.executeAction('app:list', **{
+        'host': locator.host,
+        'port': locator.port
+    })
 
 
 @appDispatcher.command(usage='--name=NAME', name='view')
-def app_view(host=('h', DEFAULT_HOST, 'hostname'),
-             port=('p', DEFAULT_PORT, 'port'),
+def app_view(locator,
              name=('n', '', 'application name')):
     """
     Shows manifest context for application
     """
-    tools.executeAction('app:view', **{'host': host, 'port': port, 'name': name})
+    locator.tools.executeAction('app:view', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name,
+        'timeout': locator.timeout
+    })
 
 
 @appDispatcher.command(name='upload')
-def app_upload(host=('h', DEFAULT_HOST, 'hostname'),
-               port=('p', DEFAULT_PORT, 'port'),
+def app_upload(locator,
                name=('n', '', 'application name'),
                manifest=('', '', 'manifest file name'),
                package=('', '', 'location of the app source package')):
@@ -65,8 +101,8 @@ def app_upload(host=('h', DEFAULT_HOST, 'hostname'),
     Uploads application into storage
     """
     tools.executeAction('app:upload', **{
-        'host': host,
-        'port': port,
+        'host': locator.host,
+        'port': locator.port,
         'name': name,
         'manifest': manifest,
         'package': package
@@ -74,144 +110,180 @@ def app_upload(host=('h', DEFAULT_HOST, 'hostname'),
 
 
 @appDispatcher.command(name='remove')
-def app_remove(host=('h', DEFAULT_HOST, 'hostname'),
-               port=('p', DEFAULT_PORT, 'port'),
+def app_remove(locator,
                name=('n', '', 'application name')):
     """
     Removes application from storage
     """
-    tools.executeAction('app:remove', **{'host': host, 'port': port, 'name': name})
+    tools.executeAction('app:remove', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name
+    })
 
 
 @appDispatcher.command(name='start')
-def app_start(host=('h', DEFAULT_HOST, 'hostname'),
-              port=('p', DEFAULT_PORT, 'port'),
+def app_start(locator,
               name=('n', '', 'application name'),
               profile=('r', '', 'profile name')):
     """
     Starts application
     """
     node = NodeExecutor()
-    node.executeAction('app:start', **{'host': host, 'port': port, 'name': name, 'profile': profile})
+    node.executeAction('app:start', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name,
+        'profile': profile
+    })
 
 
 @appDispatcher.command(name='pause')
-def app_pause(host=('h', DEFAULT_HOST, 'hostname'),
-              port=('p', DEFAULT_PORT, 'port'),
+def app_pause(locator,
               name=('n', '', 'application name')):
     """
     Pauses application
     """
     node = NodeExecutor()
-    node.executeAction('app:pause', **{'host': host, 'port': port, 'name': name})
+    node.executeAction('app:pause', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name
+    })
 
 #todo: implement app restart command
 #todo: add this command to bash completion
 
 
 @appDispatcher.command()
-def check(host=('h', DEFAULT_HOST, 'hostname'),
-          port=('p', DEFAULT_PORT, 'port'),
+def check(locator,
           name=('n', '', 'application name')):
     """
     Checks application status
     """
     node = NodeExecutor()
-    node.executeAction('app:check', **{'host': host, 'port': port, 'name': name})
+    node.executeAction('app:check', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name
+    })
 
 
 @profileDispatcher.command(name='list')
-def profile_list(host=('h', DEFAULT_HOST, 'hostname'),
-                 port=('p', DEFAULT_PORT, 'port')):
+def profile_list(locator):
     """
     Shows installed profiles list
     """
-    tools.executeAction('profile:list', **{'host': host, 'port': port})
+    tools.executeAction('profile:list', **{
+        'host': locator.host,
+        'port': locator.port
+    })
 
 
 @profileDispatcher.command(name='view')
-def profile_view(host=('h', DEFAULT_HOST, 'hostname'),
-                 port=('p', DEFAULT_PORT, 'port'),
+def profile_view(locator,
                  name=('n', '', 'profile name')):
     """
     Shows configuration context
     """
-    tools.executeAction('profile:view', **{'host': host, 'port': port, 'name': name})
+    tools.executeAction('profile:view', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name
+    })
 
 
 @profileDispatcher.command(name='upload')
-def profile_upload(host=('h', DEFAULT_HOST, 'hostname'),
-                   port=('p', DEFAULT_PORT, 'port'),
+def profile_upload(locator,
                    name=('n', '', 'profile name'),
                    profile=('', '', 'path to profile file')):
     """
     Uploads profile into storage
     """
-    tools.executeAction('profile:upload', **{'host': host, 'port': port, 'name': name, 'manifest': profile})
+    tools.executeAction('profile:upload', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name,
+        'manifest': profile
+    })
 
 
 @profileDispatcher.command(name='remove')
-def profile_upload(host=('h', DEFAULT_HOST, 'hostname'),
-                   port=('p', DEFAULT_PORT, 'port'),
+def profile_upload(locator,
                    name=('n', '', 'profile name')):
     """
     Removes profile from storage
     """
-    tools.executeAction('profile:remove', **{'host': host, 'port': port, 'name': name})
+    tools.executeAction('profile:remove', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name
+    })
 
 
 @runlistDispatcher.command(name='list')
-def runlist_list(host=('h', DEFAULT_HOST, 'hostname'),
-                 port=('p', DEFAULT_PORT, 'port')):
+def runlist_list(locator):
     """
     Shows uploaded runlists
     """
-    tools.executeAction('runlist:list', **{'host': host, 'port': port})
+    tools.executeAction('runlist:list', **{
+        'host': locator.host,
+        'port': locator.port
+    })
 
 
 @runlistDispatcher.command(name='view')
-def runlist_view(host=('h', DEFAULT_HOST, 'hostname'),
-                 port=('p', DEFAULT_PORT, 'port'),
+def runlist_view(locator,
                  name=('n', '', 'name')):
     """
     Shows configuration context for runlist
     """
-    tools.executeAction('runlist:view', **{'host': host, 'port': port, 'name': name})
+    tools.executeAction('runlist:view', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name
+    })
 
 
 @runlistDispatcher.command(name='upload')
-def runlist_upload(host=('h', DEFAULT_HOST, 'hostname'),
-                   port=('p', DEFAULT_PORT, 'port'),
+def runlist_upload(locator,
                    name=('n', '', 'name'),
                    runlist=('', '', 'runlist')):
     """
     Uploads runlist with context into storage
     """
-    tools.executeAction('runlist:upload', **{'host': host, 'port': port, 'name': name, 'manifest': runlist})
+    tools.executeAction('runlist:upload', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name,
+        'manifest': runlist
+    })
 
 
 @runlistDispatcher.command(name='remove')
-def runlist_remove(host=('h', DEFAULT_HOST, 'hostname'),
-                   port=('p', DEFAULT_PORT, 'port'),
+def runlist_remove(locator,
                    name=('n', '', 'name')):
     """
     Removes runlist from storage
     """
-    tools.executeAction('runlist:remove', **{'host': host, 'port': port, 'name': name})
+    tools.executeAction('runlist:remove', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name
+    })
 
 
 @runlistDispatcher.command(name='add-app')
-def runlist_add_app(host=('h', DEFAULT_HOST, 'hostname'),
-                   port=('p', DEFAULT_PORT, 'port'),
-                   name=('n', '', 'runlist name'),
-                   app=('', '', 'application name'),
-                   profile=('', '', 'suggested profile')):
+def runlist_add_app(locator,
+                    name=('n', '', 'runlist name'),
+                    app=('', '', 'application name'),
+                    profile=('', '', 'suggested profile')):
     """
     Adds specified application with profile to runlist
     """
     tools.executeAction('runlist:add-app', **{
-        'host': host,
-        'port': port,
+        'host': locator.host,
+        'port': locator.port,
         'name': name,
         'app': app,
         'profile': profile
@@ -219,45 +291,60 @@ def runlist_add_app(host=('h', DEFAULT_HOST, 'hostname'),
 
 
 @crashlogDispatcher.command(name='list')
-def crashlog_list(host=('h', DEFAULT_HOST, 'hostname'),
-                  port=('p', DEFAULT_PORT, 'port'),
+def crashlog_list(locator,
                   name=('n', '', 'name')):
     """
     Shows crashlogs list for application
     """
-    tools.executeAction('crashlog:list', **{'host': host, 'port': port, 'name': name})
+    tools.executeAction('crashlog:list', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name
+    })
 
 
 @crashlogDispatcher.command(name='view')
-def crashlog_view(host=('h', DEFAULT_HOST, 'hostname'),
-                  port=('p', DEFAULT_PORT, 'port'),
+def crashlog_view(locator,
                   name=('n', '', 'name'),
                   timestamp=('t', '', 'timestamp')):
     """
     Shows crashlog for application with specified timestamp
     """
-    tools.executeAction('crashlog:view', **{'host': host, 'port': port, 'name': name, 'manifest': timestamp})
+    tools.executeAction('crashlog:view', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name,
+        'manifest': timestamp
+    })
 
 
 @crashlogDispatcher.command(name='remove')
-def crashlog_remove(host=('h', DEFAULT_HOST, 'hostname'),
-                    port=('p', DEFAULT_PORT, 'port'),
+def crashlog_remove(locator,
                     name=('n', '', 'name'),
                     timestamp=('t', '', 'timestamp')):
     """
     Removes crashlog for application with specified timestamp
     """
-    tools.executeAction('crashlog:remove', **{'host': host, 'port': port, 'name': name, 'manifest': timestamp})
+    tools.executeAction('crashlog:remove', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name,
+        'manifest': timestamp
+    })
 
 
 @crashlogDispatcher.command(name='removeall')
-def crashlog_removeall(host=('h', DEFAULT_HOST, 'hostname'),
-                       port=('p', DEFAULT_PORT, 'port'),
+def crashlog_removeall(locator,
                        name=('n', '', 'name')):
     """
     Removes all crashlogs for application
     """
-    tools.executeAction('crashlog:removeall', **{'host': host, 'port': port, 'name': name, 'manifest': None})
+    tools.executeAction('crashlog:removeall', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name,
+        'manifest': None
+    })
 
 
 d.nest('app', appDispatcher, 'application commands')
@@ -267,16 +354,8 @@ d.nest('crashlog', crashlogDispatcher, 'crashlog commands')
 
 
 if __name__ == '__main__':
-    if '--color' in sys.argv:
-        # We have to remove this extra option because opster will be unhappy to see unknown (to him) option
-        sys.argv.remove('--color')
-    else:
-        coloredOutput.disable()
-
     if not sys.stdin.isatty():
         coloredOutput.disable()
-
-    #todo: need to do some brainstorm about 'host' & 'port' global options, cause they are in all suboptions
 
     tools = ToolsExecutor()
     try:
