@@ -29,25 +29,33 @@ class Chain(object):
         """
         self.func = func
         self.nextChain = nextChain
+        self.finished = False
 
     def run(self, *args, **kwargs):
         try:
             result = self.func(*args, **kwargs)
-            future = result
+            if isinstance(result, Future):
+                future = result
+            else:
+                future = FutureMock(result)
             future.bind(self.on, self.error, self.done)
         except Exception as err:
             self.error(err)
 
     def on(self, chunk):
-        if self.nextChain:
+        if self.nextChain and not self.finished:
             result = Result(chunk)
             self.nextChain.run(result)
 
     def error(self, exception):
-        self.on(exception)
+        if not self.finished:
+            self.on(exception)
+            self.finished = True
 
     def done(self):
-        self.on(None)
+        if not self.finished:
+            self.on(None)
+            self.finished = True
 
 
 class ChainFactory():
@@ -96,6 +104,8 @@ class FutureCallableMock(Future):
     """
     This class represents future wrapper over your asynchronous functions (i.e. tornado async callee).
     Once done, you must call `ready` method and pass the result to it.
+
+    WARNING: `on_done` function is not used. Do not pass it!
     """
     def bind(self, callback, errorback=None, on_done=None):
         self.callback = callback
@@ -105,23 +115,9 @@ class FutureCallableMock(Future):
     def ready(self, result):
         try:
             self.callback(result)
-            if self.on_done:
-                self.on_done()
         except Exception as err:
             if self.errorback:
                 self.errorback(err)
-
-
-def synchronous(func):
-    def wrapper(*args, **kwargs):
-        result = None
-        try:
-            result = func(*args, **kwargs)
-        except Exception as err:
-            result = err
-        finally:
-            return FutureMock(result)
-    return wrapper
 
 
 def asynchronousCallable(func):

@@ -34,9 +34,7 @@ def f4(result):
     future = service.find('manifests', ('app',))
     return future
 
-#todo: Incapsulate this
-#todo: Что будет если функция ждет больше одного значения (через yield), а они никогда не придут?
-@chain.synchronous
+#todo: What happens if the function awaits more than one results (via yield), but they aren't going to come
 def f5(result):
     log.info('Entered at f5. I am sync! My input = {0}. Sleeping for 1 sec ...'.format(result.get()))
     time.sleep(1.0)
@@ -47,7 +45,6 @@ def f6(future, result):
     log.info('Entered at f6. I am async and invoke callback by tornado timeout! My input = {0}'.format(result.get()))
     loop.add_timeout(time.time() + 1.0, lambda: future.ready(10000))
 
-#todo: Там, где выбрасывается исключение, там плохо, т.к. скорее всего вызывается onDone еще раз.
 def f7(result):
     log.info('Entered at f7. I am sync and I raise exception! My input = {0}'.format(result.get()))
     raise Exception('Fuck you all!')
@@ -62,7 +59,6 @@ def f8(result):
     future = service.find('manifests', ('app',))
     return future
 
-@chain.synchronous
 def f_finish(result):
     log.info('Entered at f_finish. I am async! My input = {0}'.format(result.get()))
     log.info('Done')

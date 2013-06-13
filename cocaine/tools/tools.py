@@ -6,7 +6,6 @@ import sys
 import tarfile
 from time import ctime, time
 from warnings import warn
-from cocaine.futures import chain
 from cocaine.futures.chain import ChainFactory
 
 from cocaine.services import Service
@@ -404,7 +403,6 @@ class AddApplicationToRunlistAction(SpecificRunlistAction):
         future = action.execute()
         return future
 
-    @chain.synchronous
     def parseRunlist(self, result):
         runlist = msgpack.loads(result.get())
         runlist[self.app] = self.profile
