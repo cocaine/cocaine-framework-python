@@ -342,10 +342,6 @@ class SomeTests(FunctionalTests):
                                           '--name=default_r'])
         self.assertEqualContent(json.dumps(Context.RUNLIST), actual)
 
-    #todo: Test: Make app runlist upload feature ::
-    #todo: Test: Check add-app name (runlist) broken
-    #todo: Test: Check add-app successful
-
     def test_2RunlistAddNonExistingApp(self):
         expected = ('Application "NonExistingApp" with profile "default" has been successfully added to runlist '
                    '"default_r"')
@@ -372,6 +368,15 @@ class SomeTests(FunctionalTests):
                                           '--profile=default'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = process.communicate()
         self.assertEqualContent(expected, err)
+
+    def test_2RunlistAddApp(self):
+        expected = ('Application "test" with profile "default" has been successfully added to runlist '
+                   '"default_r"')
+        actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'runlist', 'add-app',
+                                          '--name=default_r',
+                                          '--app=test',
+                                          '--profile=default'])
+        self.assertEqualContent(expected, actual)
 
     def test_9RunlistRemove(self):
         expected = 'The runlist "default_r" has been successfully removed\n'
