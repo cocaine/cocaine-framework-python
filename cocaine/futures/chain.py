@@ -1,3 +1,4 @@
+import types
 from cocaine.futures import Future
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
@@ -36,6 +37,8 @@ class Chain(object):
             result = self.func(*args, **kwargs)
             if isinstance(result, Future):
                 future = result
+            elif isinstance(result, types.GeneratorType):
+                future = GeneratorFutureMock(result)
             else:
                 future = FutureMock(result)
             future.bind(self.on, self.error, self.done)
@@ -99,6 +102,42 @@ class FutureMock(Future):
             if errorback:
                 errorback(err)
 
+
+class GeneratorFutureMock(Future):
+    def __init__(self, obj=None):
+        super(GeneratorFutureMock, self).__init__()
+        self.obj = obj
+        self.firstIteration = True
+
+    def loop(self, val=None):
+        print(val, self.firstIteration)
+        rs = Result(val)
+        try:
+            if self.firstIteration:
+                self.firstIteration = False
+            else:
+                print('GET', rs)
+                self.obj.send(rs)
+            result = self.obj.next()
+            print('123')
+            if isinstance(result, Future):
+                future = result
+            else:
+                future = FutureMock(result)
+            print(future)
+            future.bind(self.loop, self.loop)
+        except GeneratorExit:
+            print('>>')
+            self.cb(self.obj)
+        except Exception as err:
+            print('?')
+            if self.eb:
+                self.eb(err)
+
+    def bind(self, callback, errorback=None, on_done=None):
+        self.cb = callback
+        self.eb = errorback
+        self.loop()
 
 class FutureCallableMock(Future):
     """
