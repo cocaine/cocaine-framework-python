@@ -19,9 +19,6 @@
 #
 
 import sys
-import errno
-import socket
-from threading import Lock
 
 from msgpack import Unpacker, packb, unpackb
 
@@ -41,8 +38,8 @@ class BaseService(object):
     """ Implement basic functional for services:
     * all asio stuff
     * perform_sync method for synchronous operations
-    You should reimplement _on_message fucntion - this is callback for decoder,
-    so this fucntion is called with every incoming decoded message
+    You should reimplement _on_message function - this is callback for decoder,
+    so this function is called with every incoming decoded message
     """
 
     def __init__(self, name, endpoint="localhost", port=10053, init_args=sys.argv):

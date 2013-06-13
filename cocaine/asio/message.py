@@ -20,8 +20,6 @@
 #
 
 
-import msgpack
-
 from itertools import izip
 
 #
@@ -82,7 +80,7 @@ PROTOCOL = {
 
 def closure(m_id, m_session, args):
     def _wrapper():
-        return (m_id, m_session, args)
+        return m_id, m_session, args
     return _wrapper
 
 class MessageInit(type):

@@ -50,9 +50,9 @@ class ServicePipe(socket.socket):
                 self.connect(path)
             except socket.error as e:
                 # On Mac OS X it raises this on localhost connection
-                if e.args[0] == errno.EISCONN: # Already connected
+                if e.errno == errno.EISCONN: # Already connected
                     break
-                elif e.args[0] not in (errno.EINPROGRESS, errno.EAGAIN):
+                elif e.errno not in (errno.EINPROGRESS, errno.EAGAIN):
                     raise
             else:
                 break

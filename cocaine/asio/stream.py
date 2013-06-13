@@ -146,6 +146,6 @@ class WritableStream(object):
             self.ring.extend(data[sent:])
 
 
-            if False == self.is_attached:
+            if not self.is_attached:
                 self.loop.register_write_event(self._on_event, self.pipe.fileno())
                 self.is_attached = True

@@ -20,11 +20,9 @@
 #
 
 import sys
-import errno
-import socket
 from threading import Lock
 
-from msgpack import Unpacker, packb, unpackb
+from msgpack import unpackb
 
 from cocaine.asio import message
 from cocaine.asio.message import Message

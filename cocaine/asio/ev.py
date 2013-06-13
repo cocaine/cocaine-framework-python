@@ -21,8 +21,6 @@
 
 from tornado import ioloop as ev
 
-from time import time
-
 class Loop(object):
     """ Event loop wrapper"""
 

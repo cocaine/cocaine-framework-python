@@ -19,8 +19,6 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import json
-import time
 import sys
 import traceback
 
@@ -79,7 +77,7 @@ class Worker(object):
             app_name = init_args[init_args.index("--app") + 1]
             self.endpoint = init_args[init_args.index("--endpoint") + 1]
         except Exception as err:
-            self._logger.error("Wrong cmdline argumensts: %s " % err)
+            self._logger.error("Wrong cmdline arguments: %s " % err)
             raise RuntimeError("Wrong cmdline arguments")
 
     def run(self, binds={}):

@@ -21,7 +21,6 @@
 import sys
 
 from cocaine.asio.baseservice import BaseService
-from log_message import PROTOCOL_LIST
 from log_message import Message
 
 __all__ = ["Logger"]

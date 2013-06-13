@@ -51,7 +51,7 @@ def exception_trap(func):
         except StopIteration:
             pass
         except Exception as err:
-            self._logger.error("Caught execption: %s" % str(err))
+            self._logger.error("Caught exception: %s" % str(err))
             traceback.print_stack()
     return wrapper
 
@@ -111,14 +111,14 @@ class _Function(_Proxy):
         try:
             self._func(self._request, self._response)
         except Exception as err:
-            self._logger.error("Caught execption in invoke(): %s" % str(err))
+            self._logger.error("Caught exception in invoke(): %s" % str(err))
             traceback.print_stack()
 
     def push(self, chunk):
         try:
             self._func(chunk, self._response)
         except Exception as err:
-            self._logger.error("Caught execption in push(): %s" % str(err))
+            self._logger.error("Caught exception in push(): %s" % str(err))
             traceback.print_stack()
 
     def close(self):
@@ -129,7 +129,7 @@ class _Function(_Proxy):
 
 def type_traits(func_or_generator):
     """ Return class object depends on type of callable object """
-    if (compiler.consts.CO_GENERATOR & func_or_generator.func_code.co_flags): # Coroutine
+    if compiler.consts.CO_GENERATOR & func_or_generator.func_code.co_flags: # Coroutine
         return _Coroutine
     else:
         return _Function

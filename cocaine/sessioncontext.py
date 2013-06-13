@@ -148,4 +148,5 @@ class Request(object):
             # from cocaine-runtime are availaible
             self._logger.warn("Chunks are over,\
                                 but the application requests them")
-            errorback(RequestError("No chunks are available"))
+            if errorback:
+                errorback(RequestError("No chunks are available"))

@@ -36,7 +36,7 @@ PROTOCOL = {
 
 def closure(m_id, session, args):
     def _wrapper():
-        return (m_id, session, args)
+        return m_id, session, args
     return _wrapper
 
 class MessageInit(type):
