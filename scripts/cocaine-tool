@@ -151,7 +151,25 @@ def app_pause(locator,
         'name': name
     })
 
-#todo: implement app restart command
+
+@appDispatcher.command(name='restart')
+def app_restart(locator,
+                name=('n', '', 'application name'),
+                profile=('r', '', 'profile name')):
+    """
+    Restarts application
+
+    Equivalent of `cocaine-tool app pause --name [NAME]; cocaine-tool app start --name [NAME] --profile [PROFILE]`.
+    If profile is not specified, application will be restarted with the current profile.
+    """
+    node = NodeExecutor()
+    node.executeAction('app:restart', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name,
+        'profile': profile
+    })
+
 #todo: add this command to bash completion
 
 

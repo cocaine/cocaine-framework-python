@@ -611,6 +611,7 @@ AVAILABLE_TOOLS_ACTIONS = {
 class NodeAction(object):
     def __init__(self, node=None, **config):
         self.node = node
+        self.config = config
 
     def execute(self):
         raise NotImplementedError()
@@ -668,6 +669,71 @@ def NodeActionPrettyWrapper():
                 IOLoop.instance().stop()
         return Wrapper
     return Patch
+
+
+class AppRestartAction(NodeAction):
+    def __init__(self, node, **config):
+        super(AppRestartAction, self).__init__(node, **config)
+        self.name = config.get('name')
+        self.profile = config.get('profile')
+        if not self.name:
+            raise ValueError('Please specify application name')
+
+    # def experiment(self):
+    #     return ChainFactory().then(self.do)
+    #
+    # def do(self):
+    #     try:
+    #         info = yield NodeInfoAction(self.node, **self.config).execute()
+    #         profile = self.profile or info['apps'][self.name]['profile']
+    #         status = yield AppPauseAction(self.node, **self.config).execute()
+    #         print(status)
+    #         config = self.config.copy()
+    #         config['profile'] = profile
+    #         yield AppStartAction(self.node, **config).execute()
+    #     except KeyError:
+    #         raise ToolsError('Application is not running')
+
+    def execute(self):
+        chain = ChainFactory().then(self.getInfo).then(self.saveProfile).then(self.stopApp).then(self.startApp)
+        return chain
+
+    def getInfo(self):
+        action = NodeInfoAction(self.node, **self.config)
+        return action.execute()
+
+    def saveProfile(self, result):
+        try:
+            info = result.get()
+            if not self.profile:
+                self.profile = info['apps'][self.name]['profile']
+        except KeyError:
+            raise ToolsError('Application is not running')
+
+    def stopApp(self, result):
+        action = AppPauseAction(self.node, **self.config)
+        return action.execute()
+
+    def startApp(self, result):
+        print(result.get())
+        config = self.config.copy()
+        config['profile'] = self.profile
+        action = AppStartAction(self.node, **config)
+        return action.execute()
+
+
+class ConsoleAppRestartAction(AppRestartAction):
+    def execute(self):
+        chain = super(ConsoleAppRestartAction, self).execute().then(self.showStatus)
+        chain.run()
+
+    def showStatus(self, result):
+        try:
+            print(result.get())
+        except Exception as err:
+            printError(err.message)
+        finally:
+            IOLoop.instance().stop()
 
 
 class AppCheckAction(NodeAction):
@@ -733,6 +799,8 @@ AVAILABLE_NODE_ACTIONS = {
     'info': NodeActionPrettyWrapper()(NodeInfoAction),
     'app:start': NodeActionPrettyWrapper()(AppStartAction),
     'app:pause': NodeActionPrettyWrapper()(AppPauseAction),
+    'app:stop': NodeActionPrettyWrapper()(AppPauseAction),
+    'app:restart': ConsoleAppRestartAction,
     'app:check': PrettyPrintableAppCheckAction
 }
 
