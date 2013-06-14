@@ -9,7 +9,7 @@ _cocaine_tool()
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     subcommands_1="info app profile runlist crashlog help"
-    subcommands_app="start pause check list view upload remove"
+    subcommands_app="start stop restart pause check list view upload remove"
     subcommands_profile="list view upload remove"
     subcommands_runlist="list view upload remove add-app"
     subcommands_crashlog="list view remove removeall"
@@ -34,7 +34,7 @@ _cocaine_tool()
 	    COMPREPLY=()
             return 0
             ;;
-        view|check|remove|pause)
+        view|check|remove|pause|stop)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
                 COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type=app`" -- ${cur}))
@@ -66,7 +66,7 @@ _cocaine_tool()
                 ;;
             esac
             ;;
-	start)
+	start|restart)
 	    case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
                 COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type=app`" -- ${cur}))

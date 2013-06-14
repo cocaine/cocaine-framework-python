@@ -142,9 +142,25 @@ def app_pause(locator,
               name=('n', '', 'application name')):
     """
     Pauses application
+
+    This command is alias for `cocaine-tool app stop`
     """
     node = NodeExecutor()
     node.executeAction('app:pause', **{
+        'host': locator.host,
+        'port': locator.port,
+        'name': name
+    })
+
+
+@appDispatcher.command(name='stop')
+def app_stop(locator,
+              name=('n', '', 'application name')):
+    """
+    Stops application
+    """
+    node = NodeExecutor()
+    node.executeAction('app:stop', **{
         'host': locator.host,
         'port': locator.port,
         'name': name
