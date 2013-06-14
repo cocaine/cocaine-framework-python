@@ -92,7 +92,7 @@ class Sleep(object):
 class NextTick(object):
     """ Allow to attach callback,\
     which will be executed on the next iteration of reactor loop.
-    It's usefull for hard operations, using that from handle to avoid
+    It's useful for hard operations, using that from handle to avoid
     event loop blocking.
     """
 

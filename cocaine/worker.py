@@ -80,7 +80,9 @@ class Worker(object):
             self._logger.error("Wrong cmdline arguments: %s " % err)
             raise RuntimeError("Wrong cmdline arguments")
 
-    def run(self, binds={}):
+    def run(self, binds=None):
+        if not binds:
+            binds = {}
         for event, name in binds.iteritems():
             self.on(event, name)
         self.loop.run()

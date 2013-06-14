@@ -7,8 +7,8 @@ storage = Service("storage")
 
 def write_dummy(request, response):
     req = yield request.read()
-    yield storage.write("dummy-namespace", "dummy-key",\
-                            req, ["dummy-tag"])
+    yield storage.write("dummy-namespace", "dummy-key",
+                        req, ["dummy-tag"])
     dummy = yield storage.read("dummy-namespace", "dummy-key")
     response.write(dummy)
     response.close()

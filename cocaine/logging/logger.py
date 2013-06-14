@@ -77,20 +77,20 @@ class _Logger(BaseService):
 class Logger(object):
 
     def __new__(cls):
-        if not hasattr(cls, "_instanse"):
-            instanse = object.__new__(cls)
+        if not hasattr(cls, "_instance"):
+            instance = object.__new__(cls)
             try:
                 _logger = _Logger()
                 for verbosity in _logger.perform_sync("verbosity"): #only one chunk and read choke also.
                     pass
-                setattr(instanse, "_logger", _logger)
+                setattr(instance, "_logger", _logger)
                 try:
-                    setattr(instanse, "target", "app/%s" % sys.argv[sys.argv.index("--app") + 1])
+                    setattr(instance, "target", "app/%s" % sys.argv[sys.argv.index("--app") + 1])
                 except ValueError: 
-                    setattr(instanse, "target", "app/%s" % "standalone" )
-                _construct_logger_methods(instanse, verbosity)
+                    setattr(instance, "target", "app/%s" % "standalone" )
+                _construct_logger_methods(instance, verbosity)
             except Exception as err:
-                instanse = _STDERR_Logger()
-                instanse.warn("Logger init error: %s. Use stderr logger" % err)
-            cls._instanse = instanse
-        return cls._instanse
+                instance = _STDERR_Logger()
+                instance.warn("Logger init error: %s. Use stderr logger" % err)
+            cls._instance = instance
+        return cls._instance

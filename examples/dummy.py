@@ -13,4 +13,4 @@ def event_handler(request, response):
         response.write("Please, say 'Hello' to me!")
     response.close()
 
-W.run({"hello" : event_handler}) # Run eventloop - ready to work!
+W.run({"hello" : event_handler}) # Run event loop - ready to work!

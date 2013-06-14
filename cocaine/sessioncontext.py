@@ -101,7 +101,7 @@ class Request(object):
         else:
             # Copy callback to temp, clear current callback and perform temp
             # Do it so because self._clbk may change,
-            # while perfoming callback function.
+            # while performing callback function.
             # Avoid double chunk sending to the task
             self._logger.debug("Send chunk to application")
             temp = self._clbk
@@ -136,7 +136,7 @@ class Request(object):
             callback(self.cache.pop(0))
         elif self._errmsg is not None:
             if errorback is not None:
-                errorback(self._errmsg)  # traslate error into worker
+                errorback(self._errmsg)  # translate error into worker
             else:
                 self.default_errorback(self._errmsg)
         elif self._state is not None:
@@ -145,7 +145,7 @@ class Request(object):
         else:
             # Stream closed by choke
             # Raise exception here because no chunks
-            # from cocaine-runtime are availaible
+            # from cocaine-runtime are available
             self._logger.warn("Chunks are over,\
                                 but the application requests them")
             if errorback:
