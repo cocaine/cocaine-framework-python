@@ -223,8 +223,8 @@ def NodeActionPrettyWrapper():
 
 class ConsoleAppRestartAction(AppRestartAction):
     def execute(self):
-        chain = super(ConsoleAppRestartAction, self).execute().then(self.showStatus)
-        chain.run()
+        chain = super(ConsoleAppRestartAction, self).execute()
+        chain.then(self.showStatus).run()
 
     def showStatus(self, result):
         try:

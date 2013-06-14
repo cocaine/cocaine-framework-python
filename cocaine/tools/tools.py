@@ -405,12 +405,14 @@ class AppRestartAction(NodeAction):
         if not self.name:
             raise ValueError('Please specify application name')
 
-    # def experiment(self):
+    # def execute(self):
     #     return ChainFactory().then(self.do)
     #
+    # #todo: Now it is undefined behaviour when exception is raised directly in coroutine
     # def do(self):
     #     try:
     #         info = yield NodeInfoAction(self.node, **self.config).execute()
+    #         print(info)
     #         profile = self.profile or info['apps'][self.name]['profile']
     #         status = yield AppPauseAction(self.node, **self.config).execute()
     #         print(status)
@@ -418,7 +420,10 @@ class AppRestartAction(NodeAction):
     #         config['profile'] = profile
     #         yield AppStartAction(self.node, **config).execute()
     #     except KeyError:
+    #         print('key error')
     #         raise ToolsError('Application is not running')
+    #     except Exception as err:
+    #         print(err)
 
     def execute(self):
         chain = ChainFactory().then(self.getInfo).then(self.saveProfile).then(self.stopApp).then(self.startApp)
