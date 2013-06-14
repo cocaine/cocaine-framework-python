@@ -1,7 +1,14 @@
+from __future__ import absolute_import
+import logging
+import time
 import types
+from tornado.ioloop import IOLoop
 from cocaine.futures import Future
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
+
+
+log = logging.getLogger(__name__)
 
 
 class Result(object):
@@ -97,47 +104,54 @@ class FutureMock(Future):
         data. Doneback hasn't any result, so it left here only for properly working `Chain` class.
         """
         try:
-            callback(self.obj)
+            self.invokeAsynchronously(lambda: callback(self.obj))
         except Exception as err:
             if errorback:
-                errorback(err)
+                self.invokeAsynchronously(lambda: errorback(err))
+
+    def invokeAsynchronously(self, callback):
+        IOLoop.instance().add_timeout(time.time(), lambda: callback())
+
 
 
 class GeneratorFutureMock(Future):
     def __init__(self, obj=None):
         super(GeneratorFutureMock, self).__init__()
         self.obj = obj
-        self.firstIteration = True
-
-    def loop(self, val=None):
-        print(val, self.firstIteration)
-        rs = Result(val)
-        try:
-            if self.firstIteration:
-                self.firstIteration = False
-            else:
-                print('GET', rs)
-                self.obj.send(rs)
-            result = self.obj.next()
-            print('123')
-            if isinstance(result, Future):
-                future = result
-            else:
-                future = FutureMock(result)
-            print(future)
-            future.bind(self.loop, self.loop)
-        except GeneratorExit:
-            print('>>')
-            self.cb(self.obj)
-        except Exception as err:
-            print('?')
-            if self.eb:
-                self.eb(err)
+        self.counter = 0
 
     def bind(self, callback, errorback=None, on_done=None):
         self.cb = callback
-        self.eb = errorback
-        self.loop()
+        self.advance()
+
+    def advance(self, value=None):
+        try:
+            log.debug('Advance({0}) - {1}'.format(self.counter, value))
+            self.counter += 1
+            result = self.nextStep(value)
+            future = self.wrapResult(result)
+            if result:
+                future.bind(self.advance, self.advance)
+            log.debug('Advance got: {0} -> {1}'.format(result, future))
+        except StopIteration:
+            log.debug('StopIteration')
+            self.cb(value)
+        except Exception as err:
+            log.error(err)
+
+    def nextStep(self, value):
+        if isinstance(value, Exception):
+            result = self.obj.throw(value)
+        else:
+            result = self.obj.send(value)
+        return result
+
+    def wrapResult(self, result):
+        if isinstance(result, Future):
+            future = result
+        else:
+            future = FutureMock(result)
+        return future
 
 class FutureCallableMock(Future):
     """
