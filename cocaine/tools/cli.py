@@ -58,7 +58,7 @@ def printError(message):
     sys.stderr.write('{s}{message}{e}\n'.format(s=coloredOutput.FAIL, message=message, e=coloredOutput.ENDC))
 
 
-def AwaitListWrapper(onChunkReceivedMessage, onErrorMessage=None):
+def AwaitListWrapper(onErrorMessage=None):
     """
     Simple class decorator that wraps action class with single future returned from execute method and applies callback
     and errorback handlers on execute method.
@@ -72,9 +72,7 @@ def AwaitListWrapper(onChunkReceivedMessage, onErrorMessage=None):
                 future.bind(callback=self.onChunkReceived, errorback=self.onErrorReceived)
 
             def onChunkReceived(self, chunk):
-                print(onChunkReceivedMessage)
-                for num, profile in enumerate(chunk, start=1):
-                    print('\t{0}. {1}'.format(num, profile))
+                print(json.dumps(chunk))
                 IOLoop.instance().stop()
 
             def onErrorReceived(self, exception):
@@ -282,15 +280,15 @@ CRASHLOG_REMOVE_SUCCESS = 'Crashlog for app "{0}" have been removed'
 CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
 AVAILABLE_TOOLS_ACTIONS = {
-    'app:list': AwaitListWrapper(APP_LIST_SUCCESS)(AppListAction),
+    'app:list': AwaitListWrapper()(AppListAction),
     'app:view': AwaitJsonWrapper()(AppViewAction),
     'app:upload': AwaitDoneWrapper(APP_UPLOAD_SUCCESS, APP_UPLOAD_FAIL)(AppUploadAction),
     'app:remove': AwaitDoneWrapper(APP_REMOVE_SUCCESS, APP_REMOVE_FAIL)(AppRemoveAction),
-    'profile:list': AwaitListWrapper(PROFILE_LIST_SUCCESS)(ProfileListAction),
+    'profile:list': AwaitListWrapper()(ProfileListAction),
     'profile:view': AwaitJsonWrapper()(ProfileViewAction),
     'profile:upload': AwaitDoneWrapper(PROFILE_UPLOAD_SUCCESS, PROFILE_UPLOAD_FAIL)(ProfileUploadAction),
     'profile:remove': AwaitDoneWrapper(PROFILE_REMOVE_SUCCESS, PROFILE_REMOVE_FAIL)(ProfileRemoveAction),
-    'runlist:list': AwaitListWrapper(RUNLIST_LIST_SUCCESS)(RunlistListAction),
+    'runlist:list': AwaitListWrapper()(RunlistListAction),
     'runlist:view': AwaitJsonWrapper()(RunlistViewAction),
     'runlist:upload': AwaitDoneWrapper(RUNLIST_UPLOAD_SUCCESS, RUNLIST_UPLOAD_FAIL)(RunlistUploadAction),
     'runlist:remove': AwaitDoneWrapper(RUNLIST_REMOVE_SUCCESS, RUNLIST_REMOVE_FAIL)(RunlistRemoveAction),

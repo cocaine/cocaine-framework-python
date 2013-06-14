@@ -202,7 +202,7 @@ class SomeTests(FunctionalTests):
         self.assertEqual(expected, actual)
 
     def test_1AppList(self):
-        expected = 'Currently uploaded apps:\n\t1. test\n'
+        expected = '["test"]\n'
         actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'app', 'list'])
         self.assertEqual(expected, actual)
 
@@ -302,7 +302,7 @@ class SomeTests(FunctionalTests):
         self.assertEqual(expected, actual)
 
     def test_1ProfileList(self):
-        expected = 'Currently uploaded profiles:\n\t1. default\n'
+        expected = '["default"]\n'
         actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'profile', 'list'])
         self.assertEqual(expected, actual)
 
@@ -326,7 +326,7 @@ class SomeTests(FunctionalTests):
         self.assertEqual(expected, actual)
 
     def test_1RunlistList(self):
-        expected = '''Currently uploaded runlists: 1. default_r'''
+        expected = '["default_r"]'
         actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'runlist', 'list'])
         self.assertEqualContent(expected, actual)
 
