@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 from opster import Dispatcher
-#TODO: Package name cocaine.tools.tools is not funny. May be move it one layer up?
 import sys
-from cocaine.tools.tools import ToolsExecutor, NodeExecutor, coloredOutput, ToolsError, printError
+from cocaine.tools.cli import ToolsExecutor, NodeExecutor, coloredOutput, ToolsError, printError
 
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'

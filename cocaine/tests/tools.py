@@ -1,22 +1,15 @@
 # coding=utf-8
 import StringIO
-from inspect import getmembers
-import inspect
 import json
 import os
 import re
 import shutil
-from string import Template
 import subprocess
 import tarfile
 import time
 import unittest
-from mock import Mock
 
-import msgpack
 import sys
-from cocaine.tools.tools import AppListAction, APPS_TAGS, AppViewAction
-from cocaine.tools.tools_sync import Storage, upload_app
 
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
