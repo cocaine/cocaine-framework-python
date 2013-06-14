@@ -31,9 +31,7 @@ class Chain(object):
         """
         This class represents chain element by storing some function and invoking it as is turn comes.
         If method `run` is called it invokes `func` with specified arguments and receives its result or catches an
-        exception. The function `func` MUST return the `Future` object with `bind` method with three callbacks defined.
-        If it is not - use `synchronous` and `asynchronousCallable` decorators or `FutureMock` and `FutureCallableMock`
-        classes directly.
+        exception
         """
         self.func = func
         self.nextChain = nextChain
@@ -92,8 +90,9 @@ class ChainFactory():
 class FutureMock(Future):
     def __init__(self, obj=None):
         """
-        This class represents simple future wrapper on some result. It simple calls `callback` function with single
-        `obj` parameter when `bind` method is called or `errorback` when some error occurred during `callback` invoking.
+        This class represents simple future wrapper on some result. It simple deferredly calls `callback` function with
+        single `obj` parameter when `bind` method is called or `errorback` when some error occurred during `callback`
+        invoking.
         """
         super(FutureMock, self).__init__()
         self.obj = obj
@@ -101,7 +100,7 @@ class FutureMock(Future):
     def bind(self, callback, errorback=None, on_done=None):
         """
         NOTE: `on_done` callback is not used because it's not needed. You have to use this object only to store any
-        data. Doneback hasn't any result, so it left here only for properly working `Chain` class.
+        data. Doneback hasn't any result, so it left here only for having the same signature with Future.bind method
         """
         try:
             self.invokeAsynchronously(lambda: callback(self.obj))
@@ -115,6 +114,9 @@ class FutureMock(Future):
 
 
 class GeneratorFutureMock(Future):
+    """
+    This class represents future wrapper over coroutine function as chain item.
+    """
     def __init__(self, obj=None):
         super(GeneratorFutureMock, self).__init__()
         self.obj = obj

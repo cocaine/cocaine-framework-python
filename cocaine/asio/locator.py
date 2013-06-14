@@ -29,6 +29,8 @@ from cocaine.asio.message import Message
 from cocaine.asio import message
 from cocaine.exceptions import LocatorResolveError
 
+#todo: Need asynchronous locator (without loooooong tcp blocking timeout), plz plz plz
+
 class Cache(object):
 
     lock = Lock()
