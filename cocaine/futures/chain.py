@@ -122,6 +122,7 @@ class GeneratorFutureMock(Future):
 
     def bind(self, callback, errorback=None, on_done=None):
         self.cb = callback
+        self.eb = errorback
         self.advance()
 
     def advance(self, value=None):
@@ -138,6 +139,8 @@ class GeneratorFutureMock(Future):
             self.cb(value)
         except Exception as err:
             log.error(err)
+            if self.eb:
+                self.eb(err)
 
     def nextStep(self, value):
         if isinstance(value, Exception):

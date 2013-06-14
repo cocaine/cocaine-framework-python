@@ -405,52 +405,26 @@ class AppRestartAction(NodeAction):
         if not self.name:
             raise ValueError('Please specify application name')
 
-    # def execute(self):
-    #     return ChainFactory().then(self.do)
-    #
-    # #todo: Now it is undefined behaviour when exception is raised directly in coroutine
-    # def do(self):
-    #     try:
-    #         info = yield NodeInfoAction(self.node, **self.config).execute()
-    #         print(info)
-    #         profile = self.profile or info['apps'][self.name]['profile']
-    #         status = yield AppPauseAction(self.node, **self.config).execute()
-    #         print(status)
-    #         config = self.config.copy()
-    #         config['profile'] = profile
-    #         yield AppStartAction(self.node, **config).execute()
-    #     except KeyError:
-    #         print('key error')
-    #         raise ToolsError('Application is not running')
-    #     except Exception as err:
-    #         print(err)
-
     def execute(self):
-        chain = ChainFactory().then(self.getInfo).then(self.saveProfile).then(self.stopApp).then(self.startApp)
-        return chain
+        return ChainFactory().then(self.doAction)
 
-    def getInfo(self):
-        action = NodeInfoAction(self.node, **self.config)
-        return action.execute()
-
-    def saveProfile(self, result):
+    def doAction(self):
         try:
-            info = result.get()
-            if not self.profile:
-                self.profile = info['apps'][self.name]['profile']
+            info = yield NodeInfoAction(self.node, **self.config).execute()
+            profile = self.profile or info['apps'][self.name]['profile']
+            appStopStatus = yield AppPauseAction(self.node, **self.config).execute()
+            appStartConfig = {
+                'host': self.config['host'],
+                'port': self.config['port'],
+                'name': self.name,
+                'profile': profile
+            }
+            appStartStatus = yield AppStartAction(self.node, **appStartConfig).execute()
+            yield [appStopStatus, appStartStatus]
         except KeyError:
-            raise ToolsError('Application is not running')
-
-    def stopApp(self, result):
-        action = AppPauseAction(self.node, **self.config)
-        return action.execute()
-
-    def startApp(self, result):
-        print(result.get())
-        config = self.config.copy()
-        config['profile'] = self.profile
-        action = AppStartAction(self.node, **config)
-        return action.execute()
+            raise ToolsError('Application "{0}" is not running and profile not specified'.format(self.name))
+        except Exception as err:
+            raise ToolsError('Unknown error - {0}'.format(err))
 
 
 class AppCheckAction(NodeAction):

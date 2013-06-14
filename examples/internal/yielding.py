@@ -100,6 +100,9 @@ def step1():
         log.error('Something goes wrong! You should never see this message!')
     except SomeErrorServiceError as err:
         log.info('Result: {0}'.format(err))
+
+    raise Exception('12345')
+
     yield 'Return'
 
 def step2(result):
@@ -108,7 +111,10 @@ def step2(result):
     return 'Fuck you all!'
 
 def finish(value):
-    log.info('Finished! - {0}'.format(value.get()))
+    try:
+        log.info('Finished! - {0}'.format(value.get()))
+    except Exception as err:
+        log.error('Error caught in finish method - {0}'.format(err))
 
 if __name__ == '__main__':
     log = logging.getLogger(__name__)
