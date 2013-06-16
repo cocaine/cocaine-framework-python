@@ -24,8 +24,10 @@ from threading import Lock
 
 import msgpack
 
-MAX_BUFF_SIZE = 104857600
-START_CHUNK_SIZE = 10240
+#MAX_BUFF_SIZE = 104857600
+START_CHUNK_SIZE = 10240 # Buffer size for ReadableStream
+
+SIZE_OF_WRITE_FRAME = 640000 # Size of data sending by one write
 
 def encode_dec(f):
     def wrapper(self, data):
@@ -82,7 +84,7 @@ class ReadableStream(object):
             length = self.pipe.read(self.tmp_buff, self.tmp_buff.buffer_info()[1])
 
             if length <= 0:
-                if length == 0: #Remote side has closed connection
+                if length == 0: # Remote side has closed connection
                     self.loop.unregister_read_event(self.pipe.fileno())
                 return
 
@@ -103,48 +105,41 @@ class WritableStream(object):
 
         self.mutex = Lock()
 
-        self.ring = bytearray()
+        self.buffer = list()
         self.wr_offset = 0
         self.tx_offset = 0
 
+        self._frame_size = SIZE_OF_WRITE_FRAME
+
     def _on_event(self):
         with self.mutex:
-
-            if self.wr_offset == self.tx_offset and self.is_attached:
-                self.loop.unregister_write_event(self.pipe.fileno())
-                self.is_attached = False
+            # All data was sent - so unbind writable event
+            if len(self.buffer) == 0:
+                if self.is_attached:
+                    self.loop.unregister_write_event(self.pipe.fileno())
+                    self.is_attached = False
                 return
 
-            unsent = self.wr_offset - self.tx_offset
+            current = self.buffer[0]
+            unsent = len(current) - self.tx_offset
 
-            sent = self.pipe.write(self.ring[self.tx_offset : self.tx_offset + unsent])
+            if unsent > self._frame_size:
+                sent = self.pipe.write(current[-unsent:-(unsent - self._frame_size)])
+            else:
+                sent = self.pipe.write(current[-unsent:])
 
-            if sent > 0:
+            if sent > 0: # else EPIPE
                 self.tx_offset += sent
+
+            # Current object is sent completely - pop it from buffer
+            if self.tx_offset == len(current):
+                self.buffer.pop(0)
+                self.tx_offset = 0
 
     @encode_dec
     def write(self, data, size):
         with self.mutex:
-            if self.wr_offset == self.tx_offset:
-                sent = self.pipe.write(data)
-
-                if sent >= 0:
-                    if sent == size:
-                        return
-
-                    size -= sent
-
-
-            if len(self.ring) > MAX_BUFF_SIZE:
-                unsent = self.wr_offset - self.tx_offset
-                self.ring = self.ring[self.tx_offset : self.tx_offset + unsent]
-                self.rd_offset = unsent
-                self.rx_offset = 0
-
-
-            self.wr_offset += size
-            self.ring.extend(data[sent:])
-
+            self.buffer.append(array.array('c', data))
 
             if not self.is_attached:
                 self.loop.register_write_event(self._on_event, self.pipe.fileno())
