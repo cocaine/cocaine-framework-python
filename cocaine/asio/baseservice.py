@@ -1,5 +1,5 @@
 #
-#   Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
+#    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
 #    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
 #
 #    This file is part of Cocaine.
@@ -35,7 +35,7 @@ from locator import Locator
 
 
 class BaseService(object):
-    """ Implement basic functional for services:
+    """ Implements basic functional for services:
     * all asio stuff
     * perform_sync method for synchronous operations
     You should reimplement _on_message function - this is callback for decoder,

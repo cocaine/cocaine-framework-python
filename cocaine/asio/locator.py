@@ -84,10 +84,9 @@ class Locator(object):
     def _get_api(self, name, endpoint, port):
         try:
             locator_pipe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            locator_pipe.settimeout(4.0)
+            locator_pipe.settimeout(1.0)
             locator_pipe.connect((endpoint, port))
             locator_pipe.send(msgpack.packb([0, 1, [name]]))
-            #locator_pipe.send(Message(0, 1, [name]).pack())
             u = msgpack.Unpacker()
             msg = None
             while msg is None:

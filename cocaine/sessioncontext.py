@@ -21,6 +21,8 @@
 
 import traceback
 
+import msgpack
+
 from decorators import default
 from cocaine.exceptions import *
 from cocaine.logging import Logger
@@ -64,6 +66,7 @@ class Stream(object):
         self.session = session
 
     def write(self, chunk):
+        chunk = msgpack.packb(chunk)
         if self._m_state is not None:
             self.worker.send_chunk(self.session, chunk)
             return

@@ -23,6 +23,8 @@ import socket
 import fcntl
 import errno
 
+
+
 class Pipe(socket.socket):
 
     def __init__(self, path):
@@ -40,9 +42,10 @@ class Pipe(socket.socket):
     def write(self, buff):
         return self.send(buff)
 
+
 class ServicePipe(socket.socket):
 
-    def __init__(self, path):
+    def __init__(self, path, on_disconnect_clb=None):
         super(ServicePipe, self).__init__(socket.AF_INET, socket.SOCK_STREAM)
         self._configure()
         while True:
@@ -56,6 +59,9 @@ class ServicePipe(socket.socket):
                     raise
             else:
                 break
+        self._connected = True
+        assert(on_disconnect_clb is None or callable(on_disconnect_clb))
+        self._on_disconnect = on_disconnect_clb or (lambda : None)
 
     def _configure(self):
         self.setblocking(0)
@@ -65,8 +71,18 @@ class ServicePipe(socket.socket):
         return self.recv_into(buff, size)
 
     def write(self, buff):
-        return self.send(buff)
+        try:
+            return self.send(buff)
+        except socket.error as e:
+            if e.errno == errno.EPIPE:
+                self._connected = False
+                self._on_disconnect()
+                return 0
 
     def writeall(self, buff):
         """Only for synchronous calls"""
         return self.sendall(buff)
+
+    @property
+    def connected(self):
+        return self._coonected
