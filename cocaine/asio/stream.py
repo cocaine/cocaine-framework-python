@@ -24,10 +24,8 @@ from threading import Lock
 
 import msgpack
 
-#MAX_BUFF_SIZE = 104857600
 START_CHUNK_SIZE = 10240 # Buffer size for ReadableStream
 
-SIZE_OF_WRITE_FRAME = 640000 # Size of data sending by one write
 
 def encode_dec(f):
     def wrapper(self, data):
@@ -105,41 +103,34 @@ class WritableStream(object):
 
         self.mutex = Lock()
 
-        self.buffer = list()
+        self._buffer = list()
         self.wr_offset = 0
         self.tx_offset = 0
-
-        self._frame_size = SIZE_OF_WRITE_FRAME
 
     def _on_event(self):
         with self.mutex:
             # All data was sent - so unbind writable event
-            if len(self.buffer) == 0:
+            if len(self._buffer) == 0:
                 if self.is_attached:
                     self.loop.unregister_write_event(self.pipe.fileno())
                     self.is_attached = False
                 return
 
-            current = self.buffer[0]
-            unsent = len(current) - self.tx_offset
-
-            if unsent > self._frame_size:
-                sent = self.pipe.write(current[-unsent:-(unsent - self._frame_size)])
-            else:
-                sent = self.pipe.write(current[-unsent:])
+            current = self._buffer[0]
+            sent = self.pipe.write(buffer(current, self.tx_offset))
 
             if sent > 0: # else EPIPE
                 self.tx_offset += sent
 
             # Current object is sent completely - pop it from buffer
             if self.tx_offset == len(current):
-                self.buffer.pop(0)
+                self._buffer.pop(0)
                 self.tx_offset = 0
 
     @encode_dec
     def write(self, data, size):
         with self.mutex:
-            self.buffer.append(array.array('c', data))
+            self._buffer.append(data)
 
             if not self.is_attached:
                 self.loop.register_write_event(self._on_event, self.pipe.fileno())
