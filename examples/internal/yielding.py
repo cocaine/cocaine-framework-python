@@ -68,6 +68,14 @@ class SomeErrorService(object):
     def execute(self):
         return EFut(self.value)
 
+
+def f1():
+    return 1
+
+def f2(result):
+    return 'r320r353475734854'
+
+
 def step1():
     log.info('Invoking service that returns exactly 3 chunks. We have to get it all!')
     r10 = yield ServiceMock(yields=(0, 10, 20)).execute()
@@ -100,6 +108,9 @@ def step1():
         log.error('Something goes wrong! You should never see this message!')
     except SomeErrorServiceError as err:
         log.info('Result: {0}'.format(err))
+
+    result = yield ChainFactory().then(f1).then(f2)
+    print(result, 'RESULT!!!')
 
     raise Exception('12345')
 
