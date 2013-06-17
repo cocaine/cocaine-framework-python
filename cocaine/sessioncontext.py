@@ -26,6 +26,8 @@ import msgpack
 from decorators import default
 from cocaine.exceptions import *
 from cocaine.logging import Logger
+from cocaine.futures import Future
+from cocaine.futures import chain
 
 
 class Sandbox(object):
@@ -86,7 +88,7 @@ class Stream(object):
         return self._m_state is None
 
 
-class Request(object):
+class Request(Future):
 
     def __init__(self):
         self._logger = Logger()
@@ -127,7 +129,7 @@ class Request(object):
                 self._logger.error("No errorback. Can't throw error")
 
     def read(self):
-        return self
+        return chain.ChainFactory().then(lambda : self)
 
     def default_errorback(self, err):
         self._logger.error("No errorback.\

@@ -28,6 +28,7 @@ from cocaine.asio import message
 from cocaine.asio.message import Message
 from cocaine.exceptions import ServiceError
 from cocaine.futures import Future
+from cocaine.futures import chain
 from cocaine.asio.baseservice import BaseService
 
 __all__ = ["Service"]
@@ -44,11 +45,12 @@ class Service(BaseService):
         def closure(number):
             def wrapper(*args):
                 future = Future()
+                c = chain.ChainFactory().then(lambda : future)
                 with self.lock:
                     self._counter += 1
                     self.w_stream.write([number, self._counter, args])
                     self._subscribers[self._counter] = future
-                return future
+                return c
             return wrapper
 
         for number, methodname in self._service_api.iteritems():

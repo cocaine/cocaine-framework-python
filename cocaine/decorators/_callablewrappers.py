@@ -72,7 +72,8 @@ class _Coroutine(_Proxy):
         self._current_future_object = self._func.send(chunk)
         while self._current_future_object is None:
             self._current_future_object = self._func.next()
-        self._current_future_object.bind(self.push, self.error, self.push)
+        self._current_future_object.then(self.chain_chunk)
+        self._current_future_object.run()
 
     @exception_trap
     def error(self, error):
@@ -80,7 +81,17 @@ class _Coroutine(_Proxy):
         self._current_future_object = self._func.throw(error)
         while self._current_future_object is None:
             self._current_future_object = self._func.next()
-        self._current_future_object.bind(self.push, self.error, self.push)
+        self._current_future_object.then(self.chain_chunk)
+        self._current_future_object.run()
+
+    @exception_trap
+    def chain_chunk(self, chunk):
+        try:
+            data = chunk.get()
+        except Exception as err:
+            self.error(err)
+        else:
+            self.push(data)
 
     @exception_trap
     def invoke(self, request, stream):
@@ -88,8 +99,8 @@ class _Coroutine(_Proxy):
         self._response = stream  # attach response stream
         self._func = self._obj(request, self._response)  # prepare generator
         self._current_future_object = self._func.next()
-        if self._current_future_object is not None:
-            self._current_future_object.bind(self.push, self.error, self.push)
+        self._current_future_object.then(self.chain_chunk)
+        self._current_future_object.run()
 
 
     def close(self):
