@@ -49,14 +49,15 @@ if __name__ == '__main__':
         }
 
         def locateApps():
-            return storage.find(*locateItems.get(config['locateItem']))
-
-        def printResult(apps):
-            print(' '.join(apps.get()))
-            loop.stop()
+            apps = yield storage.find(*locateItems.get(config['locateItem']))
+            with open('/tmp/1.txt', 'w') as fh:
+                fh.write(' '.join(apps))
+            if apps:
+                print(' '.join(apps))
+                loop.stop()
 
         storage = Service('storage', config['host'], int(config['port']))
-        ChainFactory().then(locateApps).then(printResult).run()
+        ChainFactory().then(locateApps).run()
         loop = IOLoop.instance()
         loop.add_timeout(time() + ADEQUATE_TIMEOUT, lambda: loop.stop())
         loop.start()

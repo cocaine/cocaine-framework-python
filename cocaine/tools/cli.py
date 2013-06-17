@@ -21,13 +21,12 @@ from cocaine.tools.tools import (parseCrashlogs,
                                 RunlistViewAction,
                                 RunlistUploadAction,
                                 RunlistRemoveAction,
-                                AddApplicationToRunlistAction,
+                                RunlistAddApplicationAction,
                                 CrashlogRemoveAction,
                                 CrashlogRemoveAllAction,
                                 CrashlogListAction,
                                 CrashlogViewAction,
                                 ToolsError)
-import collections
 import json
 import msgpack
 import sys
@@ -58,30 +57,6 @@ def printError(message):
     sys.stderr.write('{s}{message}{e}\n'.format(s=coloredOutput.FAIL, message=message, e=coloredOutput.ENDC))
 
 
-def AwaitListWrapper(onErrorMessage=None):
-    """
-    Simple class decorator that wraps action class with single future returned from execute method and applies callback
-    and errorback handlers on execute method.
-    Callback simply prints list received and stops event loop.
-    Errorback prints error message and stops event loop also.
-    """
-    def Patch(cls):
-        class Wrapper(cls):
-            def execute(self):
-                chain = super(Wrapper, self).execute()
-                chain.then(self.processResult).run()
-
-            def processResult(self, chunk):
-                try:
-                    print(json.dumps(chunk.get()))
-                except Exception as err:
-                    printError((onErrorMessage or 'Error occurred: {0}').format(err))
-                finally:
-                    IOLoop.instance().stop()
-        return Wrapper
-    return Patch
-
-
 def AwaitDoneWrapper(onDoneMessage=None, onErrorMessage=None):
     def Patch(cls):
         class Wrapper(cls):
@@ -103,7 +78,7 @@ def AwaitDoneWrapper(onDoneMessage=None, onErrorMessage=None):
     return Patch
 
 
-def AwaitJsonWrapper(onErrorMessage=None):
+def AwaitJsonWrapper(onErrorMessage=None, unpack=False):
     def Patch(cls):
         class Wrapper(cls):
             def execute(self):
@@ -111,9 +86,12 @@ def AwaitJsonWrapper(onErrorMessage=None):
                 chain.then(self.processResult).run()
 
             def processResult(self, chunk):
-                print(chunk.obj)
                 try:
-                    print(json.dumps(msgpack.unpackb(chunk.get()), indent=4))
+                    result = chunk.get()
+                    if result:
+                        if unpack:
+                            result = msgpack.loads(result)
+                        print(json.dumps(result, indent=4))
                 except Exception as err:
                     printError((onErrorMessage or 'Error occurred: {0}').format(err))
                 finally:
@@ -122,7 +100,7 @@ def AwaitJsonWrapper(onErrorMessage=None):
     return Patch
 
 
-class ConsoleAddApplicationToRunlistAction(AddApplicationToRunlistAction):
+class ConsoleAddApplicationToRunlistAction(RunlistAddApplicationAction):
     def execute(self):
         super(ConsoleAddApplicationToRunlistAction, self).execute().then(self.printResult).run()
 
@@ -187,24 +165,6 @@ def makePrettyCrashlogRemove(cls, onDoneMessage=None):
     return PrettyWrapper
 
 
-def NodeActionPrettyWrapper():
-    def Patch(cls):
-        class Wrapper(cls):
-            def execute(self):
-                chain = super(Wrapper, self).execute()
-                chain.then(self.processResult).run()
-
-            def processResult(self, result):
-                try:
-                    print(json.dumps(result.get(), indent=4))
-                except Exception as err:
-                    printError('Error occurred: {what}'.format(what=err.message))
-                finally:
-                    IOLoop.instance().stop()
-        return Wrapper
-    return Patch
-
-
 class ConsoleAppRestartAction(AppRestartAction):
     def execute(self):
         chain = super(ConsoleAppRestartAction, self).execute()
@@ -258,16 +218,16 @@ CRASHLOG_REMOVE_SUCCESS = 'Crashlog for app "{0}" have been removed'
 CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
 AVAILABLE_TOOLS_ACTIONS = {
-    'app:list': AwaitListWrapper()(AppListAction),
-    'app:view': AwaitJsonWrapper()(AppViewAction),
+    'app:list': AwaitJsonWrapper()(AppListAction),
+    'app:view': AwaitJsonWrapper(unpack=True)(AppViewAction),
     'app:upload': AwaitDoneWrapper(APP_UPLOAD_SUCCESS, APP_UPLOAD_FAIL)(AppUploadAction),
     'app:remove': AwaitDoneWrapper(APP_REMOVE_SUCCESS, APP_REMOVE_FAIL)(AppRemoveAction),
-    'profile:list': AwaitListWrapper()(ProfileListAction),
-    'profile:view': AwaitJsonWrapper()(ProfileViewAction),
+    'profile:list': AwaitJsonWrapper()(ProfileListAction),
+    'profile:view': AwaitJsonWrapper(unpack=True)(ProfileViewAction),
     'profile:upload': AwaitDoneWrapper(PROFILE_UPLOAD_SUCCESS, PROFILE_UPLOAD_FAIL)(ProfileUploadAction),
     'profile:remove': AwaitDoneWrapper(PROFILE_REMOVE_SUCCESS, PROFILE_REMOVE_FAIL)(ProfileRemoveAction),
-    'runlist:list': AwaitListWrapper()(RunlistListAction),
-    'runlist:view': AwaitJsonWrapper()(RunlistViewAction),
+    'runlist:list': AwaitJsonWrapper()(RunlistListAction),
+    'runlist:view': AwaitJsonWrapper(unpack=True)(RunlistViewAction),
     'runlist:upload': AwaitDoneWrapper(RUNLIST_UPLOAD_SUCCESS, RUNLIST_UPLOAD_FAIL)(RunlistUploadAction),
     'runlist:remove': AwaitDoneWrapper(RUNLIST_REMOVE_SUCCESS, RUNLIST_REMOVE_FAIL)(RunlistRemoveAction),
     'runlist:add-app': ConsoleAddApplicationToRunlistAction,
@@ -278,10 +238,10 @@ AVAILABLE_TOOLS_ACTIONS = {
 }
 
 AVAILABLE_NODE_ACTIONS = {
-    'info': NodeActionPrettyWrapper()(NodeInfoAction),
-    'app:start': NodeActionPrettyWrapper()(AppStartAction),
-    'app:pause': NodeActionPrettyWrapper()(AppPauseAction),
-    'app:stop': NodeActionPrettyWrapper()(AppPauseAction),
+    'info': AwaitJsonWrapper()(NodeInfoAction),
+    'app:start': AwaitJsonWrapper()(AppStartAction),
+    'app:pause': AwaitJsonWrapper()(AppPauseAction),
+    'app:stop': AwaitJsonWrapper()(AppPauseAction),
     'app:restart': ConsoleAppRestartAction,
     'app:check': PrettyPrintableAppCheckAction
 }

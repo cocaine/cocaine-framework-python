@@ -204,7 +204,7 @@ class SomeTests(FunctionalTests):
     def test_1AppList(self):
         expected = '["test"]\n'
         actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'app', 'list'])
-        self.assertEqual(expected, actual)
+        self.assertEqualContent(expected, actual)
 
     def test_1AppView(self):
         actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'app', 'view',
@@ -304,7 +304,7 @@ class SomeTests(FunctionalTests):
     def test_1ProfileList(self):
         expected = '["default"]\n'
         actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'profile', 'list'])
-        self.assertEqual(expected, actual)
+        self.assertEqualContent(expected, actual)
 
     def test_1ProfileView(self):
         actual = subprocess.check_output([PYTHON, COCAINE_TOOLS, 'profile', 'view',

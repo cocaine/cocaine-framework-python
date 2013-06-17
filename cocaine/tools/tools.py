@@ -220,9 +220,9 @@ class RunlistRemoveAction(SpecificRunlistAction):
         return future
 
 
-class AddApplicationToRunlistAction(SpecificRunlistAction):
+class RunlistAddApplicationAction(SpecificRunlistAction):
     def __init__(self, storage, **config):
-        super(AddApplicationToRunlistAction, self).__init__(storage, **config)
+        super(RunlistAddApplicationAction, self).__init__(storage, **config)
         self.app = config.get('app')
         self.profile = config.get('profile')
         if not self.app:
@@ -234,8 +234,8 @@ class AddApplicationToRunlistAction(SpecificRunlistAction):
         return ChainFactory([self.do])
 
     def do(self):
-        packedRunlist = yield RunlistViewAction(self.storage, **{'name': self.name}).execute()
-        runlist = msgpack.loads(packedRunlist)
+        runlistInfo = yield RunlistViewAction(self.storage, **{'name': self.name}).execute()
+        runlist = msgpack.loads(runlistInfo)
         runlist[self.app] = self.profile
         action = RunlistUploadAction(self.storage, **{
             'name': self.name,
