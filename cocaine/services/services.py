@@ -36,8 +36,8 @@ __all__ = ["Service"]
 
 class Service(BaseService):
 
-    def __init__(self, name, endpoint="localhost", port=10053, init_args=sys.argv):
-        super(Service, self).__init__(name, endpoint, port, init_args)
+    def __init__(self, name, endpoint="localhost", port=10053, init_args=sys.argv, **kwargs):
+        super(Service, self).__init__(name, endpoint, port, init_args, **kwargs)
 
         self._subscribers = dict()
         self.lock = Lock()
@@ -56,7 +56,6 @@ class Service(BaseService):
         for number, methodname in self._service_api.iteritems():
             setattr(self, methodname, closure(number))
 
-    
     def _on_message(self, args):
         msg = Message.initialize(args)
         if msg is None:

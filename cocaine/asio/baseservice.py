@@ -30,6 +30,7 @@ from cocaine.asio.stream import Decoder
 from cocaine.asio import message
 from cocaine.asio.message import Message
 from cocaine.exceptions import ServiceError
+from cocaine.exceptions import LocatorResolveError
 
 from locator import Locator
 
@@ -42,7 +43,7 @@ class BaseService(object):
     so this function is called with every incoming decoded message
     """
 
-    def __init__(self, name, endpoint="localhost", port=10053, init_args=sys.argv):
+    def __init__(self, name, endpoint="localhost", port=10053, init_args=sys.argv, **kwargs):
         """
         It:
         * goes to Locator and get service api (put into self._service_api)
@@ -58,30 +59,44 @@ class BaseService(object):
                 port = 10053
             except IndexError as err:
                 port = 10053
-
-        locator = Locator()
-        service_endpoint, _, service_api = locator.resolve(name, endpoint, port)
-
-        self._service_api = service_api
-        self.servicename = name
         
+        self.raise_reconnect_failure = kwargs.get("raise_reconnect_failure", True)
+        self._counter = 1
         self.loop = ev.Loop()
 
-        self._counter = 1
-        
-        # msgpack convert in list or tuple depend on version - make it tuple
-        self.pipe = ServicePipe(tuple(service_endpoint))
+        self._locator_host = endpoint
+        self._locator_port = port
+        self.servicename = name
+
+        self._init_endpoint() # initialize pipe
 
         self.decoder = Decoder()
         self.decoder.bind(self._on_message)
-
-        self.loop.bind_on_fd(self.pipe.fileno())
 
         self.w_stream = WritableStream(self.loop, self.pipe)
         self.r_stream = ReadableStream(self.loop, self.pipe)
         self.r_stream.bind(self.decoder.decode)
 
         self.loop.register_read_event(self.r_stream._on_event, self.pipe.fileno())
+
+    def _init_endpoint(self):
+        locator = Locator()
+        self.service_endpoint, _, service_api = locator.resolve(self.servicename, self._locator_host, self._locator_port)
+        self._service_api = service_api
+        # msgpack convert in list or tuple depend on version - make it tuple
+        self.pipe = ServicePipe(tuple(self.service_endpoint), self.reconnect)
+        self.loop.bind_on_fd(self.pipe.fileno())
+        
+    def reconnect(self):
+        self.loop.stop_listening(self.pipe.fileno())
+        try:
+            self._init_endpoint()
+        except LocatorResolveError as err:
+            if self.raise_reconnect_failure:
+                raise
+        else:
+            self.w_stream.reconnect(self.pipe)
+            self.r_stream.reconnect(self.pipe)
 
     def perform_sync(self, method, *args, **kwargs):
         """ Do not use the service synchronously after treatment to him asynchronously!

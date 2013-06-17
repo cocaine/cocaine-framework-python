@@ -83,8 +83,7 @@ class ReadableStream(object):
 
             if length <= 0:
                 if length == 0: # Remote side has closed connection
-                    self.pipe._connected = False
-                    #self.loop.unregister_read_event(self.pipe.fileno())
+                    self.pipe.connected = False
                     self.loop.stop_listening(self.pipe.fileno())
                 return
 
@@ -94,6 +93,11 @@ class ReadableStream(object):
             # Enlarge buffer if messages are big
             if self.tmp_buff.buffer_info()[1] == length:
                 self.tmp_buff *= 2
+    
+    def reconnect(self, pipe):
+        self.pipe = pipe
+        self.buffer = msgpack.Unpacker()
+        self.bind(self.callback)
 
 
 class WritableStream(object):
@@ -106,7 +110,6 @@ class WritableStream(object):
         self.mutex = Lock()
 
         self._buffer = list()
-        self.wr_offset = 0
         self.tx_offset = 0
 
     def _on_event(self):
@@ -137,3 +140,10 @@ class WritableStream(object):
             if not self.is_attached:
                 self.loop.register_write_event(self._on_event, self.pipe.fileno())
                 self.is_attached = True
+
+    def reconnect(self, pipe):
+        print "RECONNECT"
+        self.pipe = pipe
+        self.loop.register_write_event(self._on_event, self.pipe.fileno())
+        self.is_attached = True
+        self.tx_offset = 0

@@ -75,8 +75,7 @@ class ServicePipe(socket.socket):
             return self.send(buff)
         except socket.error as e:
             if e.errno == errno.EPIPE:
-                self._connected = False
-                self._on_disconnect()
+                self.connected = False
                 return 0
 
     def writeall(self, buff):
@@ -86,3 +85,9 @@ class ServicePipe(socket.socket):
     @property
     def connected(self):
         return self._connected
+
+    @connected.setter
+    def connected(self, value):
+        self._connected = value
+        if False == value:
+            self._on_disconnect()

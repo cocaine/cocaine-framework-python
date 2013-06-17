@@ -83,6 +83,10 @@ class Loop(object):
 
     def stop_listening(self, fd):
         self._ioloop.remove_handler(fd)
+        self._ioloop.remove_handler(fd)
+        self._ioloop.remove_handler(fd)
+        self._callbacks.pop((fd, self.READ), None)
+        self._callbacks.pop((fd, self.WRITE), None)
         return True
 
     def proxy(self, fd, event):
