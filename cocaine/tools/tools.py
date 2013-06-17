@@ -167,20 +167,17 @@ class ProfileUploadAction(SpecificProfileAction):
 
     def execute(self):
         profile = self.encodeJson(self.profile)
-        future = self.storage.write('profiles', self.name, profile, PROFILES_TAGS)
-        return future
+        return self.storage.write('profiles', self.name, profile, PROFILES_TAGS)
 
 
 class ProfileRemoveAction(SpecificProfileAction):
     def execute(self):
-        future = self.storage.remove('profiles', self.name)
-        return future
+        return self.storage.remove('profiles', self.name)
 
 
 class ProfileViewAction(SpecificProfileAction):
     def execute(self):
-        future = self.storage.read('profiles', self.name)
-        return future
+        return self.storage.read('profiles', self.name)
 
 
 class RunlistListAction(ListAction):
@@ -198,8 +195,7 @@ class SpecificRunlistAction(StorageAction):
 
 class RunlistViewAction(SpecificRunlistAction):
     def execute(self):
-        future = self.storage.read('runlists', self.name)
-        return future
+        return self.storage.read('runlists', self.name)
 
 
 class RunlistUploadAction(SpecificRunlistAction):
@@ -215,8 +211,7 @@ class RunlistUploadAction(SpecificRunlistAction):
             runlist = self.encodeJson(self.runlist)
         else:
             runlist = msgpack.dumps(self.runlist_raw)
-        future = self.storage.write('runlists', self.name, runlist, RUNLISTS_TAGS)
-        return future
+        return self.storage.write('runlists', self.name, runlist, RUNLISTS_TAGS)
 
 
 class RunlistRemoveAction(SpecificRunlistAction):
@@ -236,26 +231,18 @@ class AddApplicationToRunlistAction(SpecificRunlistAction):
             raise ValueError('Please specify profile')
 
     def execute(self):
-        chain = ChainFactory().then(self.getRunlist).then(self.parseRunlist).then(self.uploadRunlist)
-        return chain
+        return ChainFactory([self.do])
 
-    def getRunlist(self):
-        action = RunlistViewAction(self.storage, **{'name': self.name})
-        future = action.execute()
-        return future
-
-    def parseRunlist(self, result):
-        runlist = msgpack.loads(result.get())
+    def do(self):
+        packedRunlist = yield RunlistViewAction(self.storage, **{'name': self.name}).execute()
+        runlist = msgpack.loads(packedRunlist)
         runlist[self.app] = self.profile
-        return runlist
-
-    def uploadRunlist(self, runlist):
         action = RunlistUploadAction(self.storage, **{
             'name': self.name,
-            'runlist-raw': runlist.get()
+            'runlist-raw': runlist
         })
-        future = action.execute()
-        return future
+        status = yield action.execute()
+        yield status
 
 
 class CrashlogListAction(StorageAction):
@@ -266,8 +253,7 @@ class CrashlogListAction(StorageAction):
             raise ValueError('Please specify crashlog name')
 
     def execute(self):
-        future = self.storage.find('crashlogs', (self.name, ))
-        return future
+        return self.storage.find('crashlogs', (self.name, ))
 
 
 def parseCrashlogs(crashlogs, timestamp=None):
@@ -276,69 +262,52 @@ def parseCrashlogs(crashlogs, timestamp=None):
     return [(ts, ctime(float(ts) / 1000000), name) for ts, name in _list if flt(ts)]
 
 
-class CrashlogViewOrRemoveAction(StorageAction):
-    def __init__(self, storage, method, **config):
-        super(CrashlogViewOrRemoveAction, self).__init__(storage, **config)
+class CrashlogAction(StorageAction):
+    def __init__(self, storage, **config):
+        super(CrashlogAction, self).__init__(storage, **config)
         self.name = config.get('name')
         self.timestamp = config.get('manifest')
-        self.method = method
         if not self.name:
             raise ValueError('Please specify name')
 
+
+class CrashlogViewAction(CrashlogAction):
+    def __init__(self, storage, **config):
+        super(CrashlogViewAction, self).__init__(storage, **config)
+
     def execute(self):
-        class Future(object):
-            def __init__(self, action, future):
-                self.action = action
-                self.messagesLeft = 0
-                future.bind(self.onChunk, self.onError, self.onDone)
+        return ChainFactory([self.do])
 
-            def bind(self, callback, errorback=None, doneback=None):
-                self.callback = callback
-                self.errorback = errorback
-                self.doneback = doneback
-
-            def onChunk(self, chunk):
-                def countable(func):
-                    def wrapper(*args, **kwargs):
-                        func(*args, **kwargs)
-                        self.messagesLeft -= 1
-                        if not self.messagesLeft:
-                            self.doneback()
-                    return wrapper
-                crashlogs = parseCrashlogs(chunk, timestamp=self.action.timestamp)
-                self.messagesLeft = len(crashlogs)
-                if len(crashlogs) == 0:
-                    self.doneback()
-
-                for crashlog in crashlogs:
-                    key = "%s:%s" % (crashlog[0], crashlog[2])
-                    method = getattr(self.action.storage, self.action.method)
-                    future = method('crashlogs', key)
-                    future.bind(countable(self.callback), countable(self.errorback), self.doneback)
-
-            def onError(self, exception):
-                self.errorback(exception)
-                self.doneback()
-
-            def onDone(self):
-                self.doneback()
-
-        findCrashlogsFuture = self.storage.find('crashlogs', (self.name,))
-        readCrashlogFuture = Future(self, findCrashlogsFuture)
-        return readCrashlogFuture
+    def do(self):
+        crashlogs = yield self.storage.find('crashlogs', (self.name,))
+        yield # get choke
+        parsedCrashlogs = parseCrashlogs(crashlogs, timestamp=self.timestamp)
+        contents = []
+        for crashlog in parsedCrashlogs:
+            key = '%s:%s' % (crashlog[0], crashlog[2])
+            content = yield self.storage.read('crashlogs', key)
+            yield # get choke
+            contents.append(content)
+        yield ''.join(contents)
 
 
-class CrashlogViewAction(CrashlogViewOrRemoveAction):
+class CrashlogRemoveAction(CrashlogAction):
     def __init__(self, storage, **config):
-        super(CrashlogViewAction, self).__init__(storage, 'read', **config)
+        super(CrashlogRemoveAction, self).__init__(storage, **config)
+
+    def execute(self):
+        return ChainFactory([self.do])
+
+    def do(self):
+        crashlogs = yield self.storage.find('crashlogs', (self.name,))
+        yield # get choke
+        parsedCrashlogs = parseCrashlogs(crashlogs, timestamp=self.timestamp)
+        for crashlog in parsedCrashlogs:
+            key = '%s:%s' % (crashlog[0], crashlog[2])
+            yield self.storage.remove('crashlogs', key)
 
 
-class CrashlogRemoveAction(CrashlogViewOrRemoveAction):
-    def __init__(self, storage, **config):
-        super(CrashlogRemoveAction, self).__init__(storage, 'remove', **config)
-
-
-class CrashlogRemoveAllAction(CrashlogViewOrRemoveAction):
+class CrashlogRemoveAllAction(CrashlogRemoveAction):
     def __init__(self, storage, **config):
         config['manifest'] = None
         super(CrashlogRemoveAllAction, self).__init__(storage, 'remove', **config)

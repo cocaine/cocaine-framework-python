@@ -135,7 +135,7 @@ class GeneratorFutureMock(Future):
             self.counter += 1
             result = self.nextStep(value)
             future = self.wrapResult(result)
-            if result:
+            if result is not None:
                 future.bind(self.advance, self.advance)
             log.debug('Advance got: {0} -> {1}'.format(result, future))
         except StopIteration:

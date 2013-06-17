@@ -111,6 +111,7 @@ def AwaitJsonWrapper(onErrorMessage=None):
                 chain.then(self.processResult).run()
 
             def processResult(self, chunk):
+                print(chunk.obj)
                 try:
                     print(json.dumps(msgpack.unpackb(chunk.get()), indent=4))
                 except Exception as err:
@@ -138,32 +139,32 @@ class ConsoleAddApplicationToRunlistAction(AddApplicationToRunlistAction):
 
 class PrettyPrintableCrashlogListAction(CrashlogListAction):
     def execute(self):
-        future = super(PrettyPrintableCrashlogListAction, self).execute()
-        future.bind(callback=self.onChunkReceived, errorback=self.onErrorReceived)
+        chain = super(PrettyPrintableCrashlogListAction, self).execute()
+        chain.then(self.handleResult).run()
 
-    def onChunkReceived(self, chunk):
-        print("Currently available crashlogs for application '%s'" % self.name)
-        for item in parseCrashlogs(chunk):
-            print ' '.join(item)
-        IOLoop.instance().stop()
-
-    def onErrorReceived(self, exception):
-        printError(('' or 'Unable to view "{name}" - {error}').format(name=self.name, error=exception))
-        IOLoop.instance().stop()
+    def handleResult(self, result):
+        try:
+            print('Currently available crashlogs for application \'%s\'' % self.name)
+            for item in parseCrashlogs(result.get()):
+                print ' '.join(item)
+        except Exception as err:
+            printError(('' or 'Unable to view "{name}" - {error}').format(name=self.name, error=err))
+        finally:
+            IOLoop.instance().stop()
 
 
 class PrettyPrintableCrashlogViewAction(CrashlogViewAction):
     def execute(self):
-        future = super(PrettyPrintableCrashlogViewAction, self).execute()
-        future.bind(callback=self.onChunkReceived, errorback=self.onErrorReceived, doneback=IOLoop.instance().stop)
+        super(PrettyPrintableCrashlogViewAction, self).execute().then(self.handleResult).run()
 
-    def onChunkReceived(self, crashlog):
-        print('Crashlog:')
-        print('\n'.join(msgpack.unpackb(crashlog)))
-
-    def onErrorReceived(self, exception):
-        printError(exception)
-        IOLoop.instance().stop()
+    def handleResult(self, result):
+        try:
+            print('Crashlog:')
+            print('\n'.join(msgpack.loads(result.get())))
+        except Exception as err:
+            printError(err)
+        finally:
+            IOLoop.instance().stop()
 
 
 def makePrettyCrashlogRemove(cls, onDoneMessage=None):
@@ -172,16 +173,17 @@ def makePrettyCrashlogRemove(cls, onDoneMessage=None):
             super(PrettyWrapper, self).__init__(storage, **config)
 
         def execute(self):
-            future = super(PrettyWrapper, self).execute()
-            future.bind(callback=None, errorback=self.onErrorReceived, doneback=self.onDone)
+            super(PrettyWrapper, self).execute().then(self.handleResult).run()
 
-        def onErrorReceived(self, exception):
-            printError(exception)
-            IOLoop.instance().stop()
+        def handleResult(self, result):
+            try:
+                result.get()
+                print((onDoneMessage or 'Action for app "{0}" finished').format(self.name))
+            except Exception as err:
+                printError(err)
+            finally:
+                IOLoop.instance().stop()
 
-        def onDone(self):
-            print((onDoneMessage or 'Action for app "{0}" finished').format(self.name))
-            IOLoop.instance().stop()
     return PrettyWrapper
 
 
