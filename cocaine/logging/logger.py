@@ -86,7 +86,7 @@ class Logger(object):
                 setattr(instance, "_logger", _logger)
                 try:
                     setattr(instance, "target", "app/%s" % sys.argv[sys.argv.index("--app") + 1])
-                except ValueError: 
+                except ValueError:
                     setattr(instance, "target", "app/%s" % "standalone" )
                 _construct_logger_methods(instance, verbosity)
             except Exception as err:

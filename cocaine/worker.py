@@ -40,7 +40,7 @@ from cocaine.exceptions import RequestError
 
 class Worker(object):
 
-    def __init__(self, init_args=sys.argv, disown_timeout=2, heartbeat_timeout=5):
+    def __init__(self, init_args=sys.argv, disown_timeout=2, heartbeat_timeout=20):
         self._logger = Logger()
         self._init_endpoint(init_args)
 
@@ -130,6 +130,7 @@ class Worker(object):
                 self.sessions.pop(msg.session)
 
         elif msg.id == message.RPC_HEARTBEAT:
+            self._logger.debug("Receive heartbeat. Stop disown timer")
             self.disown_timer.stop()
 
         elif msg.id == message.RPC_TERMINATE:
@@ -142,8 +143,10 @@ class Worker(object):
                 _session.error(RequestError(msg.message))
 
     def on_disown(self):
-        self._logger.error("Disowned")
-        self.loop.stop()
+        try:
+            self._logger.error("Disowned")
+        finally:
+            self.loop.stop()
 
     # Private:
     def _send_handshake(self):
@@ -151,6 +154,7 @@ class Worker(object):
 
     def _send_heartbeat(self):
         self.disown_timer.start()
+        self._logger.debug("Send heartbeat. Start disown timer")
         self.w_stream.write(Message(message.RPC_HEARTBEAT, 0).pack())
 
     def send_choke(self, session):

@@ -137,12 +137,11 @@ class WritableStream(object):
         with self.mutex:
             self._buffer.append(data)
 
-            if not self.is_attached:
+            if not self.is_attached and self.pipe.connected:
                 self.loop.register_write_event(self._on_event, self.pipe.fileno())
                 self.is_attached = True
 
     def reconnect(self, pipe):
-        print "RECONNECT"
         self.pipe = pipe
         self.loop.register_write_event(self._on_event, self.pipe.fileno())
         self.is_attached = True

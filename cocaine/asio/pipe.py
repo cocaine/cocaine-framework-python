@@ -31,6 +31,7 @@ class Pipe(socket.socket):
         super(Pipe, self).__init__(socket.AF_UNIX, socket.SOCK_STREAM)
         self._configure()
         self.connect(path)
+        self._connected = True
 
     def _configure(self):
         self.setblocking(0)
@@ -40,7 +41,16 @@ class Pipe(socket.socket):
         return self.recv_into(buff, size)
 
     def write(self, buff):
-        return self.send(buff)
+        try:
+            return self.send(buff)
+        except socket.error as e:
+            if e.errno == errno.EPIPE:
+                self._connected = False
+                return 0
+
+    @property
+    def connected(self):
+        return self._connected
 
 
 class ServicePipe(socket.socket):
