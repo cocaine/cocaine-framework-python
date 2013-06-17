@@ -29,7 +29,9 @@ class Loop(object):
 
         self._callbacks = dict()
         self._fd_events = dict()
+        # Tornado ERROR = epoll._ERROR | epoll._EPOLLHUP
         self.READ = self._ioloop.READ
+        self.ERROR = self._ioloop.ERROR
         self.WRITE = self._ioloop.WRITE
 
     def run(self):
@@ -77,6 +79,10 @@ class Loop(object):
 
     def unregister_read_event(self, fd):
         self._unregister_event(fd, self.READ)
+        return True
+
+    def stop_listening(self, fd):
+        self._ioloop.remove_handler(fd)
         return True
 
     def proxy(self, fd, event):

@@ -20,7 +20,7 @@ class Future(object):
             self.cache.append(chunk)
         else:
             temp = self._clbk
-            self._clbk = None
+            #self._clbk = None
             temp(chunk)
 
     def error(self, err):
@@ -29,7 +29,7 @@ class Future(object):
             self._errmsg = err
         else:
             temp = self._errbk
-            self._errbk = None
+            #self._errbk = None
             temp(err)
 
     def default_errorback(self, err):

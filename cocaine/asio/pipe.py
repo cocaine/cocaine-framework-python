@@ -85,4 +85,4 @@ class ServicePipe(socket.socket):
 
     @property
     def connected(self):
-        return self._coonected
+        return self._connected

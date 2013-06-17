@@ -154,6 +154,11 @@ class GeneratorFutureMock(Future):
     def wrapResult(self, result):
         if isinstance(result, Future):
             future = result
+        elif isinstance(result, ChainFactory):
+            f = FutureCallableMock()
+            result.then(lambda r: f.ready(r.get()))
+            result.run()
+            future = f
         else:
             future = FutureMock(result)
         return future

@@ -83,7 +83,9 @@ class ReadableStream(object):
 
             if length <= 0:
                 if length == 0: # Remote side has closed connection
-                    self.loop.unregister_read_event(self.pipe.fileno())
+                    self.pipe._connected = False
+                    #self.loop.unregister_read_event(self.pipe.fileno())
+                    self.loop.stop_listening(self.pipe.fileno())
                 return
 
             self.buffer.feed(self.tmp_buff[:length])

@@ -126,3 +126,7 @@ class BaseService(object):
 
     def _on_message(self, args):
         raise NotImplementedError()
+
+    @property
+    def connected(self):
+        return self.pipe.connected
