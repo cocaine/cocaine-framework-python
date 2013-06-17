@@ -68,8 +68,7 @@ class ListAction(StorageAction):
         self.tags = tags
 
     def execute(self):
-        future = self.storage.find(self.key, self.tags)
-        return future
+        return self.storage.find(self.key, self.tags)
 
 
 class AppListAction(ListAction):
@@ -85,8 +84,7 @@ class AppViewAction(StorageAction):
             raise ValueError('Specify name of application')
 
     def execute(self):
-        future = self.storage.read('manifests', self.name)
-        return future
+        return self.storage.read('manifests', self.name)
 
 
 class AppUploadAction(StorageAction):
@@ -108,14 +106,15 @@ class AppUploadAction(StorageAction):
     def execute(self):
         """
         Encodes manifest and package files and (if successful) uploads them into storage
-
-        :returns: list of two futures on each of them you can bind callback and errorback.
-        Doneback is not supported but you can implement own counting cause it is only two futures returned
         """
+        return ChainFactory().then(self.do)
+
+    def do(self):
         manifest = self.encodeJson(self.manifest)
         package = self.encodePackage()
-        futures = self.upload(manifest, package)
-        return futures
+        manifestStatus = yield self.storage.write('manifests', self.name, manifest, APPS_TAGS)
+        appsStatus = yield self.storage.write('apps', self.name, package, APPS_TAGS)
+        #yield [manifestStatus, appsStatus]
 
     def encodePackage(self):
         try:
@@ -126,13 +125,6 @@ class AppUploadAction(StorageAction):
                 return package
         except IOError as err:
             raise CocaineError('Error occurred while reading archive file "{0}" - {1}'.format(self.package, err))
-
-    def upload(self, manifest, package):
-        futures = [
-            self.storage.write('manifests', self.name, manifest, APPS_TAGS),
-            self.storage.write('apps', self.name, package, APPS_TAGS)
-        ]
-        return futures
 
 
 class AppRemoveAction(StorageAction):
@@ -146,11 +138,11 @@ class AppRemoveAction(StorageAction):
             raise ValueError('Empty application name')
 
     def execute(self):
-        futures = [
-            self.storage.remove("manifests", self.name),
-            self.storage.remove("apps", self.name)
-        ]
-        return futures
+        return ChainFactory([self.do])
+
+    def do(self):
+        yield self.storage.remove("manifests", self.name)
+        yield self.storage.remove("apps", self.name)
 
 
 class ProfileListAction(ListAction):
@@ -363,8 +355,7 @@ class NodeAction(object):
 
 class NodeInfoAction(NodeAction):
     def execute(self):
-        future = self.node.info()
-        return future
+        return self.node.info()
 
 
 class AppStartAction(NodeAction):
@@ -381,8 +372,7 @@ class AppStartAction(NodeAction):
         apps = {
             self.name: self.profile
         }
-        future = self.node.start_app(apps)
-        return future
+        return self.node.start_app(apps)
 
 
 class AppPauseAction(NodeAction):
@@ -435,30 +425,15 @@ class AppCheckAction(NodeAction):
             raise ValueError('Please specify application name')
 
     def execute(self):
-        class Future(object):
-            def __init__(self, action, future):
-                self.action = action
-                self.messagesLeft = 0
-                future.bind(self.onChunk, self.onError)
+        return self.node.info().then(self.parseInfo)
 
-            def bind(self, callback, errorback=None):
-                self.callback = callback
-                self.errorback = errorback
-
-            def onChunk(self, chunk):
-                state = 'stopped or missing'
-                try:
-                    apps = chunk['apps']
-                    app = apps[self.action.name]
-                    state = app['state']
-                except KeyError:
-                    pass
-                finally:
-                    self.callback({self.action.name: state})
-
-            def onError(self, exception):
-                self.errorback(exception)
-
-        future = self.node.info()
-        parseInfoFuture = Future(self, future)
-        return parseInfoFuture
+    def parseInfo(self, result):
+        state = 'stopped or missing'
+        try:
+            info = result.get()
+            apps = info['apps']
+            app = apps[self.name]
+            state = app['state']
+        except KeyError:
+            pass
+        return {self.name: state}

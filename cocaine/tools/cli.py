@@ -68,53 +68,37 @@ def AwaitListWrapper(onErrorMessage=None):
     def Patch(cls):
         class Wrapper(cls):
             def execute(self):
-                future = super(Wrapper, self).execute()
-                future.bind(callback=self.onChunkReceived, errorback=self.onErrorReceived)
+                chain = super(Wrapper, self).execute()
+                chain.then(self.processResult).run()
 
-            def onChunkReceived(self, chunk):
-                print(json.dumps(chunk))
-                IOLoop.instance().stop()
-
-            def onErrorReceived(self, exception):
-                printError((onErrorMessage or 'Error occurred: {0}').format(exception))
-                IOLoop.instance().stop()
+            def processResult(self, chunk):
+                try:
+                    print(json.dumps(chunk.get()))
+                except Exception as err:
+                    printError((onErrorMessage or 'Error occurred: {0}').format(err))
+                finally:
+                    IOLoop.instance().stop()
         return Wrapper
     return Patch
 
 
 def AwaitDoneWrapper(onDoneMessage=None, onErrorMessage=None):
-    """
-    Wrapper class factory for actions with [1; +inf] futures returned from execute method.
-    For each future there is bind method invoked with callback, errorback and doneback supplied.
-    Event loop stops if all of the chunks received or some error has been thrown
-    """
     def Patch(cls):
         class Wrapper(cls):
             def execute(self):
-                futures = super(Wrapper, self).execute()
-                if not isinstance(futures, collections.Iterable):
-                    futures = [futures,]
+                chain = super(Wrapper, self).execute()
+                chain.then(self.processResult).run()
 
-                self.received = 0
-                self.awaits = len(futures)
-                for future in futures:
-                    future.bind(
-                        callback=self.onChunkReceived,
-                        errorback=self.onErrorReceived,
-                        on_done=self.onChunkReceived
-                    )
-
-            def onChunkReceived(self):
-                self.received += 1
-                if self.received == self.awaits:
-                    IOLoop.instance().stop()
+            def processResult(self, status):
+                try:
+                    status.get()
                     print((onDoneMessage or 'Action for "{name}" - done').format(name=self.name))
-
-            def onErrorReceived(self, exception):
-                printError((onErrorMessage or 'Error occurred on action for "{name}": {error}').format(
-                    name=self.name, error=exception)
-                )
-                IOLoop.instance().stop()
+                except Exception as err:
+                    printError((onErrorMessage or 'Error occurred on action for "{name}": {error}').format(
+                        name=self.name, error=err)
+                    )
+                finally:
+                    IOLoop.instance().stop()
         return Wrapper
     return Patch
 
@@ -123,18 +107,16 @@ def AwaitJsonWrapper(onErrorMessage=None):
     def Patch(cls):
         class Wrapper(cls):
             def execute(self):
-                future = super(Wrapper, self).execute()
-                future.bind(callback=self.onChunkReceived, errorback=self.onErrorReceived)
+                chain = super(Wrapper, self).execute()
+                chain.then(self.processResult).run()
 
-            def onChunkReceived(self, chunk):
-                print(json.dumps(msgpack.unpackb(chunk), indent=4))
-                IOLoop.instance().stop()
-
-            def onErrorReceived(self, exception):
-                printError((onErrorMessage or 'Unable to view "{name}" - {error}').format(
-                    name=self.name, error=exception)
-                )
-                IOLoop.instance().stop()
+            def processResult(self, chunk):
+                try:
+                    print(json.dumps(msgpack.unpackb(chunk.get()), indent=4))
+                except Exception as err:
+                    printError((onErrorMessage or 'Error occurred: {0}').format(err))
+                finally:
+                    IOLoop.instance().stop()
         return Wrapper
     return Patch
 
@@ -207,16 +189,16 @@ def NodeActionPrettyWrapper():
     def Patch(cls):
         class Wrapper(cls):
             def execute(self):
-                future = super(Wrapper, self).execute()
-                future.bind(callback=self.onChunkReceived, errorback=self.onErrorReceived)
+                chain = super(Wrapper, self).execute()
+                chain.then(self.processResult).run()
 
-            def onChunkReceived(self, chunk):
-                print(json.dumps(chunk, indent=4))
-                IOLoop.instance().stop()
-
-            def onErrorReceived(self, exception):
-                printError('Error occurred: {what}'.format(what=exception))
-                IOLoop.instance().stop()
+            def processResult(self, result):
+                try:
+                    print(json.dumps(result.get(), indent=4))
+                except Exception as err:
+                    printError('Error occurred: {what}'.format(what=err.message))
+                finally:
+                    IOLoop.instance().stop()
         return Wrapper
     return Patch
 
@@ -237,25 +219,19 @@ class ConsoleAppRestartAction(AppRestartAction):
 
 class PrettyPrintableAppCheckAction(AppCheckAction):
     def execute(self):
-        future = super(PrettyPrintableAppCheckAction, self).execute()
-        future.bind(callback=self.onChunkReceived, errorback=self.onErrorReceived)
+        chain = super(PrettyPrintableAppCheckAction, self).execute()
+        chain.then(self.processResult).run()
 
-    def onChunkReceived(self, chunk):
-        app = self.name
-        state = chunk[app]
-        outputMessage = '{0}: {1}'.format(app, state)
-        if 'running' in state:
+    def processResult(self, result):
+        try:
+            app = self.name
+            state = result.get()[app]
+            outputMessage = '{0}: {1}'.format(app, state)
             print(outputMessage)
+        except Exception as err:
+            printError(err.message)
+        finally:
             IOLoop.instance().stop()
-        else:
-            printError(outputMessage)
-            IOLoop.instance().stop()
-            exit(1)
-
-    def onErrorReceived(self, exception):
-        printError('Error occurred: {what}'.format(what=exception))
-        IOLoop.instance().stop()
-        exit(1)
 
 
 APP_LIST_SUCCESS = 'Currently uploaded apps:'

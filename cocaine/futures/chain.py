@@ -74,8 +74,10 @@ class ChainFactory():
         ChainFactory().then(f1).then(f2).then(f3) ... then(fn).run()
     and this looks like more prettier.
     """
-    def __init__(self):
-        self.chains = []
+    def __init__(self, functions=None):
+        if not functions:
+            functions = []
+        self.chains = [Chain(func) for func in functions]
 
     def then(self, func):
         self.chains.append(Chain(func))
