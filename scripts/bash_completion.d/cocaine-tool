@@ -101,6 +101,7 @@ _cocaine_tool()
         view|remove)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
+                COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type profile`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -143,6 +144,7 @@ _cocaine_tool()
         view|remove)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
+                COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type runlist`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -181,6 +183,7 @@ _cocaine_tool()
         list|removeall)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
+                COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type app`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -192,6 +195,7 @@ _cocaine_tool()
 	view|remove)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
+                COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type app`" -- ${cur}))
                 return 0
                 ;;
 	    --timestamp)
