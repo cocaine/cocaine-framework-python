@@ -73,6 +73,7 @@ _cocaine_tool()
                 return 0
                 ;;
 	    --profile)
+	            COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type=profile`" -- ${cur}))
                 return 0
                 ;;
             *)

@@ -60,7 +60,7 @@ class StorageAction(object):
 class ListAction(StorageAction):
     """
     Abstract storage action class which main aim is to provide find list action on 'key' and 'tags'.
-    For example if key='manifests' and tags=('apps',) then class will try to find applications list
+    For example if key='manifests' and tags=('apps',) this class will try to find applications list
     """
     def __init__(self, key, tags, storage, **config):
         super(ListAction, self).__init__(storage, **config)
@@ -112,9 +112,8 @@ class AppUploadAction(StorageAction):
     def do(self):
         manifest = self.encodeJson(self.manifest)
         package = self.encodePackage()
-        manifestStatus = yield self.storage.write('manifests', self.name, manifest, APPS_TAGS)
-        appsStatus = yield self.storage.write('apps', self.name, package, APPS_TAGS)
-        #yield [manifestStatus, appsStatus]
+        yield self.storage.write('manifests', self.name, manifest, APPS_TAGS)
+        yield self.storage.write('apps', self.name, package, APPS_TAGS)
 
     def encodePackage(self):
         try:
@@ -216,8 +215,7 @@ class RunlistUploadAction(SpecificRunlistAction):
 
 class RunlistRemoveAction(SpecificRunlistAction):
     def execute(self):
-        future = self.storage.remove('runlists', self.name)
-        return future
+        return self.storage.remove('runlists', self.name)
 
 
 class RunlistAddApplicationAction(SpecificRunlistAction):
@@ -237,12 +235,20 @@ class RunlistAddApplicationAction(SpecificRunlistAction):
         runlistInfo = yield RunlistViewAction(self.storage, **{'name': self.name}).execute()
         runlist = msgpack.loads(runlistInfo)
         runlist[self.app] = self.profile
-        action = RunlistUploadAction(self.storage, **{
+        runlistUploadAction = RunlistUploadAction(self.storage, **{
             'name': self.name,
             'runlist-raw': runlist
         })
-        status = yield action.execute()
-        yield status
+        yield runlistUploadAction.execute()
+        result = {
+            'runlist': self.name,
+            'status': 'Success',
+            'added.': {
+                'app' : self.app,
+                'profile': self.profile,
+            }
+        }
+        yield result
 
 
 class CrashlogListAction(StorageAction):
@@ -280,13 +286,11 @@ class CrashlogViewAction(CrashlogAction):
 
     def do(self):
         crashlogs = yield self.storage.find('crashlogs', (self.name,))
-        yield # get choke
         parsedCrashlogs = parseCrashlogs(crashlogs, timestamp=self.timestamp)
         contents = []
         for crashlog in parsedCrashlogs:
             key = '%s:%s' % (crashlog[0], crashlog[2])
             content = yield self.storage.read('crashlogs', key)
-            yield # get choke
             contents.append(content)
         yield ''.join(contents)
 
@@ -300,7 +304,6 @@ class CrashlogRemoveAction(CrashlogAction):
 
     def do(self):
         crashlogs = yield self.storage.find('crashlogs', (self.name,))
-        yield # get choke
         parsedCrashlogs = parseCrashlogs(crashlogs, timestamp=self.timestamp)
         for crashlog in parsedCrashlogs:
             key = '%s:%s' % (crashlog[0], crashlog[2])
@@ -365,7 +368,7 @@ class AppRestartAction(NodeAction):
             raise ValueError('Please specify application name')
 
     def execute(self):
-        return ChainFactory().then(self.doAction)
+        return ChainFactory([self.doAction])
 
     def doAction(self):
         try:
