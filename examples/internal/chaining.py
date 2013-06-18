@@ -14,29 +14,34 @@ def func():
 
 
 def handle(result):
-    print(result.obj)
+    print "Handle", result.obj
 
 
 def func2():
+    print 'AA'
     info1 = yield node.info()
-    none = yield
     info2 = yield node.info()
-    none = yield
     print(info1, info2)
+
+def func3(args):
+    print "Start"
+    s = Service("storage")
+    yield s.write("A", "A", "A", [])
+    print "END"
 
 
 if __name__ == '__main__':
     log = logging.getLogger(__name__)
-    chainLog = logging.getLogger('cocaine.futures.chain')
+    #chainLog = logging.getLogger('cocaine.futures.chain')
     log.setLevel(logging.DEBUG)
-    chainLog.setLevel(logging.DEBUG)
+    #chainLog.setLevel(logging.DEBUG)
 
 
     node = Service('node')
     func()
 
-    ChainFactory([func2]).run()
+    ChainFactory([func2, func3]).run()
     loop = IOLoop.instance()
-    loop.add_timeout(time.time() + 0.2, lambda: loop.stop() )
+    loop.add_timeout(time.time() + 2, lambda: loop.stop() )
     loop.start()
 
