@@ -37,7 +37,7 @@ _cocaine_tool()
         view|check|remove|pause|stop)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-                COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type=app`" -- ${cur}))
+                COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type app`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -69,11 +69,11 @@ _cocaine_tool()
 	start|restart)
 	    case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
-                COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type=app`" -- ${cur}))
+                COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type app`" -- ${cur}))
                 return 0
                 ;;
 	    --profile)
-	            COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type=profile`" -- ${cur}))
+	            COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type profile`" -- ${cur}))
                 return 0
                 ;;
             *)
@@ -154,17 +154,37 @@ _cocaine_tool()
                 ;;
             esac
             ;;
-	upload)
+	    upload)
             case "${COMP_WORDS[COMP_CWORD-1]}" in
             --name)
                 return 0
                 ;;
-	    --runlist) 
+            --runlist)
                 _filedir
                 return 0
                 ;;
             *)
                 COMPREPLY=($(compgen -W "--name --runlist" -- ${cur}))
+                return 0
+                ;;
+            esac
+            ;;
+        add-app)
+            case "${COMP_WORDS[COMP_CWORD-1]}" in
+            --name)
+                COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type runlist`" -- ${cur}))
+                return 0
+                ;;
+            --app)
+                COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type app`" -- ${cur}))
+                return 0
+                ;;
+            --profile)
+                COMPREPLY=($(compgen -W "`python -m ${LOCATOR} ${COMP_WORDS[*]} --locator_type profile`" -- ${cur}))
+                return 0
+                ;;
+            *)
+                COMPREPLY=($(compgen -W "--name --app --profile" -- ${cur}))
                 return 0
                 ;;
             esac

@@ -23,7 +23,6 @@ class Fut(Future):
             loop = IOLoop.instance()
             for pos, value in enumerate(self.yields):
                 loop.add_timeout(time.time() + timeout + pos * 0.1, self.inv)
-            loop.add_timeout(time.time() + timeout + len(self.yields) * 0.1, lambda: self.cb(None))
 
         def inv(self):
             result = self.yields[self.pos]
@@ -82,7 +81,6 @@ def step1():
     r10 = yield ServiceMock(yields=(0, 10, 20)).execute()
     r11 = yield
     r12 = yield
-    none = yield
     log.info('Result: {0}'.format((r10, r11, r12)))
     assert r10 == 0
     assert r11 == 10
@@ -90,13 +88,11 @@ def step1():
 
     log.info('>>> Invoking service that returns exactly 1 chunk')
     r20 = yield ServiceMock(yields=(2, )).execute()
-    none = yield
     log.info('>>> Result: {0}'.format(r20))
     assert r20 == 2
 
     log.info('>>> Invoking service that returns exactly 1 chunk')
     r30 = yield ServiceMock(yields=(3, )).execute()
-    none = yield
     log.info('>>> Result: {0}'.format(r30))
     assert r30 == 3
 
