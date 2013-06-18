@@ -88,10 +88,9 @@ def AwaitJsonWrapper(onErrorMessage=None, unpack=False):
             def processResult(self, chunk):
                 try:
                     result = chunk.get()
-                    if result:
-                        if unpack:
-                            result = msgpack.loads(result)
-                        print(json.dumps(result, indent=4))
+                    if unpack:
+                        result = msgpack.loads(result)
+                    print(json.dumps(result, indent=4))
                 except Exception as err:
                     printError((onErrorMessage or 'Error occurred: {0}').format(err))
                 finally:
@@ -165,37 +164,6 @@ def makePrettyCrashlogRemove(cls, onDoneMessage=None):
     return PrettyWrapper
 
 
-class ConsoleAppRestartAction(AppRestartAction):
-    def execute(self):
-        chain = super(ConsoleAppRestartAction, self).execute()
-        chain.then(self.showStatus).run()
-
-    def showStatus(self, result):
-        try:
-            print(result.get())
-        except Exception as err:
-            printError(err.message)
-        finally:
-            IOLoop.instance().stop()
-
-
-class PrettyPrintableAppCheckAction(AppCheckAction):
-    def execute(self):
-        chain = super(PrettyPrintableAppCheckAction, self).execute()
-        chain.then(self.processResult).run()
-
-    def processResult(self, result):
-        try:
-            app = self.name
-            state = result.get()[app]
-            outputMessage = '{0}: {1}'.format(app, state)
-            print(outputMessage)
-        except Exception as err:
-            printError(err.message)
-        finally:
-            IOLoop.instance().stop()
-
-
 APP_LIST_SUCCESS = 'Currently uploaded apps:'
 APP_UPLOAD_SUCCESS = 'The app "{name}" has been successfully uploaded'
 APP_UPLOAD_FAIL = 'Unable to upload application {name} - {error}'
@@ -230,7 +198,7 @@ AVAILABLE_TOOLS_ACTIONS = {
     'runlist:view': AwaitJsonWrapper(unpack=True)(RunlistViewAction),
     'runlist:upload': AwaitDoneWrapper(RUNLIST_UPLOAD_SUCCESS, RUNLIST_UPLOAD_FAIL)(RunlistUploadAction),
     'runlist:remove': AwaitDoneWrapper(RUNLIST_REMOVE_SUCCESS, RUNLIST_REMOVE_FAIL)(RunlistRemoveAction),
-    'runlist:add-app': ConsoleAddApplicationToRunlistAction,
+    'runlist:add-app': AwaitJsonWrapper()(RunlistAddApplicationAction),
     'crashlog:list': PrettyPrintableCrashlogListAction,
     'crashlog:view': PrettyPrintableCrashlogViewAction,
     'crashlog:remove': makePrettyCrashlogRemove(CrashlogRemoveAction, CRASHLOG_REMOVE_SUCCESS),
@@ -242,8 +210,8 @@ AVAILABLE_NODE_ACTIONS = {
     'app:start': AwaitJsonWrapper()(AppStartAction),
     'app:pause': AwaitJsonWrapper()(AppPauseAction),
     'app:stop': AwaitJsonWrapper()(AppPauseAction),
-    'app:restart': ConsoleAppRestartAction,
-    'app:check': PrettyPrintableAppCheckAction
+    'app:restart': AwaitJsonWrapper()(AppRestartAction),
+    'app:check': AwaitJsonWrapper()(AppCheckAction)
 }
 
 
