@@ -23,6 +23,7 @@ class Fut(Future):
             loop = IOLoop.instance()
             for pos, value in enumerate(self.yields):
                 loop.add_timeout(time.time() + timeout + pos * 0.1, self.inv)
+            loop.add_timeout(time.time() + timeout + len(self.yields) * 0.1, lambda: self.cb(None))
 
         def inv(self):
             result = self.yields[self.pos]
@@ -81,44 +82,50 @@ def step1():
     r10 = yield ServiceMock(yields=(0, 10, 20)).execute()
     r11 = yield
     r12 = yield
+    none = yield
     log.info('Result: {0}'.format((r10, r11, r12)))
     assert r10 == 0
     assert r11 == 10
     assert r12 == 20
 
-    log.info('Invoking service that returns exactly 1 chunk')
+    log.info('>>> Invoking service that returns exactly 1 chunk')
     r20 = yield ServiceMock(yields=(2, )).execute()
-    log.info('Result: {0}'.format(r20))
+    none = yield
+    log.info('>>> Result: {0}'.format(r20))
     assert r20 == 2
 
-    log.info('Invoking service that returns exactly 1 chunk')
+    log.info('>>> Invoking service that returns exactly 1 chunk')
     r30 = yield ServiceMock(yields=(3, )).execute()
-    log.info('Result: {0}'.format(r30))
+    none = yield
+    log.info('>>> Result: {0}'.format(r30))
     assert r30 == 3
 
     # Doesn't seems to be adequate
-    log.info('Just yielding some integer. Doesn\'t seems to be adequate, but who knows ...')
+    log.info('>>> Just yielding some integer. Doesn\'t seems to be adequate, but who knows ...')
     r4 = yield 4
-    log.info('Result: {0}'.format(r4))
+    log.info('>>> Result: {0}'.format(r4))
     assert r4 == 4
 
-    log.info('Here we raise exception in service')
+    log.info('>>> Here we raise exception in service')
     try:
         r5 = yield SomeErrorService(1).execute()
-        log.error('Something goes wrong! You should never see this message!')
+        log.error('>>> Something goes wrong! You should never see this message!')
     except SomeErrorServiceError as err:
-        log.info('Result: {0}'.format(err))
+        log.info('>>> Result: {0}'.format(err))
 
     result = yield ChainFactory().then(f1).then(f2)
-    print(result, 'RESULT!!!')
+    print(result, '>>> RESULT!!!')
 
     raise Exception('12345')
 
     yield 'Return'
 
 def step2(result):
-    log.info('Step 2. Input value must be "Return": {0}'.format(result.get()))
-    assert result.get() == 'Return'
+    try:
+        log.info('Step 2. Input value must be "Return": {0}'.format(result.get()))
+        assert result.get() == 'Return'
+    except Exception as err:
+        assert err.message == '12345'
     return 'Fuck you all!'
 
 def finish(value):
@@ -135,5 +142,8 @@ if __name__ == '__main__':
 
     ChainFactory().then(step1).then(step2).then(finish).run()
     loop = IOLoop.instance()
-    loop.add_timeout(time.time() + 1.0, lambda: loop.stop())
+    def timeout():
+        print('TIMEOUT')
+        loop.stop()
+    loop.add_timeout(time.time() + 2.0, timeout)
     loop.start()
