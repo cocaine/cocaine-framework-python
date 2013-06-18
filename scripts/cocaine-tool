@@ -1,8 +1,8 @@
 #!/usr/bin/env python
+"""Description of cocaine-tool"""
 from opster import Dispatcher
 import sys
 from cocaine.tools.cli import ToolsExecutor, NodeExecutor, coloredOutput, ToolsError, printError
-
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 

@@ -1,0 +1,148 @@
+.TH cocaine-tool 5
+.SH NAME 
+cocaine-tool
+.SH DESCRIPTION
+Description of cocaine-tool
+.SH SYNOPSIS
+ cocaine-tool info [\fB--port\fR] [\fB--host\fR]
+ cocaine-tool profile list 
+ cocaine-tool profile upload \fB--profile\fR \fB--name\fR
+ cocaine-tool profile remove \fB--name\fR
+ cocaine-tool profile view \fB--name\fR
+ cocaine-tool app pause \fB--name\fR
+ cocaine-tool app list 
+ cocaine-tool app stop \fB--name\fR
+ cocaine-tool app upload \fB--package\fR \fB--manifest\fR \fB--name\fR
+ cocaine-tool app remove \fB--name\fR
+ cocaine-tool app start \fB--profile\fR \fB--name\fR
+ cocaine-tool app check \fB--name\fR
+ cocaine-tool app restart \fB--profile\fR \fB--name\fR
+ cocaine-tool app view \fB--name\fR
+ cocaine-tool runlist list 
+ cocaine-tool runlist add-app \fB--profile\fR \fB--app\fR \fB--name\fR
+ cocaine-tool runlist upload \fB--runlist\fR \fB--name\fR
+ cocaine-tool runlist remove \fB--name\fR
+ cocaine-tool runlist view \fB--name\fR
+ cocaine-tool crashlog removeall \fB--name\fR
+ cocaine-tool crashlog list \fB--name\fR
+ cocaine-tool crashlog remove \fB--timestamp\fR \fB--name\fR
+ cocaine-tool crashlog view \fB--timestamp\fR \fB--name\fR
+
+.SH COMMANDS
+
+\fIcocaine-tool info\fR     Shows information about cocaine runtime
+    
+\fb-h\fR, \fb--host\fR hostname (default: localhost)
+.PP
+\fb-p\fR, \fb--port\fR port (default: 10053)
+.PP
+\fIcocaine-tool profile list\fR     Shows installed profiles list
+    
+\fIcocaine-tool profile upload\fR     Uploads profile into storage
+    
+\fb-n\fR, \fb--name\fR profile name
+.PP
+\fb--profile\fR path to profile file
+.PP
+\fIcocaine-tool profile remove\fR     Removes profile from storage
+    
+\fb-n\fR, \fb--name\fR profile name
+.PP
+\fIcocaine-tool profile view\fR     Shows configuration context
+    
+\fb-n\fR, \fb--name\fR profile name
+.PP
+\fIcocaine-tool app pause\fR     Pauses application
+
+    This command is alias for `cocaine-tool app stop`
+    
+\fb-n\fR, \fb--name\fR application name
+.PP
+\fIcocaine-tool app list\fR     Shows installed applications list
+    
+\fIcocaine-tool app stop\fR     Stops application
+    
+\fb-n\fR, \fb--name\fR application name
+.PP
+\fIcocaine-tool app upload\fR     Uploads application into storage
+    
+\fb-n\fR, \fb--name\fR application name
+.PP
+\fb--manifest\fR manifest file name
+.PP
+\fb--package\fR location of the app source package
+.PP
+\fIcocaine-tool app remove\fR     Removes application from storage
+    
+\fb-n\fR, \fb--name\fR application name
+.PP
+\fIcocaine-tool app start\fR     Starts application
+    
+\fb-n\fR, \fb--name\fR application name
+.PP
+\fb-r\fR, \fb--profile\fR profile name
+.PP
+\fIcocaine-tool app check\fR     Checks application status
+    
+\fb-n\fR, \fb--name\fR application name
+.PP
+\fIcocaine-tool app restart\fR     Restarts application
+
+    Equivalent of `cocaine-tool app pause --name [NAME]; cocaine-tool app start --name [NAME] --profile [PROFILE]`.
+    If profile is not specified, application will be restarted with the current profile.
+    
+\fb-n\fR, \fb--name\fR application name
+.PP
+\fb-r\fR, \fb--profile\fR profile name
+.PP
+\fIcocaine-tool app view\fR     Shows manifest context for application
+    
+\fb-n\fR, \fb--name\fR application name
+.PP
+\fIcocaine-tool runlist list\fR     Shows uploaded runlists
+    
+\fIcocaine-tool runlist add-app\fR     Adds specified application with profile to runlist
+    
+\fb-n\fR, \fb--name\fR runlist name
+.PP
+\fb--app\fR application name
+.PP
+\fb--profile\fR suggested profile
+.PP
+\fIcocaine-tool runlist upload\fR     Uploads runlist with context into storage
+    
+\fb-n\fR, \fb--name\fR name
+.PP
+\fb--runlist\fR runlist
+.PP
+\fIcocaine-tool runlist remove\fR     Removes runlist from storage
+    
+\fb-n\fR, \fb--name\fR name
+.PP
+\fIcocaine-tool runlist view\fR     Shows configuration context for runlist
+    
+\fb-n\fR, \fb--name\fR name
+.PP
+\fIcocaine-tool crashlog removeall\fR     Removes all crashlogs for application
+    
+\fb-n\fR, \fb--name\fR name
+.PP
+\fIcocaine-tool crashlog list\fR     Shows crashlogs list for application
+    
+\fb-n\fR, \fb--name\fR name
+.PP
+\fIcocaine-tool crashlog remove\fR     Removes crashlog for application with specified timestamp
+    
+\fb-n\fR, \fb--name\fR name
+.PP
+\fb-t\fR, \fb--timestamp\fR timestamp
+.PP
+\fIcocaine-tool crashlog view\fR     Shows crashlog for application with specified timestamp
+    
+\fb-n\fR, \fb--name\fR name
+.PP
+\fb-t\fR, \fb--timestamp\fR timestamp
+.PP
+.SH AUTHORS
+
+EvgenySafronov <division494@gmail.com>

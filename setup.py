@@ -40,6 +40,7 @@ if "--without-tools" in sys.argv:
     tools_packages = []
     sys.argv.remove("--without-tools")
 else:
+    os.system("python {0}/generate_man.py > {0}/manpages/cocaine-tool.8".format(BASE_DIR))
     tools_requires = ['opster >= 4.0']
     tools_packages = ["cocaine.tools", "cocaine.tools.helpers"]
     tools_data = [

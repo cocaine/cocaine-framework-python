@@ -19,14 +19,20 @@ def handle(result):
 
 def func2():
     print 'AA'
-    info1 = yield node.info()
+    try:
+        info1 = yield node.info()
+    except Exception as err:
+        print "ERRR", err
     info2 = yield node.info()
     print(info1, info2)
 
 def func3(args):
     print "Start"
     s = Service("storage")
-    yield s.write("A", "A", "A", [])
+    try:
+        k = yield s.write("A", "A", "KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK", [])
+    except Exception as err:
+        print err
     print "END"
 
 
@@ -38,7 +44,7 @@ if __name__ == '__main__':
 
 
     node = Service('node')
-    func()
+    #func()
 
     ChainFactory([func2, func3]).run()
     loop = IOLoop.instance()
