@@ -1,8 +1,10 @@
-cocaine-framework-python (0.10.5) lucid; urgency=low
+cocaine-framework-python (0.10.4-6) lucid; urgency=low
 
   * Reimplement ReadableStream with msgpack.Unpacker
+  * Reimplement WritableStream
+  * Add service's reconnect ability
 
- -- Anton Tyurin <noxiouz@yandex-team.ru>  Sun, 09 Jun 2013 22:43:10 +0400
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 19 Jun 2013 15:49:05 +0400
 
 cocaine-framework-python (0.10.4-5) lucid; urgency=low
 

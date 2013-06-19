@@ -149,6 +149,7 @@ class GeneratorFutureMock(Future):
     def nextStep(self, value):
         if isinstance(value, Exception):
             result = self.obj.throw(value)
+            print self.obj
         else:
             result = self.obj.send(value)
         return result
