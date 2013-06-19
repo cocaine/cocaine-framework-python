@@ -6,10 +6,11 @@ __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 if __name__ == '__main__':
     s = Service('node')
+    # while True:
     try:
-        info = s.info().get(timeout=0.001)
+        info = s.info().then(lambda r: r.get()).then(lambda r: r.get()).then(lambda r: r.get()).get()
         print(info)
     except TimeoutError as err:
-        print(1, err)
+        print(err)
     except Exception as err:
         print(err, type(err))

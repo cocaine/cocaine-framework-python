@@ -89,30 +89,47 @@ class ChainFactory():
             self.chains[i].nextChain = self.chains[i + 1]
         self.chains[0].run()
 
-    def get(self, timeout=1.0):
+    def get(self, timeout=None):
         """
-        raises: TimeoutException if timeout occurred
+        This method is like syntax sugar over asynchronous receiving future result from chain expression. It simply
+        starts event loop, sets timeout condition and run chain expression. Event loop will be stopped after getting
+        final chain result or after timeout expired.
+
+        :param timeout: Timeout in seconds after which TimeoutError will be raised. If timeout is not set (default) it
+                        means forever waiting.
+        :raises ValueError: If timeout is set and it is less than 1 ms.
+        :raises TimeoutError: If timeout expired.
         """
-        if timeout <= 0.0:
-            raise ValueError('Timeout must be positive value')
+        if timeout is not None and timeout < 0.001:
+            raise ValueError('Timeout cannot be less than 1 ms')
 
         loop = IOLoop.instance()
-        def runNestedEventLoop(result):
-            runNestedEventLoop.container = result.get()
-            loop.stop()
+        def startNestedEventLoop(result):
+            try:
+                startNestedEventLoop.result = result.get()
+            except Exception as err:
+                startNestedEventLoop.result = err
+            finally:
+                startNestedEventLoop.resultIsSet = True
+                loop.stop()
 
         def stopNestedEventLoop():
             stopNestedEventLoop.raiseTimeoutError = True
             loop.stop()
 
-        runNestedEventLoop.container = None
+        startNestedEventLoop.resultIsSet = False
+        startNestedEventLoop.result = None
         stopNestedEventLoop.raiseTimeoutError = False
-        self.then(runNestedEventLoop).run()
-        loop.add_timeout(time.time() + timeout, stopNestedEventLoop)
+        self.then(startNestedEventLoop).run()
+        if timeout is not None:
+            loop.add_timeout(time.time() + timeout, stopNestedEventLoop)
         loop.start()
-        if stopNestedEventLoop.raiseTimeoutError:
+
+        if stopNestedEventLoop.raiseTimeoutError and not startNestedEventLoop.resultIsSet:
             raise TimeoutError('Timeout')
-        return runNestedEventLoop.container
+        if isinstance(startNestedEventLoop.result, Exception):
+            raise startNestedEventLoop.result
+        return startNestedEventLoop.result
 
 
 class FutureMock(Future):
