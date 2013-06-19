@@ -27,6 +27,10 @@ class CocaineError(Exception):
     pass
 
 
+class TimeoutError(CocaineError):
+    pass
+
+
 class RequestError(CocaineError):
     """Exception raised when u try to request chunks from closed request """
 

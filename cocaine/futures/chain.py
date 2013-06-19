@@ -4,6 +4,7 @@ import time
 import types
 from tornado.ioloop import IOLoop
 from cocaine.futures import Future
+from cocaine.exceptions import TimeoutError
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
@@ -88,6 +89,37 @@ class ChainFactory():
             self.chains[i].nextChain = self.chains[i + 1]
         self.chains[0].run()
 
+    def get(self, timeout=1.0):
+        """
+        raises: TimeoutException if timeout occurred
+        """
+        if timeout <= 0.0:
+            raise ValueError('Timeout must be positive value')
+
+        #------
+        loop = IOLoop.instance()
+        def runNestedEventLoop(result):
+            runNestedEventLoop.container = result.get()
+            print('result got')
+            loop.stop()
+        runNestedEventLoop.container = None
+        self.then(runNestedEventLoop).run()
+        #2
+        def stopMe():
+            print('timeout')
+            stopMe.raiseTimeoutError = True
+            loop.stop()
+        stopMe.raiseTimeoutError = False
+
+        loop.add_timeout(time.time() + timeout, stopMe)
+        loop.start()
+        print(1)
+        #3
+        if stopMe.raiseTimeoutError:
+            raise TimeoutError('Timeout')
+        print(2)
+        return runNestedEventLoop.container
+
 
 class FutureMock(Future):
     def __init__(self, obj=None):
@@ -157,10 +189,10 @@ class GeneratorFutureMock(Future):
         if isinstance(result, Future):
             future = result
         elif isinstance(result, ChainFactory):
-            f = FutureCallableMock()
-            result.then(lambda r: f.ready(r.get()))
+            chainFuture = FutureCallableMock()
+            result.then(lambda r: chainFuture.ready(r.get()))
             result.run()
-            future = f
+            future = chainFuture
         else:
             future = FutureMock(result)
         return future
