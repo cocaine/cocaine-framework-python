@@ -58,6 +58,7 @@ class ServiceError(CocaineError):
     def __str__(self):
         return "ServiceException [%d] %s: %s" % (self.code, self.servicename, self.msg)
 
+
 class LocatorResolveError(CocaineError):
     """ get_api failed """
 

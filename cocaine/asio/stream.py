@@ -135,6 +135,13 @@ class WritableStream(object):
     @encode_dec
     def write(self, data, size):
         with self.mutex:
+            if len(self._buffer) == 0:
+                sent = self.pipe.write(data)
+                if sent >= len(data):
+                    return
+
+                self.tx_offset = sent
+
             self._buffer.append(data)
 
             if not self.is_attached and self.pipe.connected:

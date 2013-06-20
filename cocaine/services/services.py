@@ -44,6 +44,8 @@ class Service(BaseService):
 
         def closure(number):
             def wrapper(*args):
+                if not self.connected:
+                    raise ServiceError(self.servicename, "Service is disconnected", -200)
                 future = Future()
                 c = chain.ChainFactory().then(lambda : future)
                 with self.lock:
