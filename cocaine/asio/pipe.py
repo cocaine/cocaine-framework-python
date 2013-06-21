@@ -57,7 +57,6 @@ class ServicePipe(socket.socket):
 
     def __init__(self, path, on_disconnect_clb=None):
         super(ServicePipe, self).__init__(socket.AF_INET, socket.SOCK_STREAM)
-        self._configure()
         while True:
             try:
                 self.connect(path)
@@ -69,6 +68,7 @@ class ServicePipe(socket.socket):
                     raise
             else:
                 break
+        self._configure()
         self._connected = True
         assert(on_disconnect_clb is None or callable(on_disconnect_clb))
         self._on_disconnect = on_disconnect_clb or (lambda : None)

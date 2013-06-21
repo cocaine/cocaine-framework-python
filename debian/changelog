@@ -1,3 +1,9 @@
+cocaine-framework-python (0.10.4-8) lucid; urgency=low
+
+  * replace socket.connect to socket.create_connection  
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Fri, 21 Jun 2013 19:01:11 +0400
+
 cocaine-framework-python (0.10.4-7) lucid; urgency=low
 
   * change reconnect policy 
