@@ -60,7 +60,7 @@ class BaseService(object):
             except IndexError as err:
                 port = 10053
         
-        self.raise_reconnect_failure = kwargs.get("raise_reconnect_failure", True)
+        self._try_reconnect = kwargs.get("reconnect_once", True)
         self._counter = 1
         self.loop = ev.Loop()
 
@@ -84,7 +84,7 @@ class BaseService(object):
         self.service_endpoint, _, service_api = locator.resolve(self.servicename, self._locator_host, self._locator_port)
         self._service_api = service_api
         # msgpack convert in list or tuple depend on version - make it tuple
-        self.pipe = ServicePipe(tuple(self.service_endpoint), self.reconnect)
+        self.pipe = ServicePipe(tuple(self.service_endpoint), self.reconnect if self._try_reconnect else None)
         self.loop.bind_on_fd(self.pipe.fileno())
         
     def reconnect(self):
@@ -92,8 +92,7 @@ class BaseService(object):
         try:
             self._init_endpoint()
         except LocatorResolveError as err:
-            if self.raise_reconnect_failure:
-                raise
+            pass
         else:
             self.w_stream.reconnect(self.pipe)
             self.r_stream.reconnect(self.pipe)

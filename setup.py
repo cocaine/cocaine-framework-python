@@ -39,17 +39,16 @@ if "--without-tools" in sys.argv:
     tools_data = []
     tools_packages = []
     sys.argv.remove("--without-tools")
+    without_tools = True
 else:
-    os.system("python {0}/generate_man.py > {0}/manpages/cocaine-tool.8".format(BASE_DIR))
+    without_tools = False
+    os.system("python {0}/generate_man.py > {0}/manpages/cocaine-tool.5".format(BASE_DIR))
     tools_requires = ['opster >= 4.0']
     tools_packages = ["cocaine.tools", "cocaine.tools.helpers"]
-    tools_data = [
-                ('/usr/bin/', ["scripts/cocaine-tool"])
-    ]
-    if not 'DEB_BUILD_GNU_TYPE' in os.environ:
-        tools_data.append(
+    if 'DEB_BUILD_GNU_TYPE' in os.environ:
+        tools_data = [
                 ('/etc/bash_completion.d/', ["scripts/bash_completion.d/cocaine-tool"])
-        )
+        ]
 
 
 setup(
@@ -72,6 +71,6 @@ setup(
         "cocaine.logging"
     ] + tools_packages,
     install_requires=["msgpack_python", "tornado"] + tools_requires,
-    data_files=tools_data
+    scripts=["scripts/cocaine-tool"] if not without_tools else []
 )
 
