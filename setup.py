@@ -45,7 +45,7 @@ else:
     os.system("python {0}/generate_man.py > {0}/manpages/cocaine-tool.5".format(BASE_DIR))
     tools_requires = ['opster >= 4.0']
     tools_packages = ["cocaine.tools", "cocaine.tools.helpers"]
-    if not 'DEB_BUILD_GNU_TYPE' in os.environ:
+    if 'DEB_BUILD_GNU_TYPE' in os.environ:
         tools_data = [
                 ('/etc/bash_completion.d/', ["scripts/bash_completion.d/cocaine-tool"])
         ]
