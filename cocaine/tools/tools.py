@@ -313,7 +313,7 @@ class CrashlogRemoveAction(CrashlogAction):
 class CrashlogRemoveAllAction(CrashlogRemoveAction):
     def __init__(self, storage, **config):
         config['manifest'] = None
-        super(CrashlogRemoveAllAction, self).__init__(storage, 'remove', **config)
+        super(CrashlogRemoveAllAction, self).__init__(storage, **config)
 
 
 class NodeAction(object):
