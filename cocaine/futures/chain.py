@@ -78,7 +78,10 @@ class ChainFactory():
     def __init__(self, functions=None):
         if not functions:
             functions = []
-        self.chains = [Chain(func) for func in functions]
+
+        self.chains = []
+        for func in functions:
+            self.then(func)
 
     def then(self, func):
         self.chains.append(Chain(func))
@@ -155,7 +158,6 @@ class FutureMock(Future):
 
     def invokeAsynchronously(self, callback):
         IOLoop.instance().add_timeout(time.time(), lambda: callback())
-
 
 
 class GeneratorFutureMock(Future):

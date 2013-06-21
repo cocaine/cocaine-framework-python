@@ -1,26 +1,37 @@
 # coding=utf-8
-from tornado.ioloop import IOLoop
+import sys
+from cocaine.futures.chain import ChainFactory
+import msgpack
 from cocaine.services import Service
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
-if __name__ == '__main__2':
-    def on(chunk):
-        print('Response received - {0}'.format(chunk))
-        loop.stop()
+def example_SynchronousFetching():
+    for chunk in service.perform_sync('enqueue', 'doIt', 'SomeMessage'):
+        print('example_SynchronousFetching: Response received - {0}'.format(msgpack.loads(chunk)))
 
-    def error(exception):
-        print('Error received - {0}'.format(exception))
-        loop.stop()
 
-    service = Service('Echo')
-    future = service.invoke('doIt', 'SomeMessage')
-    future.bind(on, error)
-    loop = IOLoop.instance()
-    loop.start()
+def example_Synchronous():
+    message = service.enqueue('doIt', 'SomeMessage').get()
+    print('example_Synchronous: Response received - {0}'.format(msgpack.loads(message)))
+
+
+def example_AsynchronousYielding():
+    message = yield service.enqueue('doIt', 'SomeMessage')
+    print('example_AsynchronousYielding: Response received - {0}'.format(msgpack.loads(message)))
+
+
+def example_AsynchronousChaining():
+    return service.enqueue('doIt', 'SomeMessage')
+
 
 if __name__ == '__main__':
     service = Service('Echo')
-    for chunk in service.perform_sync('invoke', 'doIt', 'SomeMessage'):
-        print('Response received - {0}'.format(chunk))
+    example_SynchronousFetching()
+    example_Synchronous()
+    ChainFactory([example_AsynchronousYielding]).get()
+    example_AsynchronousChaining()\
+        .then(lambda r: msgpack.loads(r.get()))\
+        .then(lambda r: sys.stdout.write('example_AsynchronousYielding: Response received - {0}'.format(r.get())))\
+        .get(timeout=1)

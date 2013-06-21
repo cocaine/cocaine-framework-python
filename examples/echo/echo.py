@@ -8,6 +8,7 @@ __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 log = Logger()
 
+
 def echo(request, response):
     message = yield request.read()
     log.debug('Message received: \'{0}\'. Sending it back ...'.format(message))
