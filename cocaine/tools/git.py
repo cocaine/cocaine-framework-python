@@ -4,9 +4,10 @@ import subprocess
 import tarfile
 import tempfile
 from cocaine.services import Service
-from cocaine.tools.tools import ToolsError, AppUploadAction
+from cocaine.tools.tools import ToolsError, AppUploadAction, AppUploadFromRepositoryAction
 from pip import InstallationError
 from pip.vcs.git import Git, os
+import logging
 
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
@@ -20,9 +21,14 @@ class RequirementInstallError(UploadError):
     pass
 
 
+if __name__ == '__main__':
+    a = AppUploadFromRepositoryAction(None, **{'url': 'git+file:///Users/esafronov/mock_repo/repo_echo'})
+    r = a.execute().get(timeout=50.0)
+    print('R', r)
+
 # Only git repository at this moment
 # Only python apps at this moment
-if __name__ == '__main__':
+if __name__ == '__main__2':
     url = 'git+file:///Users/esafronov/mock_repo/repo_echo'
 
     try:

@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from threading import Thread
 import logging
 import time
 import types
@@ -207,9 +208,14 @@ class GeneratorFutureMock(Future):
             result.then(lambda r: chainFuture.ready(r.get()))
             result.run()
             future = chainFuture
+        elif isinstance(result, ThreadWorker):
+            threadFuture = FutureCallableMock()
+            result.runBackground(lambda r: threadFuture.ready(r))
+            future = threadFuture
         else:
             future = FutureMock(result)
         return future
+
 
 class FutureCallableMock(Future):
     """
@@ -231,9 +237,35 @@ class FutureCallableMock(Future):
                 self.errorback(err)
 
 
+class ThreadWorker(object):
+    def __init__(self, func, *args, **kwargs):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        self.thread = Thread(target=self._run)
+        self.callback = None
+
+    def _run(self):
+        result = self.func(*self.args, **self.kwargs)
+        self.callback(result)
+
+    def runBackground(self, callback):
+        def onDone(result):
+            IOLoop.instance().add_callback(lambda: callback(result))
+        self.callback = onDone
+        self.thread.start()
+
+
 def asynchronousCallable(func):
     def wrapper(*args, **kwargs):
         future = FutureCallableMock()
         func(future, *args, **kwargs)
         return future
+    return wrapper
+
+
+def threaded(func):
+    def wrapper(*args, **kwargs):
+        mock = ThreadWorker(func, *args, **kwargs)
+        return mock
     return wrapper

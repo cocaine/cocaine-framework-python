@@ -2,7 +2,8 @@ import json
 import socket
 import errno
 import tarfile
-from time import ctime
+import time
+from cocaine.futures import chain
 from cocaine.futures.chain import ChainFactory
 
 from cocaine.services import Service
@@ -265,7 +266,7 @@ class CrashlogListAction(StorageAction):
 def parseCrashlogs(crashlogs, timestamp=None):
     flt = lambda x: (x == timestamp if timestamp else True)
     _list = (log.split(':') for log in crashlogs)
-    return [(ts, ctime(float(ts) / 1000000), name) for ts, name in _list if flt(ts)]
+    return [(ts, time.ctime(float(ts) / 1000000), name) for ts, name in _list if flt(ts)]
 
 
 class CrashlogAction(StorageAction):
@@ -409,3 +410,26 @@ class AppCheckAction(NodeAction):
         except KeyError:
             pass
         return {self.name: state}
+
+
+class AppUploadFromRepositoryAction(StorageAction):
+    def __init__(self, storage, **config):
+        super(AppUploadFromRepositoryAction, self).__init__(storage, **config)
+        self.url = config.get('url')
+        if not self.url:
+            raise ValueError('Please specify repository URL')
+
+    def execute(self):
+        return ChainFactory([self.cloneRepository])
+
+    def cloneRepository(self):
+        while True:
+            result = yield self.long(0.01)
+            print('cRF', result)
+
+    @chain.threaded
+    def long(self, t=1):
+        print('long start')
+        time.sleep(t)
+        print('long done')
+        return 'Result', t
