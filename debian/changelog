@@ -55,7 +55,7 @@ cocaine-framework-python (0.10.4-0) unstable; urgency=low
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 29 May 2013 15:54:28 +0400
 
-cocaine-framework-python (0.10.2-1) unstable; urgency=low
+cocaine-framework-python (0.10.3-0) unstable; urgency=low
 
   * Make uploads of more than 640KB possible.
 
