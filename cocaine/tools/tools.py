@@ -6,6 +6,7 @@ import errno
 import subprocess
 import tarfile
 import tempfile
+from threading import Lock
 import time
 from pip import InstallationError
 from pip.vcs.git import Git
@@ -258,8 +259,8 @@ class RunlistAddApplicationAction(SpecificRunlistAction):
         result = {
             'runlist': self.name,
             'status': 'Success',
-            'added.': {
-                'app' : self.app,
+            'added': {
+                'app': self.app,
                 'profile': self.profile,
             }
         }
@@ -427,6 +428,8 @@ class AppCheckAction(NodeAction):
 
 
 class AppUploadFromRepositoryAction(StorageAction):
+    virtualEnvGlobalLock = Lock()
+
     def __init__(self, storage, **config):
         super(AppUploadFromRepositoryAction, self).__init__(storage, **config)
         self.name = config.get('name')
@@ -473,10 +476,11 @@ class AppUploadFromRepositoryAction(StorageAction):
         #todo: Now it's only python specific method. Replace by more abstract in future
         def createVirtualEnvironment():
             try:
-                import virtualenv
-                venv = os.path.join(repositoryPath, 'venv')
-                virtualenv.create_environment(venv)
-                return venv
+                with self.virtualEnvGlobalLock:
+                    import virtualenv
+                    venv = os.path.join(repositoryPath, 'venv')
+                    virtualenv.create_environment(venv)
+                    return venv
             except ImportError:
                 raise UploadError('Module virtualenv is not installed, so a new environment cannot be created')
 
