@@ -243,6 +243,7 @@ class ThreadWorker(object):
         self.args = args
         self.kwargs = kwargs
         self.thread = Thread(target=self._run)
+        self.thread.setDaemon(True)
         self.callback = None
 
     def _run(self):
