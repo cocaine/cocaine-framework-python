@@ -246,8 +246,11 @@ class ThreadWorker(object):
         self.callback = None
 
     def _run(self):
-        result = self.func(*self.args, **self.kwargs)
-        self.callback(result)
+        try:
+            result = self.func(*self.args, **self.kwargs)
+            self.callback(result)
+        except Exception as err:
+            self.callback(err)
 
     def runBackground(self, callback):
         def onDone(result):
