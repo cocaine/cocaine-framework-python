@@ -1,52 +1,53 @@
-cocaine-framework-python (0.10.4-8) lucid; urgency=low
+cocaine-framework-python (0.10.4-5) unstable; urgency=low
 
-  * replace socket.connect to socket.create_connection  
+  * Replace socket.connect with socket.create_connection.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Fri, 21 Jun 2013 19:01:11 +0400
 
-cocaine-framework-python (0.10.4-7) lucid; urgency=low
+cocaine-framework-python (0.10.4-4) unstable; urgency=low
 
-  * change reconnect policy 
+  * Change reconnect policy.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Fri, 21 Jun 2013 18:39:38 +0400
 
-cocaine-framework-python (0.10.4-6) lucid; urgency=low
+cocaine-framework-python (0.10.4-3) unstable; urgency=low
 
-  * Reimplement ReadableStream with msgpack.Unpacker
-  * Reimplement WritableStream
-  * Add service's reconnect ability
+  * Reimplement ReadableStream with msgpack.Unpacker.
+  * Reimplement WritableStream.
+  * Add service's reconnect ability.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 19 Jun 2013 15:49:05 +0400
 
-cocaine-framework-python (0.10.4-5) lucid; urgency=low
+cocaine-framework-python (0.10.4-2) unstable; urgency=low
 
-  * Chain futures idion was introduced.
-  * Improve performance of WritableStream with large messages (~100Mb)
-  * Adapt initialization behavior: send first heatbeat directly after handshake  
+  * Chain futures idiom was introduced.
+  * Improve performance of WritableStream with large messages (~100Mb).
+  * Adapt initialization behavior: send first heatbeat directly after
+    handshake.
   * Locator stores services API in cache.
-  * Decouple Logger and Service implementations
+  * Decouple Logger and Service implementations.
   * Add tests for cocaine.tools.
-  * http decorator now packs body with msgpack
+  * http decorator now packs body with msgpack.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Mon, 03 Jun 2013 21:48:19 +0400
 
-cocaine-framework-python (0.10.4-4) lucid; urgency=low
+cocaine-framework-python (0.10.4-1) unstable; urgency=low
 
   * Correctly register POLLOUT handlers in the I/O loop to allow large app
     uploads, etc.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 30 May 2013 00:14:51 +0400
 
-cocaine-framework-python (0.10.4-3) unstable; urgency=low
+cocaine-framework-python (0.10.4-0) unstable; urgency=low
 
   [ Anton Tyurin ]
-  * Add Sleep and NextTick futures.
-  * Add option to Worker class for tuning hearbeat and disown timeouts.
-  * Now future could accept 3 callbacks (callback, errorback, on_done).
-  * Rework @http decorator (add body, request and meta properties).
-  * Support of --locator option.
-  * Add package cocaine.tool for cocaine-tools.
-  * Fix bug with processing multiple sessions of the same event.
+  * Added Sleep and NextTick futures.
+  * Added options to Worker class for tuning hearbeat and disown timeouts.
+  * Now futures could accept 3 callbacks (callback, errorback, on_done).
+  * Rework @http decorator (added body, request and meta properties).
+  * Support for --locator worker option.
+  * Added package cocaine.tool for cocaine-tools.
+  * Fixed a bug with processing multiple sessions of the same event.
   * Small bugfixes.
 
   [ Andrey Sibiryov ]
@@ -54,13 +55,13 @@ cocaine-framework-python (0.10.4-3) unstable; urgency=low
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 29 May 2013 15:54:28 +0400
 
-cocaine-framework-python (0.10.2-1) unstable; urgency=low
+cocaine-framework-python (0.10.3-0) unstable; urgency=low
 
   * Make uploads of more than 640KB possible.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 07 May 2013 23:35:54 +0400
 
-cocaine-framework-python (0.10.2) unstable; urgency=low
+cocaine-framework-python (0.10.2-0) unstable; urgency=low
 
   * Release 10.2.
   * Dealer stuff moved out to the cocaine-dealer tree.
@@ -69,85 +70,43 @@ cocaine-framework-python (0.10.2) unstable; urgency=low
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 25 Apr 2013 22:22:16 +0400
 
-cocaine-framework-python (0.10.1) unstable; urgency=low
+cocaine-framework-python (0.10.1-0) unstable; urgency=low
 
   * Release 10.1.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 09 Apr 2013 13:38:35 +0400
 
-cocaine-framework-python (0.10.0-rc10) unstable; urgency=low
+cocaine-framework-python (0.10.0-rc4) unstable; urgency=low
 
-  * Service endpoint is tuple now.
+  * Service endpoint is a tuple now.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Thu, 04 Apr 2013 13:14:18 +0400
 
-cocaine-framework-python (0.10.0-rc8) unstable; urgency=low
+cocaine-framework-python (0.10.0-rc3) unstable; urgency=low
 
-  * Support singletone logger.
-  * Support nodejs callback style for functions.
-  * Add call/errorback handlers in futures.
-  * Add some exceptions (ServiceError, RequestError).
-  * Remove urlfetcher specific service.
-  * Add very cool example.
+  * Support for singleton logger.
+  * Support for Node.js callback style functions.
+  * Added call/errorback handlers to futures.
+  * Added ServiceError and RequestError exceptions
+  * Removed URLFetcher specific service implementation.
+  * Added very cool example.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 03 Apr 2013 03:20:50 +0400
 
-cocaine-framework-python (0.10.0-rc7) unstable; urgency=low
+cocaine-framework-python (0.10.0-rc2) unstable; urgency=low
 
   * Service locator support.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 03 Apr 2013 03:20:38 +0400
 
-cocaine-framework-python (0.10.0-rc6) unstable; urgency=low
+cocaine-framework-python (0.10.0-rc1) unstable; urgency=low
 
-  * Async.
+  * Asynchronous support.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 27 Mar 2013 16:38:39 +0400
 
 cocaine-framework-python (0.10.0-rc0) unstable; urgency=low
 
-  * Init.
+  * Initial release.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Fri, 22 Mar 2013 21:26:37 +0400
-
-cocaine-framework-python (0.9.9) unstable; urgency=low
-
-  * Updated build dependencies
-
- -- Rim Zaidullin <rimz@yandex-team.ru>  Mon, 12 Nov 2012 15:15:22 +0400
-
-cocaine-framework-python (0.9.8) unstable; urgency=low
-
-  * Updated build dependencies
-
- -- Rim Zaidullin <rimz@yandex-team.ru>  Mon, 12 Nov 2012 14:57:53 +0400
-
-cocaine-framework-python (0.9.7) unstable; urgency=low
-
-  * Updated build dependencies
-
- -- Rim Zaidullin <rimz@yandex-team.ru>  Mon, 12 Nov 2012 14:53:01 +0400
-
-cocaine-framework-python (0.9.7) unstable; urgency=low
-
-  * Updated binary compatibility with libcocaine-dealer
-
- -- Rim Zaidullin <rimz@yandex-team.ru>  Mon, 12 Nov 2012 14:49:10 +0400
-
-cocaine-framework-python (0.9.6) unstable; urgency=low
-
-  * Do not split iterable response into chunks in wrappers
-
- -- Anton Kortunov <toshik@yandex-team.ru>  Wed, 31 Oct 2012 19:56:03 +0400
-
-cocaine-framework-python (0.9.5) unstable; urgency=low
-
-  * Sometimes even I do stupid mistakes.
-
- -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 17 Sep 2012 22:01:26 +0400
-
-cocaine-framework-python (0.9.4) unstable; urgency=low
-
-  * Debianization is back.
-
- -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 13 Sep 2012 15:09:54 +0400
