@@ -23,7 +23,7 @@ import sys
 from msgpack import Unpacker, packb, unpackb
 
 from cocaine.asio import ev
-from cocaine.asio.pipe import ServicePipe
+from cocaine.asio.pipe import Pipe
 from cocaine.asio.stream import ReadableStream
 from cocaine.asio.stream import WritableStream
 from cocaine.asio.stream import Decoder
@@ -84,7 +84,7 @@ class BaseService(object):
         self.service_endpoint, _, service_api = locator.resolve(self.servicename, self._locator_host, self._locator_port)
         self._service_api = service_api
         # msgpack convert in list or tuple depend on version - make it tuple
-        self.pipe = ServicePipe(tuple(self.service_endpoint), self.reconnect if self._try_reconnect else None)
+        self.pipe = Pipe(tuple(self.service_endpoint), self.reconnect if self._try_reconnect else None)
         self.loop.bind_on_fd(self.pipe.fileno())
         
     def reconnect(self):
