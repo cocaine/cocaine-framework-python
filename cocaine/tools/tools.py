@@ -1,8 +1,15 @@
 import json
+import os
+import re
 import socket
 import errno
+import subprocess
 import tarfile
-from time import ctime
+import tempfile
+import time
+from pip import InstallationError
+from pip.vcs.git import Git
+from cocaine.futures import chain
 from cocaine.futures.chain import ChainFactory
 
 from cocaine.services import Service
@@ -18,6 +25,14 @@ PROFILES_TAGS = ("profile",)
 
 
 class ToolsError(Exception):
+    pass
+
+
+class UploadError(ToolsError):
+    pass
+
+
+class RequirementInstallError(UploadError):
     pass
 
 
@@ -265,7 +280,7 @@ class CrashlogListAction(StorageAction):
 def parseCrashlogs(crashlogs, timestamp=None):
     flt = lambda x: (x == timestamp if timestamp else True)
     _list = (log.split(':') for log in crashlogs)
-    return [(ts, ctime(float(ts) / 1000000), name) for ts, name in _list if flt(ts)]
+    return [(ts, time.ctime(float(ts) / 1000000), name) for ts, name in _list if flt(ts)]
 
 
 class CrashlogAction(StorageAction):
@@ -409,3 +424,119 @@ class AppCheckAction(NodeAction):
         except KeyError:
             pass
         return {self.name: state}
+
+
+class AppUploadFromRepositoryAction(StorageAction):
+    def __init__(self, storage, **config):
+        super(AppUploadFromRepositoryAction, self).__init__(storage, **config)
+        self.name = config.get('name')
+        self.url = config.get('url')
+        if not self.url:
+            raise ValueError('Please specify repository URL')
+        if not self.name:
+            rx = re.compile(r'^.*/(?P<name>.*?)(\..*)?$')
+            match = rx.match(self.url)
+            self.name = match.group('name')
+
+    def execute(self):
+        return ChainFactory([self.doWork])
+
+    def doWork(self):
+        repositoryPath = tempfile.mkdtemp()
+        manifestPath = os.path.join(repositoryPath, 'manifest-start.json')
+        packagePath = os.path.join(repositoryPath, 'package.tar.gz')
+        print('Repository path: {0}'.format(repositoryPath))
+        try:
+            yield self.cloneRepository(repositoryPath)
+            yield self.prepareRepository(repositoryPath, manifestPath)
+            yield self.createPackage(repositoryPath, packagePath)
+            yield AppUploadAction(self.storage, **{
+                'name': self.name,
+                'manifest': manifestPath,
+                'package': packagePath
+            }).execute()
+        except UploadError as err:
+            print(err)
+
+    @chain.threaded
+    def cloneRepository(self, repositoryPath):
+        #todo: Now it's only git specific method. Replace by more abstract in future
+        try:
+            #todo: Replace `pip.vcs.Git` by `sh` or `subprocess`
+            git = Git(url=self.url)
+            git.unpack(repositoryPath)
+        except InstallationError as err:
+            raise UploadError(err.message)
+
+    @chain.threaded
+    def prepareRepository(self, repositoryPath, manifestPath):
+        #todo: Now it's only python specific method. Replace by more abstract in future
+        def createVirtualEnvironment():
+            try:
+                import virtualenv
+                venv = os.path.join(repositoryPath, 'venv')
+                virtualenv.create_environment(venv)
+                return venv
+            except ImportError:
+                raise UploadError('Module virtualenv is not installed, so a new environment cannot be created')
+
+        def createBootstrap():
+            initialManifestPath = os.path.join(repositoryPath, 'manifest.json')
+            if os.path.exists(initialManifestPath):
+                with open(initialManifestPath) as manifestFh:
+                    try:
+                        manifest = json.loads(manifestFh.read())
+                        slave = manifest['slave']
+
+                        bootstrapPath = os.path.join(repositoryPath, 'bootstrap.sh')
+                        with open(bootstrapPath, 'w') as fh:
+                            fh.write('#!/bin/sh\n')
+                            fh.write('source venv/bin/activate\n')
+                            fh.write('python {0} $@\n'.format(slave))
+                        os.chmod(bootstrapPath, 0755)
+
+                        with open(manifestPath, 'w') as fh:
+                            manifest['slave'] = 'bootstrap.sh'
+                            fh.write(json.dumps(manifest))
+                    except ValueError as err:
+                        raise UploadError(err.message)
+                    except KeyError:
+                        raise UploadError('Slave is not specified')
+            else:
+                raise UploadError('Manifest file (manifest.json) does not exist')
+
+        def installCocaineFramework(venv):
+            cocaineFrameworkUrl = 'git+git@github.com:cocaine/cocaine-framework-python.git'
+            cocaineFrameworkPath = tempfile.mkdtemp()
+            cocaineFramework = Git(url=cocaineFrameworkUrl)
+            cocaineFramework.unpack(cocaineFrameworkPath)
+
+            python = os.path.join(venv, 'bin', 'python')
+            process = subprocess.Popen([python, 'setup.py', 'install'], cwd=cocaineFrameworkPath)
+            process.wait()
+            if process.returncode != 0:
+                raise RequirementInstallError()
+
+        def installRequirements():
+            requirementsPath = os.path.join(repositoryPath, 'requirements.txt')
+            if os.path.exists(requirementsPath):
+                with open(requirementsPath) as fh:
+                    requirements = [l.strip() for l in fh.readlines()]
+                    _pip = os.path.join(venv, 'bin', 'pip')
+                    for requirement in requirements:
+                        process = subprocess.Popen([_pip, 'install', requirement])
+                        process.wait()
+                        if process.returncode != 0:
+                            raise RequirementInstallError()
+            else:
+                print('Requirements file (requirements.txt) does not exist')
+
+        venv = createVirtualEnvironment()
+        createBootstrap()
+        installCocaineFramework(venv)
+        installRequirements()
+
+    @chain.threaded
+    def createPackage(self, repositoryPath, packagePath):
+        with tarfile.open(packagePath, mode='w:gz') as tar:
+            tar.add(repositoryPath, arcname='')
