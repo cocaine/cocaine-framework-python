@@ -1,6 +1,5 @@
 from time import time
 from tornado import ioloop
-from cocaine.exceptions import RequestError
 
 
 class Future(object):

@@ -24,6 +24,7 @@ import fcntl
 import errno
 import types
 
+
 class Pipe(object):
 
     def __init__(self, path, on_disconnect_clb=None):

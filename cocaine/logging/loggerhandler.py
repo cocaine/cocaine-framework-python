@@ -2,6 +2,7 @@ import logging
 
 from cocaine.logging import Logger
 
+
 class LoggerHandler(logging.Handler):
 
     def __init__(self):

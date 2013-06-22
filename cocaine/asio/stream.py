@@ -33,6 +33,7 @@ def encode_dec(f):
         return f(self, encode, len(encode))
     return wrapper
 
+
 class Decoder(object):
 
     def __init__(self):
@@ -47,10 +48,12 @@ class Decoder(object):
          buffer is msgpack.Unpacker (stream unpacker)
         """
         try:
-            for res in buffer: # if not enough data - 0 iterations
+            # if not enough data - 0 iterations
+            for res in buffer:
                 self.callback(res)
         except Exception as err:
-            pass # hook - view later
+            # hook - view later
+            pass
 
 
 class ReadableStream(object):
@@ -63,7 +66,7 @@ class ReadableStream(object):
         self.is_attached = False
 
         self.buffer = msgpack.Unpacker()
-        self.tmp_buff = array.array('c','\0' * START_CHUNK_SIZE)
+        self.tmp_buff = array.array('c', '\0' * START_CHUNK_SIZE)
         self.mutex = Lock()
 
     def bind(self, callback):

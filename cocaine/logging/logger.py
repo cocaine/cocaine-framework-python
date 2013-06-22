@@ -26,12 +26,13 @@ from log_message import Message
 __all__ = ["Logger"]
 
 VERBOSITY_LEVELS = {
-    0 : "ignore",
-    1 : "error",
-    2 : "warn",
-    3 : "info",
-    4 : "debug"
+    0: "ignore",
+    1: "error",
+    2: "warn",
+    3: "info",
+    4: "debug"
 }
+
 
 class _STDERR_Logger(object):
 
@@ -50,6 +51,7 @@ class _STDERR_Logger(object):
     def ignore(self, data):
         print >> sys.stderr, data
 
+
 def _construct_logger_methods(cls, verbosity_level):
     def closure(_lvl):
         if _lvl <= verbosity_level:
@@ -66,6 +68,7 @@ def _construct_logger_methods(cls, verbosity_level):
     for level, name in VERBOSITY_LEVELS.iteritems():
         setattr(cls, name, closure(level))
 
+
 class _Logger(BaseService):
 
     def __init__(self, endpoint="localhost", port=10053, init_args=sys.argv):
@@ -73,6 +76,7 @@ class _Logger(BaseService):
 
     def _on_message(self, args):
         pass
+
 
 class Logger(object):
 

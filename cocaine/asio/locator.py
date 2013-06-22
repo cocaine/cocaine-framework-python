@@ -31,6 +31,7 @@ from cocaine.exceptions import LocatorResolveError
 
 #todo: Need asynchronous locator (without loooooong tcp blocking timeout), plz plz plz
 
+
 class Cache(object):
 
     lock = Lock()
@@ -82,6 +83,7 @@ class Locator(object):
             return res
 
     def _get_api(self, name, endpoint, port):
+        locator_pipe = None
         try:
             locator_pipe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             locator_pipe.settimeout(1.0)
@@ -96,7 +98,8 @@ class Locator(object):
         except Exception as err:
             raise LocatorResolveError(name, endpoint, port, str(err))
         finally:
-            locator_pipe.close()
+            if locator_pipe is not None:
+                locator_pipe.close()
         if msg.id == message.RPC_CHUNK:
             return msgpack.unpackb(msg.data)
         if msg.id == message.RPC_ERROR:

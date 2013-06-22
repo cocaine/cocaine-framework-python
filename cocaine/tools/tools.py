@@ -428,6 +428,7 @@ class AppCheckAction(NodeAction):
 
 
 class AppUploadFromRepositoryAction(StorageAction):
+    #todo: Actually this lock shouldn't bind to this class. It's only reasonable for venv module implementation
     virtualEnvGlobalLock = Lock()
 
     def __init__(self, storage, **config):

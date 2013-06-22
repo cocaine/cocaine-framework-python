@@ -25,5 +25,6 @@ from _callablewrappers import proxy_factory
 
 __all__ = ["timer"]
 
+
 def timer(func):
     return proxy_factory(func, None, None)

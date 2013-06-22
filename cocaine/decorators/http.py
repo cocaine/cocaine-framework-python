@@ -25,6 +25,7 @@ from _callablewrappers import proxy_factory
 
 __all__ = ["http"]
 
+
 class _HTTPResponse(object):
 
     def __init__(self, stream):
@@ -42,6 +43,7 @@ class _HTTPResponse(object):
     @property
     def closed(self):
         return self._stream.closed
+
 
 class _HTTPRequest(object):
 
@@ -85,6 +87,7 @@ def http_request_decorator(obj):
         return wrapper
     obj.push = dec(obj.push)
     return obj
+
 
 def http(func):
     return proxy_factory(func, response_handler=_HTTPResponse, request_handler=http_request_decorator)

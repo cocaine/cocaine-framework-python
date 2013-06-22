@@ -108,6 +108,7 @@ class ChainFactory():
             raise ValueError('Timeout cannot be less than 1 ms')
 
         loop = IOLoop.instance()
+
         def startNestedEventLoop(result):
             try:
                 startNestedEventLoop.result = result.get()

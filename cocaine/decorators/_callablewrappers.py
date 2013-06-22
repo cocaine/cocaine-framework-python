@@ -35,14 +35,17 @@ class _Proxy(object):
     _logger = Logger()
 
     @abstractmethod
-    def __init__(self, func): pass
+    def __init__(self, func):
+        pass
 
     @abstractmethod
-    def invoke(self, stream): pass
+    def invoke(self, stream):
+        pass
 
     @property
     def closed(self):
         return self._state is None
+
 
 def exception_trap(func):
     def wrapper(self, *args, **kwargs):
@@ -108,6 +111,7 @@ class _Coroutine(_Proxy):
 
 #===========================================
 
+
 class _Function(_Proxy):
     """Wrapper for function object"""
 
@@ -145,6 +149,7 @@ def type_traits(func_or_generator):
     else:
         return _Function
 
+
 def patch_response(obj, response_handler):
     def decorator(handler):
         def dec(func):
@@ -156,6 +161,7 @@ def patch_response(obj, response_handler):
     obj.invoke = decorator(response_handler)(obj.invoke)
     return obj
 
+
 def patch_request(obj, request_handler):
     def req_decorator(handler):
         def dec(func):
@@ -166,6 +172,7 @@ def patch_request(obj, request_handler):
 
     obj.invoke = req_decorator(request_handler)(obj.invoke)
     return obj
+
 
 def proxy_factory(func, request_handler=None, response_handler=None):
     def wrapper():

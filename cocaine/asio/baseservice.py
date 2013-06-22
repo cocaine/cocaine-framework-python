@@ -111,7 +111,8 @@ class BaseService(object):
             raise ServiceError(self.servicename, "method %s is not available" % method, -100)
 
         try:
-            self.pipe.settimeout(timeout) # DO IT SYNC
+            # DO IT SYNC
+            self.pipe.settimeout(timeout)
             self.pipe.writeall(packb([number, self._counter, args]))
             self._counter += 1
             u = Unpacker()
