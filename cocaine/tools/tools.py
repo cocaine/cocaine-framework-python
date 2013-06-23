@@ -37,23 +37,8 @@ class RequirementInstallError(UploadError):
     pass
 
 
-class StorageAction(object):
-    def __init__(self, storage=None, **config):
-        self.storage = storage
-
-    def connect(self, host='localhost', port=10053):
-        try:
-            self.storage = Service('storage', host, port)
-        except socket.error as err:
-            if err.errno == errno.ECONNREFUSED:
-                raise ConnectionRefusedError(host, port)
-            else:
-                raise ConnectionError('Unknown connection error: {0}'.format(err))
-
-    def execute(self):
-        raise NotImplementedError()
-
-    def encodeJson(self, filename):
+class JsonEncoder(object):
+    def encode(self, filename):
         """
         Tries to read json file with name 'filename' and to encode it with msgpack.
 
@@ -71,6 +56,35 @@ class StorageAction(object):
             raise CocaineError('Unable to open file - {0}'.format(err))
         except ValueError as err:
             raise CocaineError('File "{0}" is corrupted - {1}'.format(filename, err))
+
+
+class PackageEncoder(object):
+    def encode(self, filename):
+        try:
+            if not tarfile.is_tarfile(filename):
+                raise CocaineError('File "{0}" is ot tar file'.format(filename))
+            with open(filename, 'rb') as archive:
+                package = msgpack.packb(archive.read())
+                return package
+        except IOError as err:
+            raise CocaineError('Error occurred while reading archive file "{0}" - {1}'.format(filename, err))
+
+
+class StorageAction(object):
+    def __init__(self, storage=None, **config):
+        self.storage = storage
+
+    def connect(self, host='localhost', port=10053):
+        try:
+            self.storage = Service('storage', host, port)
+        except socket.error as err:
+            if err.errno == errno.ECONNREFUSED:
+                raise ConnectionRefusedError(host, port)
+            else:
+                raise ConnectionError('Unknown connection error: {0}'.format(err))
+
+    def execute(self):
+        raise NotImplementedError()
 
 
 class ListAction(StorageAction):
@@ -112,6 +126,8 @@ class AppUploadAction(StorageAction):
         self.name = config.get('name')
         self.manifest = config.get('manifest')
         self.package = config.get('package')
+        self.jsonEncoder = JsonEncoder()
+        self.packageEncoder = PackageEncoder()
         if not self.name:
             raise ValueError('Please specify name of the app')
         if not self.manifest:
@@ -126,20 +142,10 @@ class AppUploadAction(StorageAction):
         return ChainFactory().then(self.do)
 
     def do(self):
-        manifest = self.encodeJson(self.manifest)
-        package = self.encodePackage()
+        manifest = self.jsonEncoder.encode(self.manifest)
+        package = self.packageEncoder.encode(self.package)
         yield self.storage.write('manifests', self.name, manifest, APPS_TAGS)
         yield self.storage.write('apps', self.name, package, APPS_TAGS)
-
-    def encodePackage(self):
-        try:
-            if not tarfile.is_tarfile(self.package):
-                raise CocaineError('File "{0}" is ot tar file'.format(self.package))
-            with open(self.package, 'rb') as archive:
-                package = msgpack.packb(archive.read())
-                return package
-        except IOError as err:
-            raise CocaineError('Error occurred while reading archive file "{0}" - {1}'.format(self.package, err))
 
 
 class AppRemoveAction(StorageAction):
@@ -156,8 +162,8 @@ class AppRemoveAction(StorageAction):
         return ChainFactory([self.do])
 
     def do(self):
-        yield self.storage.remove("manifests", self.name)
-        yield self.storage.remove("apps", self.name)
+        yield self.storage.remove('manifests', self.name)
+        yield self.storage.remove('apps', self.name)
 
 
 class ProfileListAction(ListAction):
@@ -177,11 +183,12 @@ class ProfileUploadAction(SpecificProfileAction):
     def __init__(self, storage, **config):
         super(ProfileUploadAction, self).__init__(storage, **config)
         self.profile = config.get('manifest')
+        self.jsonEncoder = JsonEncoder()
         if not self.profile:
             raise ValueError('Please specify profile file path')
 
     def execute(self):
-        profile = self.encodeJson(self.profile)
+        profile = self.jsonEncoder.encode(self.profile)
         return self.storage.write('profiles', self.name, profile, PROFILES_TAGS)
 
 
@@ -218,12 +225,13 @@ class RunlistUploadAction(SpecificRunlistAction):
         super(RunlistUploadAction, self).__init__(storage, **config)
         self.runlist = config.get('manifest')
         self.runlist_raw = config.get('runlist-raw')
+        self.jsonEncoder = JsonEncoder()
         if not any([self.runlist, self.runlist_raw]):
             raise ValueError('Please specify runlist profile file path')
 
     def execute(self):
         if self.runlist:
-            runlist = self.encodeJson(self.runlist)
+            runlist = self.jsonEncoder.encode(self.runlist)
         else:
             runlist = msgpack.dumps(self.runlist_raw)
         return self.storage.write('runlists', self.name, runlist, RUNLISTS_TAGS)
