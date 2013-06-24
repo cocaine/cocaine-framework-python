@@ -44,6 +44,7 @@ class Sandbox(object):
             event_handler.invoke(request, stream)
         else:
             self._logger.warn("There is no handler for event %s" % event_name)
+            stream.error(-100, "There is no handler for event %s" % event_name)
 
     def on(self, event_name, event_handler):
         try:
@@ -82,6 +83,11 @@ class Stream(object):
             return
         assert (self._m_state is None)
         traceback.print_stack()
+
+    def error(self, code, message):
+        if self._m_state is not None:
+            self.worker.send_error(self.session, code, message)
+            self.close()
 
     @property
     def closed(self):

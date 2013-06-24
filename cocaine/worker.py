@@ -162,3 +162,6 @@ class Worker(object):
 
     def send_chunk(self, session, data):
         self.w_stream.write(Message(message.RPC_CHUNK, session, data).pack())
+
+    def send_error(self, session, code, msg):
+        self.w_stream.write(Message(message.RPC_ERROR, session, code, msg).pack())
