@@ -11,7 +11,7 @@ storage = Service('storage')
 
 
 if __name__ == '__main__':
-    log = logging.getLogger('cocaine.tools.tools')
+    log = logging.getLogger('cocaine.tools.installer')
     log.setLevel(logging.DEBUG)
     log.propagate = False
     ch = logging.StreamHandler()
@@ -20,13 +20,13 @@ if __name__ == '__main__':
     ch.setFormatter(formatter)
     log.addHandler(ch)
 
-    a1 = AppUploadFromRepositoryAction(storage, **{'url': 'git+file:///Users/esafronov/mock_repo/repo_echo'})
-    a2 = AppUploadFromRepositoryAction(storage, **{'url': 'git+file:///Users/esafronov/mock_repo/repo_echo'})
-    a3 = AppUploadFromRepositoryAction(storage, **{'url': 'git+file:///Users/esafronov/mock_repo/repo_echoWRONG'})
-    a4 = AppUploadFromRepositoryAction(storage, **{'url': 'git+file:///Users/esafronov/mock_repo/repo_echo'})
-    a5 = AppUploadFromRepositoryAction(storage, **{'url': 'git+file:///Users/esafronov/mock_repo/repo_echo'})
+    a1 = AppUploadFromRepositoryAction(storage, **{'url': 'file:///Users/esafronov/mock_repo/repo_echo'})
+    a2 = AppUploadFromRepositoryAction(storage, **{'url': 'file:///Users/esafronov/mock_repo/repo_echo'})
+    a3 = AppUploadFromRepositoryAction(storage, **{'url': 'file:///Users/esafronov/mock_repo/repo_echoWRONG'})
+    a4 = AppUploadFromRepositoryAction(storage, **{'url': 'file:///Users/esafronov/mock_repo/repo_echo'})
+    a5 = AppUploadFromRepositoryAction(storage, **{'url': 'file:///Users/esafronov/mock_repo/repo_echo'})
     # Run all of them simultaneously
-    r = a1.execute().run()#get(20.0)
+    r = a1.execute().run()
     r = a2.execute().run()
     r = a3.execute().run()
     r = a4.execute().run()

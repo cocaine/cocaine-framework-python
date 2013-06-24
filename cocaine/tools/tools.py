@@ -3,30 +3,23 @@ import os
 import re
 import socket
 import errno
-import subprocess
 import tarfile
 import tempfile
-from threading import Lock
 import time
-from pip import InstallationError
-from pip.vcs.git import Git
-from cocaine.futures import chain
-from cocaine.futures.chain import ChainFactory
-
-from cocaine.services import Service
 import msgpack
 
+from cocaine.futures import chain
+from cocaine.futures.chain import ChainFactory
+from cocaine.services import Service
 from cocaine.exceptions import ConnectionRefusedError, ConnectionError
 from cocaine.exceptions import CocaineError
-import logging
+from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
+from cocaine.tools.installer import PythonModuleInstaller, ModuleInstallError
 
 
-log = logging.getLogger(__name__)
-
-
-APPS_TAGS = ("app",)
-RUNLISTS_TAGS = ("runlist",)
-PROFILES_TAGS = ("profile",)
+APPS_TAGS = ('app',)
+RUNLISTS_TAGS = ('runlist',)
+PROFILES_TAGS = ('profile',)
 
 
 class ToolsError(Exception):
@@ -34,10 +27,6 @@ class ToolsError(Exception):
 
 
 class UploadError(ToolsError):
-    pass
-
-
-class RequirementInstallError(UploadError):
     pass
 
 
@@ -458,136 +447,30 @@ class AppUploadFromRepositoryAction(StorageAction):
         repositoryPath = tempfile.mkdtemp()
         manifestPath = os.path.join(repositoryPath, 'manifest-start.json')
         packagePath = os.path.join(repositoryPath, 'package.tar.gz')
+        self.repositoryDownloader = GitRepositoryDownloader()
         self.moduleInstaller = PythonModuleInstaller(repositoryPath, manifestPath)
         print('Repository path: {0}'.format(repositoryPath))
         try:
             yield self.cloneRepository(repositoryPath)
-            yield self.prepareRepository()
+            yield self.installRepository()
             yield self.createPackage(repositoryPath, packagePath)
             yield AppUploadAction(self.storage, **{
                 'name': self.name,
                 'manifest': manifestPath,
                 'package': packagePath
             }).execute()
-        except UploadError as err:
+        except (RepositoryDownloadError, ModuleInstallError) as err:
             print(err)
 
     @chain.threaded
     def cloneRepository(self, repositoryPath):
-        #todo: Now it's only git specific method. Replace by more abstract in future
-        try:
-            #todo: Replace `pip.vcs.Git` by `sh` or `subprocess`
-            git = Git(url=self.url)
-            git.unpack(repositoryPath)
-        except InstallationError as err:
-            raise UploadError(err.message)
+        self.repositoryDownloader.download(self.url, repositoryPath)
 
     @chain.threaded
-    def prepareRepository(self):
+    def installRepository(self):
         self.moduleInstaller.install()
 
     @chain.threaded
     def createPackage(self, repositoryPath, packagePath):
         with tarfile.open(packagePath, mode='w:gz') as tar:
             tar.add(repositoryPath, arcname='')
-
-
-class ModuleInstaller(object):
-    def install(self):
-        raise NotImplementedError
-
-
-class PythonModuleInstaller(ModuleInstaller):
-    virtualEnvGlobalLock = Lock()
-
-    def __init__(self, path, manifestPath):
-        self.path = path
-        self.manifestPath = manifestPath
-        self.devnull = open(os.devnull, 'w')
-
-    def install(self):
-        log.debug('Start installing python module')
-        venv = self.createVirtualEnvironment()
-        self.createBootstrap()
-        self.installCocaineFramework(venv)
-        self.installRequirements(venv)
-        log.debug('Python module has been successfully installed')
-
-    def createVirtualEnvironment(self):
-        try:
-            with self.virtualEnvGlobalLock:
-                log.debug('Creating virtual environment ...')
-                import virtualenv
-                venv = os.path.join(self.path, 'venv')
-                virtualenv.create_environment(venv)
-                log.debug('Virtual environment has been successfully created in "{0}"'.format(venv))
-                return venv
-        except ImportError:
-            raise UploadError('Module virtualenv is not installed, so a new environment cannot be created')
-
-    def createBootstrap(self):
-        log.debug('Creating bootstrap script ...')
-        initialManifestPath = os.path.join(self.path, 'manifest.json')
-        if os.path.exists(initialManifestPath):
-            with open(initialManifestPath) as manifestFh:
-                try:
-                    manifest = json.loads(manifestFh.read())
-                    slave = manifest['slave']
-
-                    bootstrapPath = os.path.join(self.path, 'bootstrap.sh')
-                    with open(bootstrapPath, 'w') as fh:
-                        fh.write('#!/bin/sh\n')
-                        fh.write('source venv/bin/activate\n')
-                        fh.write('python {0} $@\n'.format(slave))
-                    os.chmod(bootstrapPath, 0755)
-
-                    with open(self.manifestPath, 'w') as fh:
-                        manifest['slave'] = 'bootstrap.sh'
-                        fh.write(json.dumps(manifest))
-                except ValueError as err:
-                    raise UploadError(err.message)
-                except KeyError:
-                    raise UploadError('Slave is not specified')
-        else:
-            raise UploadError('Manifest file (manifest.json) does not exist')
-
-    def installCocaineFramework(self, venv):
-        log.debug('Downloading cocaine-framework-python ...')
-        cocaineFrameworkUrl = 'git+git@github.com:cocaine/cocaine-framework-python.git'
-        cocaineFrameworkPath = tempfile.mkdtemp()
-        cocaineFramework = Git(url=cocaineFrameworkUrl)
-        cocaineFramework.unpack(cocaineFrameworkPath)
-
-        log.debug('Installing cocaine-framework-python ...')
-        python = os.path.join(venv, 'bin', 'python')
-        process = subprocess.Popen([python, 'setup.py', 'install'],
-                                   cwd=cocaineFrameworkPath,
-                                   stdout=self.devnull,
-                                   stderr=self.devnull)
-        process.wait()
-        if process.returncode != 0:
-            raise RequirementInstallError()
-        else:
-            log.debug('Cocaine-framework-python has been successfully installed')
-
-    def installRequirements(self, venv):
-        log.debug('Installing requirements ...')
-        requirementsPath = os.path.join(self.path, 'requirements.txt')
-        if os.path.exists(requirementsPath):
-            with open(requirementsPath) as fh:
-                requirements = [requirement.strip() for requirement in fh.readlines()]
-                log.debug('Requirements found: [{0}]'.format(', '.join(requirements)))
-                _pip = os.path.join(venv, 'bin', 'pip')
-                for requirement in requirements:
-                    log.debug('Installing "{0}" ...'.format(requirement))
-                    process = subprocess.Popen([_pip, 'install', requirement],
-                                               stdout=self.devnull,
-                                               stderr=self.devnull)
-                    process.wait()
-                    if process.returncode != 0:
-                        raise RequirementInstallError()
-                    else:
-                        log.debug('Successfully installed "{0}"'.format(requirement))
-                log.debug('All requirements has been successfully installed "{0}"')
-        else:
-            log.debug('Requirements file (requirements.txt) does not exist')

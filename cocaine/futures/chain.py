@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 from threading import Thread
-import logging
 import time
 import types
 from tornado.ioloop import IOLoop
@@ -8,9 +7,6 @@ from cocaine.futures import Future
 from cocaine.exceptions import TimeoutError
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
-
-
-log = logging.getLogger(__name__)
 
 
 class Result(object):
@@ -169,7 +165,6 @@ class GeneratorFutureMock(Future):
     def __init__(self, obj=None):
         super(GeneratorFutureMock, self).__init__()
         self.obj = obj
-        self.counter = 0
 
     def bind(self, callback, errorback=None, on_done=None):
         self.cb = callback
@@ -178,18 +173,13 @@ class GeneratorFutureMock(Future):
 
     def advance(self, value=None):
         try:
-            log.debug('Advance({0}) - {1}'.format(self.counter, value))
-            self.counter += 1
             result = self.nextStep(value)
             future = self.wrapResult(result)
             if result is not None:
                 future.bind(self.advance, self.advance)
-            log.debug('Advance got: {0} -> {1}'.format(result, future))
         except StopIteration:
-            log.debug('StopIteration')
             self.cb(value)
         except Exception as err:
-            log.error(err)
             if self.eb:
                 self.eb(err)
 
