@@ -68,9 +68,9 @@ class Chain(object):
 class ChainFactory():
     """
     This class - is some syntax sugar over `Chain` object chains. Instead of writing code like this:
-        c1 = Chain(f1, Chain(f2, Chain(f3, ...Chain(fn)))...).run()
+        `c1 = Chain(f1, Chain(f2, Chain(f3, ...Chain(fn)))...).run()`
     you can write:
-        ChainFactory().then(f1).then(f2).then(f3) ... then(fn).run()
+        `ChainFactory().then(f1).then(f2).then(f3) ... then(fn).run()`
     and this looks like more prettier.
     """
     def __init__(self, functions=None):
@@ -83,16 +83,16 @@ class ChainFactory():
 
     def then(self, func):
         chain = Chain(func)
-        if len(self.chains):
-            self.chains[-1].nextChain = chain
+        if len(self.chains) > 0:
+            lastChain = self.chains[-1]
+            lastChain.nextChain = chain
         else:
             chain.run()
         self.chains.append(chain)
         return self
 
     def run(self):
-        warnings.warn('This method is now deprecated. Its implementation is now contained in "then" method',
-                      DeprecationWarning)
+        warnings.warn('This method is deprecated. Method "then" starts chain automatically', DeprecationWarning)
 
     def get(self, timeout=None):
         """
