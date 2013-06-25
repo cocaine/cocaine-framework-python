@@ -30,7 +30,10 @@ class Fut(Future):
             return self.cb(result)
 
 
-class SomeErrorServiceError(Exception): pass
+class SomeErrorServiceError(Exception):
+    pass
+
+
 class EFut(Future):
         def __init__(self, value):
             self.cb = None
@@ -71,6 +74,7 @@ class SomeErrorService(object):
 
 def f1():
     return 1
+
 
 def f2(result):
     return 'r320r353475734854'
@@ -116,6 +120,7 @@ def step1():
 
     yield 'Return'
 
+
 def step2(result):
     try:
         log.info('Step 2. Input value must be "Return": {0}'.format(result.get()))
@@ -123,6 +128,7 @@ def step2(result):
     except Exception as err:
         assert err.message == '12345'
     return 'Fuck you all!'
+
 
 def finish(value):
     try:
@@ -138,6 +144,7 @@ if __name__ == '__main__':
 
     ChainFactory().then(step1).then(step2).then(finish).run()
     loop = IOLoop.instance()
+
     def timeout():
         print('TIMEOUT')
         loop.stop()

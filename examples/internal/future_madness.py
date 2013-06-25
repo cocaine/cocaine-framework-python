@@ -15,24 +15,27 @@ __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 def f1(result=None):
     log.info('Entered at f1. I am async! My input = {0}'.format(result))
-    future = service.find('manifests', ('app',))
-    return future
+    yield service.find('manifests', ('app',))
+
 
 def f2(result):
     log.info('Entered at f2. I am async! My input = {0}'.format(result.get()))
     time.sleep(0.5)
     future = service.find('profiles', ('profile',))
-    return future
+    yield future
+
 
 def f3(result):
     log.info('Entered at f3. I am async! My input = {0}'.format(result.get()))
     future = service.find('runlists', ('runlist',))
-    return future
+    yield future
+
 
 def f4(result):
     log.info('Entered at f4. I am async! My input = {0}'.format(result.get()))
     future = service.find('manifests', ('app',))
-    return future
+    yield future
+
 
 #todo: What happens if the function awaits more than one results (via yield), but they aren't going to come
 def f5(result):
@@ -40,14 +43,17 @@ def f5(result):
     time.sleep(1.0)
     return 'Just some value from sync function'
 
+
 @chain.asynchronousCallable
 def f6(future, result):
     log.info('Entered at f6. I am async and invoke callback by tornado timeout! My input = {0}'.format(result.get()))
     loop.add_timeout(time.time() + 1.0, lambda: future.ready(10000))
 
+
 def f7(result):
     log.info('Entered at f7. I am sync and I raise exception! My input = {0}'.format(result.get()))
     raise Exception('Fuck you all!')
+
 
 def f8(result):
     log.info('Entered at f8. I am async! My input must be an exception')
@@ -57,12 +63,14 @@ def f8(result):
     except Exception as err:
         log.info('Expected exception - {0}'.format(err))
     future = service.find('manifests', ('app',))
-    return future
+    yield future
+
 
 def f_finish(result):
     log.info('Entered at f_finish. I am async! My input = {0}'.format(result.get()))
     log.info('Done')
     return None
+
 
 def main():
     """
