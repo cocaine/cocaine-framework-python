@@ -89,6 +89,8 @@ class ChainFactory():
         else:
             chain.run()
         self.chains.append(chain)
+        self._ready = False
+        self._result = None
         return self
 
     def run(self):
@@ -96,6 +98,9 @@ class ChainFactory():
 
     def get(self, timeout=None):
         """
+        Returns result of chaining execution. If chain haven't been completed after `timeout` seconds, there will be
+        exception raised.
+
         This method is like syntax sugar over asynchronous receiving future result from chain expression. It simply
         starts event loop, sets timeout condition and run chain expression. Event loop will be stopped after getting
         final chain result or after timeout expired.
@@ -108,6 +113,9 @@ class ChainFactory():
         if timeout is not None and timeout < 0.001:
             raise ValueError('Timeout cannot be less than 1 ms')
 
+        if self._ready:
+            return Result(self._result).get()
+
         loop = IOLoop.instance()
 
         def startNestedEventLoop(result):
@@ -116,14 +124,14 @@ class ChainFactory():
             except Exception as err:
                 startNestedEventLoop.result = err
             finally:
-                startNestedEventLoop.resultIsSet = True
+                startNestedEventLoop.ready = True
                 loop.stop()
 
         def stopNestedEventLoop():
             stopNestedEventLoop.raiseTimeoutError = True
             loop.stop()
 
-        startNestedEventLoop.resultIsSet = False
+        startNestedEventLoop.ready = False
         startNestedEventLoop.result = None
         stopNestedEventLoop.raiseTimeoutError = False
         self.then(startNestedEventLoop).run()
@@ -131,11 +139,57 @@ class ChainFactory():
             loop.add_timeout(time.time() + timeout, stopNestedEventLoop)
         loop.start()
 
-        if stopNestedEventLoop.raiseTimeoutError and not startNestedEventLoop.resultIsSet:
+        if stopNestedEventLoop.raiseTimeoutError and not startNestedEventLoop.ready:
             raise TimeoutError('Timeout')
         if isinstance(startNestedEventLoop.result, Exception):
             raise startNestedEventLoop.result
         return startNestedEventLoop.result
+
+    def wait(self, timeout=None):
+        """
+        Waits chaining execution during some time or forever.
+
+        This method provides you nice way to do asynchronous waiting future result from chain expression. It simply
+        starts event loop, sets timeout condition and run chain expression. Event loop will be stopped after getting
+        final chain result or after timeout expired. Unlike `get` method there will be no exception raised if timeout
+        is occurred while chaining execution running.
+
+        :param timeout: Timeout in seconds after which event loop will be stopped. If timeout is not set (default) it
+                        means forever waiting.
+        :raises ValueError: If timeout is set and it is less than 1 ms.
+        """
+        if timeout is not None and timeout < 0.001:
+            raise ValueError('Timeout cannot be less than 1 ms')
+
+        if self._ready:
+            return
+
+        loop = IOLoop.instance()
+
+        def startNestedEventLoop(result):
+            try:
+                self._result = result.get()
+            except Exception as err:
+                self._result = err
+            finally:
+                self._ready = True
+                loop.stop()
+
+        def stopNestedEventLoop():
+            loop.stop()
+
+        self._ready = False
+        self._result = None
+        self.then(startNestedEventLoop).run()
+        if timeout is not None:
+            loop.add_timeout(time.time() + timeout, stopNestedEventLoop)
+        loop.start()
+
+    def ready(self):
+        return self._ready
+
+    def __nonzero__(self):
+        return self.ready()
 
 
 class FutureMock(Future):
