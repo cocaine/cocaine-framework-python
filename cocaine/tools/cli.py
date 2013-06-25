@@ -3,30 +3,7 @@ import socket
 from cocaine.services import Service
 from time import time
 from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError
-from cocaine.tools.tools import (parseCrashlogs,
-                                NodeInfoAction,
-                                AppRestartAction,
-                                AppCheckAction,
-                                AppListAction,
-                                AppViewAction,
-                                AppUploadAction,
-                                AppRemoveAction,
-                                AppStartAction,
-                                AppPauseAction,
-                                ProfileListAction,
-                                ProfileUploadAction,
-                                ProfileViewAction,
-                                ProfileRemoveAction,
-                                RunlistListAction,
-                                RunlistViewAction,
-                                RunlistUploadAction,
-                                RunlistRemoveAction,
-                                RunlistAddApplicationAction,
-                                CrashlogRemoveAction,
-                                CrashlogRemoveAllAction,
-                                CrashlogListAction,
-                                CrashlogViewAction,
-                                ToolsError)
+from cocaine.tools.tools import *
 import json
 import msgpack
 import sys

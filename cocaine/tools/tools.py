@@ -11,10 +11,46 @@ import msgpack
 from cocaine.futures import chain
 from cocaine.futures.chain import ChainFactory
 from cocaine.services import Service
-from cocaine.exceptions import ConnectionRefusedError, ConnectionError
-from cocaine.exceptions import CocaineError
+from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError
 from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
 from cocaine.tools.installer import PythonModuleInstaller, ModuleInstallError
+
+
+__all__ = [
+    'APPS_TAGS',
+    'RUNLISTS_TAGS',
+    'PROFILES_TAGS',
+    'parseCrashlogs',
+
+    'ToolsError',
+    'NodeInfoAction',
+
+    'AppListAction',
+    'AppViewAction',
+    'AppUploadAction',
+    'AppRemoveAction',
+    'AppStartAction',
+    'AppPauseAction',
+    'AppRestartAction',
+    'AppCheckAction',
+    'AppUploadFromRepositoryAction',
+
+    'ProfileListAction',
+    'ProfileViewAction',
+    'ProfileUploadAction',
+    'ProfileRemoveAction',
+
+    'RunlistListAction',
+    'RunlistViewAction',
+    'RunlistUploadAction',
+    'RunlistRemoveAction',
+    'RunlistAddApplicationAction',
+
+    'CrashlogListAction',
+    'CrashlogViewAction',
+    'CrashlogRemoveAction',
+    'CrashlogRemoveAllAction',
+]
 
 
 APPS_TAGS = ('app',)

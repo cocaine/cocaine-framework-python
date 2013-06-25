@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from threading import Thread
 import time
 import types
+import warnings
 from tornado.ioloop import IOLoop
 from cocaine.futures import Future
 from cocaine.exceptions import TimeoutError
@@ -81,13 +82,17 @@ class ChainFactory():
             self.then(func)
 
     def then(self, func):
-        self.chains.append(Chain(func))
+        chain = Chain(func)
+        if len(self.chains):
+            self.chains[-1].nextChain = chain
+        else:
+            chain.run()
+        self.chains.append(chain)
         return self
 
     def run(self):
-        for i in xrange(len(self.chains) - 1):
-            self.chains[i].nextChain = self.chains[i + 1]
-        self.chains[0].run()
+        warnings.warn('This method is now deprecated. Its implementation is now contained in "then" method',
+                      DeprecationWarning)
 
     def get(self, timeout=None):
         """
