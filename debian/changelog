@@ -1,3 +1,9 @@
+cocaine-framework-python (0.10.5-0) unstable; urgency=low
+
+  * Send error if user emitss event without handler
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 25 Jun 2013 16:28:52 +0400
+
 cocaine-framework-python (0.10.4-5) unstable; urgency=low
 
   * Replace socket.connect with socket.create_connection.
