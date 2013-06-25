@@ -35,7 +35,6 @@ def encode_dec(f):
 
 
 class Decoder(object):
-
     def __init__(self):
         self.callback = None
 
@@ -57,7 +56,6 @@ class Decoder(object):
 
 
 class ReadableStream(object):
-
     def __init__(self, loop, pipe):
         self.loop = loop
         self.pipe = pipe
@@ -96,7 +94,7 @@ class ReadableStream(object):
             # Enlarge buffer if messages are big
             if self.tmp_buff.buffer_info()[1] == length:
                 self.tmp_buff *= 2
-    
+
     def reconnect(self, pipe):
         self.pipe = pipe
         self.buffer = msgpack.Unpacker()
@@ -104,7 +102,6 @@ class ReadableStream(object):
 
 
 class WritableStream(object):
-
     def __init__(self, loop, pipe):
         self.loop = loop
         self.pipe = pipe

@@ -1,19 +1,30 @@
+#!/usr/bin/env python
 # coding=utf-8
-from tornado.ioloop import IOLoop
+import msgpack
+from cocaine.futures.chain import ChainFactory
 from cocaine.services import Service
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
 if __name__ == '__main__':
-    def on(chunk):
-        print('Response received - {0}'.format(chunk))
+    def fetchAll():
+        leData = []
+        chunk = yield service.enqueue('chunkMe', '1')
+        leData += msgpack.loads(chunk)
+        size = len(chunk)
+        counter = 1
+        while True:
+            ch = yield
+            chunk = msgpack.loads(ch)
+            size += len(chunk)
+            counter += 1
+            print(counter, size)#, chunk)
+            if chunk == 'Done':
+                break
+            leData += chunk
 
-    def error(reason):
-        print('Error received - {0}'.format(reason))
+        print(len(leData))
 
     service = Service('Chunker')
-    future = service.invoke('chunkMe', '1')
-    future.bind(on, error)
-    loop = IOLoop.instance()
-    loop.start()
+    ChainFactory([fetchAll]).get(timeout=60.0)

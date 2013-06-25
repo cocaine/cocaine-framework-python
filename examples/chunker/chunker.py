@@ -8,10 +8,13 @@ __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 log = Logger()
 
+
 def chunker(request, response):
-    for num in xrange(5):
-        response.write(msgpack.dumps(num))
-        log.info('Written: {0}'.format(num))
+    chunks = 100 * 1024
+    leData = [1024 * str(i) for i in xrange(chunks)]
+    for num in xrange(chunks):
+        response.write(msgpack.dumps(leData[num]))
+    response.write(msgpack.dumps('Done'))
     response.close()
 
 W = Worker()

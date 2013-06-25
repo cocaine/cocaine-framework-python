@@ -30,8 +30,8 @@ if __name__ == '__main__':
     service = Service('Echo')
     example_SynchronousFetching()
     example_Synchronous()
-    ChainFactory([example_AsynchronousYielding]).get(timeout=1)
+    ChainFactory([example_AsynchronousYielding]).wait()
     example_AsynchronousChaining()\
         .then(lambda r: msgpack.loads(r.get()))\
-        .then(lambda r: sys.stdout.write('example_AsynchronousYielding: Response received - {0}'.format(r.get())))\
-        .get(timeout=1)
+        .then(lambda r: sys.stdout.write('example_AsynchronousChaining: Response received - {0}'.format(r.get())))\
+        .wait()

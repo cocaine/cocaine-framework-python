@@ -49,6 +49,10 @@ class Pipe(object):
             if e.errno == errno.EPIPE:
                 self.connected = False
                 return 0
+            elif e.errno == errno.EWOULDBLOCK:
+                return 0
+            else:
+                return 0
 
     def fileno(self):
         return self.sock.fileno()
