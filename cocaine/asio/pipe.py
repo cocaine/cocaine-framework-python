@@ -40,7 +40,16 @@ class Pipe(object):
         self._on_disconnect = on_disconnect_clb or (lambda : None)
 
     def read(self, buff, size):
-        return self.sock.recv_into(buff, size)
+        try:
+            return self.sock.recv_into(buff, size)
+        except socket.error as e:
+            if e.errno == errno.ECONNRESET:
+                self.connection = False
+                return 0
+            elif e.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
+                return 0
+            else:
+                raise
 
     def write(self, buff):
         try:
@@ -49,7 +58,7 @@ class Pipe(object):
             if e.errno == errno.EPIPE:
                 self.connected = False
                 return 0
-            elif e.errno == errno.EWOULDBLOCK:
+            elif e.errno in (errno.EWOULDBLOCK, errno.EAGAIN):
                 return 0
             else:
                 return 0
