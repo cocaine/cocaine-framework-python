@@ -1,13 +1,33 @@
 # coding=utf-8
 import unittest
-from tornado.testing import AsyncTestCase
-from mockito import mock, when, verify, any
+import msgpack
+from mockito import mock, when, verify, any, unstub
 from cocaine.tools.tools import *
+from cocaine.futures.chain import ChainFactory
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
-class AppTestCase(AsyncTestCase):
+def verifyInit(patchedClassName, expected):
+    def decorator(func):
+        def wrapper(self, *args, **kwargs):
+            def verify(*args, **kwargs):
+                self.assertEqual(expected, kwargs)
+            patchedClass = eval(patchedClassName)
+            temp = patchedClass.__init__
+            try:
+                patchedClass.__init__ = verify
+                func(self, *args, **kwargs)
+            finally:
+                patchedClass.__init__ = temp
+        return wrapper
+    return decorator
+
+
+class AppTestCase(unittest.TestCase):
+    def tearDown(self):
+        unstub()
+
     def test_AppListAction(self):
         """
         In this test we just need to be sure, that there will be `find` method invocation from `storage` object with
@@ -69,6 +89,300 @@ class AppTestCase(AsyncTestCase):
 
         verify(storage).remove('manifests', 'AppName')
         verify(storage).remove('apps', 'AppName')
+
+    def test_AppStartActionValueErrors(self):
+        node = mock()
+        self.assertRaises(ValueError, AppStartAction, node, **{})
+        self.assertRaises(ValueError, AppStartAction, node, **{'name': '', 'profile': 'P'})
+        self.assertRaises(ValueError, AppStartAction, node, **{'name': 'N', 'profile': ''})
+
+    def test_AppStartAction(self):
+        node = mock()
+        action = AppStartAction(node, **{'name': 'AppName', 'profile': 'ProfileName'})
+        action.execute()
+
+        verify(node).start_app({'AppName': 'ProfileName'})
+
+    def test_AppPauseActionValueErrors(self):
+        node = mock()
+        self.assertRaises(ValueError, AppPauseAction, node, **{})
+        self.assertRaises(ValueError, AppPauseAction, node, **{'name': ''})
+
+    def test_AppPauseAction(self):
+        node = mock()
+        action = AppPauseAction(node, **{'name': 'AppName'})
+        action.execute()
+
+        verify(node).pause_app(['AppName'])
+
+    def test_AppCheckActionValueErrors(self):
+        node = mock()
+        self.assertRaises(ValueError, AppCheckAction, node, **{})
+        self.assertRaises(ValueError, AppCheckAction, node, **{'name': ''})
+
+    def test_AppCheckAction(self):
+        node = mock()
+        action = AppCheckAction(node, **{'name': 'AppName'})
+        mockInfo = {
+            'apps': {
+                'AppName': {
+                    'load-median': 0,
+                    'profile': 'ProfileName',
+                    'sessions': {
+                        'pending': 0
+                    },
+                    'state': 'running',
+                }
+            }
+        }
+        when(node).info().thenReturn(ChainFactory([lambda: mockInfo]))
+        actual = action.execute().get(timeout=0.1)
+
+        verify(node).info()
+        self.assertEqual({'AppName': 'running'}, actual)
+
+    def test_AppCheckActionReturnsStoppedOrMissingWhenApplicationIsNotFound(self):
+        node = mock()
+        action = AppCheckAction(node, **{'name': 'AppName'})
+        mockInfo = {
+            'apps': {
+            }
+        }
+        when(node).info().thenReturn(ChainFactory([lambda: mockInfo]))
+        actual = action.execute().get(timeout=0.1)
+
+        verify(node).info()
+        self.assertEqual({'AppName': 'stopped or missing'}, actual)
+
+    def test_AppRestartActionValueErrors(self):
+        node = mock()
+        self.assertRaises(ValueError, AppRestartAction, node, **{})
+        self.assertRaises(ValueError, AppRestartAction, node, **{'name': ''})
+
+    @verifyInit('AppPauseAction', {'host': '', 'port': '', 'name': 'AppName'})
+    @verifyInit('AppStartAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'ProfileName'})
+    def test_AppRestartActionAppIsRunningProfileIsNotSpecified(self):
+        node = mock()
+        action = AppRestartAction(node, **{'name': 'AppName', 'host': '', 'port': ''})
+        when(NodeInfoAction).execute().thenReturn(ChainFactory([lambda: {
+            'apps': {
+                'AppName': {
+                    'profile': 'ProfileName',
+                    'state': 'running',
+                }
+            }
+        }]))
+
+        when(AppPauseAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Stopped'}]))
+        when(AppStartAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Started'}]))
+        action.execute().get()
+
+        verify(NodeInfoAction).execute()
+        verify(AppPauseAction).execute()
+        verify(AppStartAction).execute()
+
+    @verifyInit('AppPauseAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('AppStartAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    def test_AppRestartActionAppIsRunningProfileIsSpecified(self):
+        node = mock()
+        action = AppRestartAction(node, **{'name': 'AppName', 'profile': 'NewProfile', 'host': '', 'port': ''})
+        when(NodeInfoAction).execute().thenReturn(ChainFactory([lambda: {
+            'apps': {
+                'AppName': {
+                    'profile': 'ProfileName',
+                    'state': 'running',
+                }
+            }
+        }]))
+
+        when(AppPauseAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Stopped'}]))
+        when(AppStartAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Started'}]))
+        action.execute().get()
+
+        verify(NodeInfoAction).execute()
+        verify(AppPauseAction).execute()
+        verify(AppStartAction).execute()
+
+    @verifyInit('AppPauseAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('AppStartAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    def test_AppRestartActionAppIsNotRunningProfileIsSpecified(self):
+        node = mock()
+        action = AppRestartAction(node, **{'name': 'AppName', 'profile': 'NewProfile', 'host': '', 'port': ''})
+        when(NodeInfoAction).execute().thenReturn(ChainFactory([lambda: {
+            'apps': {}
+        }]))
+
+        when(AppPauseAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'NotRunning'}]))
+        when(AppStartAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Started'}]))
+        action.execute().get()
+
+        verify(NodeInfoAction).execute()
+        verify(AppPauseAction).execute()
+        verify(AppStartAction).execute()
+
+    @verifyInit('AppPauseAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('AppStartAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    def test_AppRestartActionAppIsNotRunningProfileIsNotSpecified(self):
+        node = mock()
+        action = AppRestartAction(node, **{'name': 'AppName', 'host': '', 'port': ''})
+        when(NodeInfoAction).execute().thenReturn(ChainFactory([lambda: {
+            'apps': {}
+        }]))
+
+        when(AppPauseAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'NotRunning'}]))
+        when(AppStartAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Started'}]))
+        self.assertRaises(ToolsError, action.execute().get)
+
+        verify(NodeInfoAction).execute()
+
+
+class ProfileTestCase(unittest.TestCase):
+    def tearDown(self):
+        unstub()
+
+    def test_ProfileListAction(self):
+        storage = mock()
+        action = ProfileListAction(storage)
+        when(storage).find(any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action.execute().get()
+
+        verify(storage).find('profiles', PROFILES_TAGS)
+
+    def test_ProfileViewActionValueErrors(self):
+        storage = mock()
+        self.assertRaises(ValueError, ProfileViewAction, storage, **{})
+        self.assertRaises(ValueError, ProfileViewAction, storage, **{'profile': ''})
+
+    def test_ProfileViewAction(self):
+        storage = mock()
+        action = ProfileViewAction(storage, **{'name': 'ProfileName'})
+        when(storage).read(any(str), any(str)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action.execute().get()
+
+        verify(storage).read('profiles', 'ProfileName')
+
+    def test_ProfileUploadActionValueErrors(self):
+        storage = mock()
+        self.assertRaises(ValueError, ProfileUploadAction, storage, **{})
+        self.assertRaises(ValueError, ProfileUploadAction, storage, **{'name': '', 'manifest': 'P'})
+        self.assertRaises(ValueError, ProfileUploadAction, storage, **{'name': 'N', 'manifest': ''})
+
+    def test_ProfileUploadAction(self):
+        storage = mock()
+        jsonEncoder = mock()
+        action = ProfileUploadAction(storage, **{'name': 'ProfileName', 'manifest': 'p.json'})
+        action.jsonEncoder = jsonEncoder
+        when(jsonEncoder).encode('p.json').thenReturn('{-encodedJson-}')
+        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action.execute().get()
+
+        verify(storage).write('profiles', 'ProfileName', '{-encodedJson-}', PROFILES_TAGS)
+
+    #todo: Отсюда и выше проверить тестами код на проброс или обработку ошибок
+    def test_ProfileUploadActionRethrowsExceptions(self):
+        storage = mock()
+        jsonEncoder = mock()
+        action = ProfileUploadAction(storage, **{'name': 'ProfileName', 'manifest': 'p.json'})
+        action.jsonEncoder = jsonEncoder
+        when(jsonEncoder).encode('p.json').thenRaise(ValueError)
+        self.assertRaises(ValueError, action.execute)
+
+    def test_ProfileRemoveActionValueErrors(self):
+        storage = mock()
+        self.assertRaises(ValueError, ProfileRemoveAction, storage, **{})
+        self.assertRaises(ValueError, ProfileRemoveAction, storage, **{'name': ''})
+
+    def test_ProfileRemoveAction(self):
+        storage = mock()
+        action = ProfileRemoveAction(storage, **{'name': 'ProfileName'})
+        when(storage).remove(any(str), any(str)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action.execute().get()
+
+        verify(storage).remove('profiles', 'ProfileName')
+
+    def test_ProfileRemoveActionRethrowsExceptions(self):
+        storage = mock()
+        action = ProfileRemoveAction(storage, **{'name': 'ProfileName'})
+        when(storage).remove(any(str), any(str)).thenRaise(Exception)
+        self.assertRaises(Exception, action.execute)
+
+
+class RunlistTestCase(unittest.TestCase):
+    def tearDown(self):
+        unstub()
+
+    def test_RunlistListAction(self):
+        storage = mock()
+        action = RunlistListAction(storage)
+        when(storage).find(any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action.execute().get()
+
+        verify(storage).find('runlists', RUNLISTS_TAGS)
+
+    def test_RunlistViewActionValueErrors(self):
+        storage = mock()
+        self.assertRaises(ValueError, RunlistViewAction, storage, **{})
+        self.assertRaises(ValueError, RunlistViewAction, storage, **{'name': ''})
+
+    def test_RunlistViewAction(self):
+        storage = mock()
+        action = RunlistViewAction(storage, **{'name': 'RunlistName'})
+        when(storage).read(any(str), any(str)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action.execute().get()
+
+        verify(storage).read('runlists', 'RunlistName')
+
+    def test_RunlistUploadActionValueErrors(self):
+        storage = mock()
+        self.assertRaises(ValueError, RunlistUploadAction, storage, **{'name': 'R', 'manifest': ''})
+        self.assertRaises(ValueError, RunlistUploadAction, storage, **{'name': '', 'manifest': 'M'})
+        self.assertRaises(ValueError, RunlistUploadAction, storage, **{'name': 'R', 'manifest': '', 'runlist-raw': ''})
+
+    def test_RunlistUploadAction(self):
+        storage = mock()
+        jsonEncoder = mock()
+        action = RunlistUploadAction(storage, **{'name': 'RunlistName', 'manifest': 'r.json'})
+        action.jsonEncoder = jsonEncoder
+        when(jsonEncoder).encode('r.json').thenReturn('{-encodedJson-}')
+        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action.execute().get()
+
+        verify(storage).write('runlists', 'RunlistName', '{-encodedJson-}', RUNLISTS_TAGS)
+
+    def test_RunlistUploadActionRawRunlistProvided(self):
+        storage = mock()
+        action = RunlistUploadAction(storage, **{'name': 'RunlistName', 'runlist-raw': '{raw-data}'})
+        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action.execute().get()
+
+        verify(storage).write('runlists', 'RunlistName', msgpack.dumps('{raw-data}'), RUNLISTS_TAGS)
+
+    def test_RunlistRemoveActionValueErrors(self):
+        storage = mock()
+        self.assertRaises(ValueError, RunlistRemoveAction, storage, **{})
+        self.assertRaises(ValueError, RunlistRemoveAction, storage, **{'name': ''})
+
+    def test_RunlistRemoveAction(self):
+        storage = mock()
+        action = RunlistRemoveAction(storage, **{'name': 'RunlistName'})
+        when(storage).remove(any(str), any(str)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action.execute().get()
+
+        verify(storage).remove('runlists', 'RunlistName')
+
+    def test_RunlistAddAppActionValueErrors(self):
+        storage = mock()
+        self.assertRaises(ValueError, RunlistAddApplicationAction, storage, **{})
+        self.assertRaises(ValueError, RunlistAddApplicationAction, storage,
+                          **{'name': '', 'profile': 'P', 'app': 'A'})
+        self.assertRaises(ValueError, RunlistAddApplicationAction, storage,
+                          **{'name': 'N', 'profile': '', 'app': 'A'})
+        self.assertRaises(ValueError, RunlistAddApplicationAction, storage,
+                          **{'name': 'N', 'profile': 'P', 'app': ''})
+
+    def test_RunlistAddAppAction(self):
+        #todo: Implement it
+        pass
 
 
 if __name__ == '__main__':
