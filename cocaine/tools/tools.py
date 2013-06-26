@@ -256,7 +256,7 @@ class RunlistUploadAction(SpecificRunlistAction):
         self.runlist_raw = config.get('runlist-raw')
         self.jsonEncoder = JsonEncoder()
         if not any([self.runlist, self.runlist_raw]):
-            raise ValueError('Please specify runlist profile file path')
+            raise ValueError('Please specify runlist file path')
 
     def execute(self):
         if self.runlist:

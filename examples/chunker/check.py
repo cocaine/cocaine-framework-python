@@ -19,7 +19,7 @@ if __name__ == '__main__':
             chunk = msgpack.loads(ch)
             size += len(chunk)
             counter += 1
-            print(counter, size)#, chunk)
+            print(counter, len(chunk), size)#, chunk)
             if chunk == 'Done':
                 break
             leData += chunk
@@ -27,4 +27,5 @@ if __name__ == '__main__':
         print(len(leData))
 
     service = Service('Chunker')
-    ChainFactory([fetchAll]).get(timeout=60.0)
+    c = ChainFactory([fetchAll])
+    c.get(timeout=60.0)
