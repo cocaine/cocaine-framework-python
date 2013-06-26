@@ -10,14 +10,14 @@ __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 def verifyInit(patchedClassName, expected):
     def decorator(func):
-        def wrapper(self, *args, **kwargs):
+        def wrapper(self):
             def verify(*args, **kwargs):
                 self.assertEqual(expected, kwargs)
             patchedClass = eval(patchedClassName)
             temp = patchedClass.__init__
             try:
                 patchedClass.__init__ = verify
-                func(self, *args, **kwargs)
+                func(self)
             finally:
                 patchedClass.__init__ = temp
         return wrapper
@@ -381,8 +381,118 @@ class RunlistTestCase(unittest.TestCase):
                           **{'name': 'N', 'profile': 'P', 'app': ''})
 
     def test_RunlistAddAppAction(self):
-        #todo: Implement it
-        pass
+        storage = mock()
+        action = RunlistAddApplicationAction(storage, **{'name': 'RunlistName', 'app': 'App', 'profile': 'Profile'})
+        when(RunlistViewAction).execute().thenReturn(msgpack.dumps({
+            'App': 'Profile'
+        }))
+        when(RunlistUploadAction).execute().thenReturn('Ok')
+        action.execute().get()
+
+        verify(RunlistViewAction).execute()
+        verify(RunlistUploadAction).execute()
+
+
+class CrashlogTestCase(unittest.TestCase):
+    def tearDown(self):
+        unstub()
+
+    def test_CrashlogListActionValueErrors(self):
+        storage = mock()
+        self.assertRaises(ValueError, CrashlogListAction, storage, **{})
+        self.assertRaises(ValueError, CrashlogListAction, storage, **{'name': ''})
+
+    def test_CrashlogListAction(self):
+        storage = mock()
+        action = CrashlogListAction(storage, **{'name': 'CrashlogName'})
+        when(storage).find(any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action.execute().get()
+
+        verify(storage).find('crashlogs', ('CrashlogName', ))
+
+    def test_CrashlogViewActionValueErrors(self):
+        storage = mock()
+        self.assertRaises(ValueError, CrashlogViewAction, storage, **{})
+        self.assertRaises(ValueError, CrashlogViewAction, storage, **{'name': '', 'manifest': 'T'})
+
+    def test_CrashlogViewAction(self):
+        storage = mock()
+        action = CrashlogViewAction(storage, **{'name': 'AppName', 'manifest': '10000'})
+        when(storage).find(any(str), any(tuple)).thenReturn([
+            '10000:hash1',
+            '20000:hash2'
+        ])
+        when(storage).read(any(str), any(str)).thenReturn('content')
+        action.execute().get()
+
+        verify(storage).find('crashlogs', ('AppName',))
+        verify(storage).read('crashlogs', '10000:hash1')
+
+    def test_CrashlogViewActionWithoutTimestampSpecified(self):
+        storage = mock()
+        action = CrashlogViewAction(storage, **{'name': 'AppName', 'manifest': ''})
+        when(storage).find(any(str), any(tuple)).thenReturn([
+            '10000:hash1',
+            '20000:hash2'
+        ])
+        when(storage).read(any(str), any(str)).thenReturn('content')
+        action.execute().get()
+
+        verify(storage).find('crashlogs', ('AppName',))
+        verify(storage).read('crashlogs', '10000:hash1')
+        verify(storage).read('crashlogs', '20000:hash2')
+
+    def test_CrashlogRemoveActionValueErrors(self):
+        storage = mock
+        self.assertRaises(ValueError, CrashlogRemoveAction, storage, **{})
+        self.assertRaises(ValueError, CrashlogRemoveAction, storage, **{'name': ''})
+        CrashlogRemoveAction(storage, **{'name': 'N', 'manifest': ''})
+
+    def test_CrashlogRemoveAction(self):
+        storage = mock()
+        action = CrashlogRemoveAction(storage, **{'name': 'AppName', 'manifest': '10000'})
+        when(storage).find(any(str), any(tuple)).thenReturn([
+            '10000:hash1',
+            '20000:hash2'
+        ])
+        when(storage).remove(any(str), any(str)).thenReturn('Ok')
+        action.execute().get()
+
+        verify(storage).find('crashlogs', ('AppName',))
+        verify(storage).remove('crashlogs', '10000:hash1')
+
+    def test_CrashlogRemoveActionWithoutTimestampSpecified(self):
+        storage = mock()
+        action = CrashlogRemoveAction(storage, **{'name': 'AppName', 'manifest': ''})
+        when(storage).find(any(str), any(tuple)).thenReturn([
+            '10000:hash1',
+            '20000:hash2'
+        ])
+        when(storage).remove(any(str), any(str)).thenReturn('Ok')
+        action.execute().get()
+
+        verify(storage).find('crashlogs', ('AppName',))
+        verify(storage).remove('crashlogs', '10000:hash1')
+        verify(storage).remove('crashlogs', '20000:hash2')
+
+    def test_CrashlogRemoveAllActionValueErrors(self):
+        storage = mock()
+        self.assertRaises(ValueError, CrashlogRemoveAllAction, storage, **{})
+        self.assertRaises(ValueError, CrashlogRemoveAllAction, storage, **{'name': ''})
+
+    def test_CrashlogRemoveAll(self):
+        storage = mock()
+        action = CrashlogRemoveAllAction(storage, **{'name': 'AppName'})
+        when(storage).find(any(str), any(tuple)).thenReturn([
+            '10000:hash1',
+            '20000:hash2'
+        ])
+        when(storage).remove(any(str), any(str)).thenReturn('Ok')
+        action.execute().get()
+
+        verify(storage).find('crashlogs', ('AppName',))
+        verify(storage).remove('crashlogs', '10000:hash1')
+        verify(storage).remove('crashlogs', '20000:hash2')
 
 
 if __name__ == '__main__':
