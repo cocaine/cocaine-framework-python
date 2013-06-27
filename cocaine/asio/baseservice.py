@@ -43,7 +43,7 @@ class BaseService(object):
     so this function is called with every incoming decoded message
     """
 
-    def __init__(self, name, endpoint="localhost", port=10053, init_args=sys.argv, **kwargs):
+    def __init__(self, name, endpoint="127.0.0.1", port=10053, init_args=sys.argv, **kwargs):
         """
         It:
         * goes to Locator and get service api (put into self._service_api)
@@ -89,6 +89,12 @@ class BaseService(object):
         
     def reconnect(self):
         self.loop.stop_listening(self.pipe.fileno())
+        try:
+            print "CLOSE"
+            self.pipe.sock.close()
+            print "CLOSE OK"
+        except Exception as err:
+            print(str(err))
         try:
             self._init_endpoint()
         except LocatorResolveError as err:
