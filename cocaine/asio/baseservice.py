@@ -90,9 +90,7 @@ class BaseService(object):
     def reconnect(self):
         self.loop.stop_listening(self.pipe.fileno())
         try:
-            print "CLOSE"
             self.pipe.sock.close()
-            print "CLOSE OK"
         except Exception as err:
             print(str(err))
         try:
