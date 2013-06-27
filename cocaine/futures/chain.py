@@ -35,6 +35,7 @@ class Chain(object):
         self.func = func
         self.nextChain = nextChain
         self.finished = False
+        self.currentResult = None
 
     def run(self, *args, **kwargs):
         try:
@@ -50,8 +51,9 @@ class Chain(object):
             self.error(err)
 
     def on(self, chunk):
+        result = Result(chunk)
+        self.currentResult = result
         if self.nextChain and not self.finished:
-            result = Result(chunk)
             self.nextChain.run(result)
 
     def error(self, exception):
@@ -59,6 +61,7 @@ class Chain(object):
             self.on(exception)
             self.finished = True
 
+    #todo: Determine if this method is really invoked by somebody
     def done(self):
         if not self.finished:
             self.on(None)
@@ -74,6 +77,8 @@ class ChainFactory():
     and this looks like more prettier.
     """
     def __init__(self, functions=None):
+        self._ready = True
+        self._result = None
         if not functions:
             functions = []
 
@@ -83,11 +88,16 @@ class ChainFactory():
 
     def then(self, func):
         chain = Chain(func)
-        if len(self.chains) > 0:
+        # if len(self.chains) > 0:
+        if not self._ready:
             lastChain = self.chains[-1]
             lastChain.nextChain = chain
         else:
-            chain.run()
+            if len(self.chains) == 0:
+                chain.run()
+            else:
+                lastChain = self.chains[-1]
+                chain.run(lastChain.currentResult)
         self.chains.append(chain)
         self._ready = False
         self._result = None
@@ -115,6 +125,9 @@ class ChainFactory():
 
         if self._ready:
             return Result(self._result).get()
+
+        if len(self.chains) > 0 and self.chains[-1].finished:
+            return self.chains[-1].currentResult.get()
 
         loop = IOLoop.instance()
 

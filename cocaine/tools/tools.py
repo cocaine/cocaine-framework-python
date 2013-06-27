@@ -1,3 +1,4 @@
+import ast
 import json
 import os
 import re
@@ -11,7 +12,7 @@ import msgpack
 from cocaine.futures import chain
 from cocaine.futures.chain import ChainFactory
 from cocaine.services import Service
-from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError
+from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError, ServiceError
 from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
 from cocaine.tools.installer import PythonModuleInstaller, ModuleInstallError
 
@@ -23,7 +24,10 @@ __all__ = [
     'parseCrashlogs',
 
     'ToolsError',
+    'ServiceCallError',
+
     'NodeInfoAction',
+    'CallAction',
 
     'AppListAction',
     'AppViewAction',
@@ -58,12 +62,20 @@ RUNLISTS_TAGS = ('runlist',)
 PROFILES_TAGS = ('profile',)
 
 
-class ToolsError(Exception):
+class ToolsError(CocaineError):
     pass
 
 
 class UploadError(ToolsError):
     pass
+
+
+class ServiceCallError(ToolsError):
+    def __init__(self, serviceName, reason):
+        self.message = 'Error in service "{0}" - {1}'.format(serviceName, reason)
+
+    def __str__(self):
+        return self.message
 
 
 class JsonEncoder(object):
@@ -510,3 +522,67 @@ class AppUploadFromRepositoryAction(StorageAction):
     def createPackage(self, repositoryPath, packagePath):
         with tarfile.open(packagePath, mode='w:gz') as tar:
             tar.add(repositoryPath, arcname='')
+
+
+class CallAction(NodeAction):
+    def __init__(self, node, **config):
+        super(CallAction, self).__init__(node, **config)
+        command = config.get('command')
+        if not command:
+            raise ValueError('Please specify service name for getting API or full command to invoke')
+        service, separator, methodWithArguments = command.partition('.')
+        self.serviceName = service
+        rx = re.compile(r'(.*?)\((.*)\)')
+        match = rx.match(methodWithArguments)
+        if match:
+            self.methodName, self.args = match.groups()
+        else:
+            self.methodName = methodWithArguments
+
+    def execute(self):
+        return ChainFactory([self.callService])
+
+    def callService(self):
+        service = self.getService()
+        response = {
+            'service': self.serviceName,
+        }
+        if not self.methodName:
+            api = service._service_api
+            response['request'] = 'api'
+            response['response'] = api
+        else:
+            method = self.getMethod(service)
+            args = self.parseArguments()
+            result = yield method(*args)
+            response['request'] = 'invoke'
+            response['response'] = result
+        yield response
+
+    def getService(self):
+        try:
+            service = Service(self.serviceName)
+            return service
+        except Exception as err:
+            raise ServiceCallError(self.serviceName, err)
+
+    def getMethod(self, service):
+        try:
+            method = service.__getattribute__(self.methodName)
+            return method
+        except AttributeError:
+            raise ServiceError(self.serviceName, 'method "{0}" is not found'.format(self.methodName), 1)
+
+    def parseArguments(self):
+        if not self.args:
+            return ()
+
+        try:
+            args = ast.literal_eval(self.args)
+            if not isinstance(args, tuple):
+                args = (args,)
+            return args
+        except (SyntaxError, ValueError) as err:
+            raise ServiceCallError(self.serviceName, err)
+        except Exception as err:
+            print(err, type(err))

@@ -1,4 +1,4 @@
-FRAMEWORK_ROOT_PATH=/home/evgeny/sandbox/cocaine-framework-python
+FRAMEWORK_ROOT_PATH=~/sandbox/cocaine-framework-python
 
 TOOL=${FRAMEWORK_ROOT_PATH}/scripts/cocaine-tool
 EXAMPLES_PATH=${FRAMEWORK_ROOT_PATH}/examples/echo

@@ -4,8 +4,21 @@ import msgpack
 from mockito import mock, when, verify, any, unstub
 from cocaine.tools.tools import *
 from cocaine.futures.chain import ChainFactory
+from cocaine.exceptions import ServiceError
+
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
+
+
+class CallableMock(object):
+    def __init__(self, mock):
+        self.mock = mock
+
+    def __call__(self, *args, **kwargs):
+        return self.mock.__call__(*args, **kwargs)
+
+    def __getattr__(self, methodName):
+        return self.mock.__getattr__(methodName)
 
 
 def verifyInit(patchedClassName, expected):
@@ -493,6 +506,145 @@ class CrashlogTestCase(unittest.TestCase):
         verify(storage).find('crashlogs', ('AppName',))
         verify(storage).remove('crashlogs', '10000:hash1')
         verify(storage).remove('crashlogs', '20000:hash2')
+
+
+class NodeTestCase(unittest.TestCase):
+    def tearDown(self):
+        unstub()
+
+    def test_CallValueErrors(self):
+        node = mock()
+        self.assertRaises(ValueError, CallAction, node, **{})
+        self.assertRaises(ValueError, CallAction, node, **{'command': ''})
+
+    def test_CallActionThrowsExceptionWhenServiceIsNotAvailable(self):
+        node = mock()
+        action = CallAction(node, **{'command': 'Service'})
+        self.assertRaises(ServiceCallError, action.execute().get)
+
+    def test_CallActionReturnsApiWhenMethodIsNotSpecified(self):
+        node = mock()
+        service = mock()
+        service._service_api = {
+            0: 'method_0',
+            1: 'method_1'
+        }
+        when(CallAction).getService().thenReturn(service)
+        action = CallAction(node, **{'command': 'Service'})
+        actual = action.execute().get()
+
+        expected = {
+            'service': 'Service',
+            'request': 'api',
+            'response': {
+                0: 'method_0',
+                1: 'method_1'
+            }
+        }
+        self.assertEqual(expected, actual)
+
+    def test_CallActionThrowsExceptionWhenMethodIsWrong(self):
+        node = mock()
+        service = mock()
+        service._service_api = {
+            0: 'method_0',
+            1: 'method_1'
+        }
+        when(CallAction).getService().thenReturn(service)
+        action = CallAction(node, **{'command': 'Service.method'})
+        self.assertRaises(ServiceError, action.execute().get)
+
+    def test_CallAction(self):
+        node = mock()
+        service = mock()
+        method = mock()
+        callableMethod = CallableMock(method)
+
+        service._service_api = {
+            0: 'method_0',
+            1: 'method_1'
+        }
+        when(CallAction).getService().thenReturn(service)
+        when(CallAction).getMethod(any(object)).thenReturn(callableMethod)
+
+        action = CallAction(node, **{
+            'command': "Service.method_0(1, 2, {'key': 'value'})"
+        })
+        when(method).__call__(1, 2, {'key': 'value'}).thenReturn('Ok')
+        action.execute().get()
+
+        verify(method).__call__(1, 2, {'key': 'value'})
+
+    def test_CallActionParser(self):
+        node = mock()
+
+        action = CallAction(node, **{'command': 'S.m()'})
+        self.assertEqual((), action.parseArguments())
+
+        action = CallAction(node, **{'command': 'S.m(1)'})
+        self.assertEqual((1,), action.parseArguments())
+
+        action = CallAction(node, **{'command': 'S.m(1, 2)'})
+        self.assertEqual((1, 2), action.parseArguments())
+
+        action = CallAction(node, **{'command': 'S.m("string")'})
+        self.assertEqual(('string',), action.parseArguments())
+
+        action = CallAction(node, **{'command': 'S.m((1, 2))'})
+        self.assertEqual((1, 2), action.parseArguments())
+
+        action = CallAction(node, **{'command': 'S.m([1, 2])'})
+        self.assertEqual(([1, 2],), action.parseArguments())
+
+        action = CallAction(node, **{'command': 'S.m({1: 2})'})
+        self.assertEqual(({1: 2},), action.parseArguments())
+
+        action = CallAction(node, **{'command': "S.m({'Echo': 'EchoProfile'})"})
+        self.assertEqual(({'Echo': 'EchoProfile'},), action.parseArguments())
+
+        action = CallAction(node, **{'command': 'S.m(True, False)'})
+        self.assertEqual((True, False), action.parseArguments())
+
+        action = CallAction(node, **{'command': "S.m(1, 2, {'key': 'value'})"})
+        self.assertEqual((1, 2, {'key': 'value'}), action.parseArguments())
+
+        action = CallAction(node, **{'command': "S.m(1, 2, (3, 4), [5, 6], {'key': 'value'})"})
+        self.assertEqual((1, 2, (3, 4), [5, 6], {'key': 'value'}), action.parseArguments())
+
+    def test_CallActionThrowsExceptionWhenWrongArgsSyntax(self):
+        node = mock()
+        service = mock()
+        method = mock()
+        callableMethod = CallableMock(method)
+
+        service._service_api = {
+            0: 'method_0',
+            1: 'method_1'
+        }
+        when(CallAction).getService().thenReturn(service)
+        when(CallAction).getMethod(any(object)).thenReturn(callableMethod)
+
+        action = CallAction(node, **{'command': 'S.M(WrongArgs)'})
+        self.assertRaises(ServiceCallError, action.execute().get)
+
+    def test_CallActionWhenArgumentsIsNotNecessary(self):
+        node = mock()
+        service = mock()
+        method = mock()
+        callableMethod = CallableMock(method)
+
+        service._service_api = {
+            0: 'method_0',
+            1: 'method_1'
+        }
+        when(CallAction).getService().thenReturn(service)
+        when(CallAction).getMethod(any(object)).thenReturn(callableMethod)
+
+        action = CallAction(node, **{'command': "S.M()"})
+        when(method).__call__().thenReturn('Ok')
+        action.execute().get()
+
+        verify(method).__call__()
 
 
 if __name__ == '__main__':

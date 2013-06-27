@@ -7,6 +7,10 @@ from cocaine.tools.cli import ToolsExecutor, NodeExecutor, coloredOutput, ToolsE
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
+__doc__ = '''Provides helpful tools for management, viewing, uploading and other actions with cocaine applications
+and services'''
+
+
 DESCRIPTION = ''
 DEFAULT_HOST = 'localhost'
 DEFAULT_PORT = 10053
@@ -46,7 +50,7 @@ def middleware(func):
     return inner
 
 
-d = Dispatcher()
+d = Dispatcher(globaloptions=Locator.options, middleware=middleware)
 appDispatcher = Dispatcher(globaloptions=Locator.options, middleware=middleware)
 profileDispatcher = Dispatcher(globaloptions=Locator.options, middleware=middleware)
 runlistDispatcher = Dispatcher(globaloptions=Locator.options, middleware=middleware)
@@ -54,17 +58,34 @@ crashlogDispatcher = Dispatcher(globaloptions=Locator.options, middleware=middle
 
 
 @d.command()
-def info(host=('h', DEFAULT_HOST, 'hostname'),
-         port=('p', DEFAULT_PORT, 'port')):
+def info(locator):
     """
     Shows information about cocaine runtime
     """
     node = NodeExecutor()
     node.executeAction('info', **{
-        'host': host,
-        'port': port
+        'host': locator.host,
+        'port': locator.port
     })
 
+@d.command()
+def call(locator,
+         service, method='', args=''):
+    """
+    Invokes specified method from service.
+
+    If no method provided, service API will be printed.
+    Examples:
+        `cocaine-tool call node` will print service `node` API
+        `cocaine-tool call node info` will invoke `info` method from `node` service and prints result
+    """
+    command = service + '.' + method + '(' + args + ')'
+    node = NodeExecutor()
+    node.executeAction('call', **{
+        'host': locator.host,
+        'port': locator.port,
+        'command': command,
+    })
 
 @appDispatcher.command(name='list')
 def app_list(locator):

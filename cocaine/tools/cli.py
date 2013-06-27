@@ -2,7 +2,7 @@ import errno
 import socket
 from cocaine.services import Service
 from time import time
-from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError
+from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError, ServiceError
 from cocaine.tools.tools import *
 import json
 import msgpack
@@ -141,6 +141,29 @@ def makePrettyCrashlogRemove(cls, onDoneMessage=None):
     return PrettyWrapper
 
 
+class CallActionCli(object):
+    def __init__(self, node=None, **config):
+        self.action = CallAction(node, **config)
+        self.config = config
+
+    def execute(self):
+        try:
+            result = self.action.execute().get(timeout=1.0)
+            requestType = result['request']
+            response = result['response']
+            if requestType == 'api':
+                print('API of service "{0}": {1}'.format(
+                    result['service'],
+                    json.dumps([method for method in response.values()], indent=4))
+                )
+            elif requestType == 'invoke':
+                print(response)
+        except Exception as err:
+            printError(err)
+        finally:
+            IOLoop.instance().stop()
+
+
 APP_LIST_SUCCESS = 'Currently uploaded apps:'
 APP_UPLOAD_SUCCESS = 'The app "{name}" has been successfully uploaded'
 APP_UPLOAD_FAIL = 'Unable to upload application {name} - {error}'
@@ -184,6 +207,7 @@ AVAILABLE_TOOLS_ACTIONS = {
 
 AVAILABLE_NODE_ACTIONS = {
     'info': AwaitJsonWrapper()(NodeInfoAction),
+    'call': CallActionCli,
     'app:start': AwaitJsonWrapper()(AppStartAction),
     'app:pause': AwaitJsonWrapper()(AppPauseAction),
     'app:stop': AwaitJsonWrapper()(AppPauseAction),
