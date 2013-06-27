@@ -1,3 +1,9 @@
+cocaine-framework-python (0.10.5-1) lucid; urgency=low
+
+  * Critiacal bug with not collecting services with GC fixed. 
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Thu, 27 Jun 2013 16:27:39 +0400
+
 cocaine-framework-python (0.10.5-0) unstable; urgency=low
 
   * Send error if user emitss event without handler

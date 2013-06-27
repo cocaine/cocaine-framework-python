@@ -89,10 +89,10 @@ class BaseService(object):
         
     def reconnect(self):
         self.loop.stop_listening(self.pipe.fileno())
-        try:
-            self.pipe.sock.close()
-        except Exception as err:
-            print(str(err))
+        #try:
+        #    self.pipe.sock.close()
+        #except Exception as err:
+        #    print(str(err))
         try:
             self._init_endpoint()
         except LocatorResolveError as err:
