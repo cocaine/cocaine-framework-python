@@ -24,6 +24,8 @@ from threading import Lock
 
 import msgpack
 
+from cocaine.utils import weakmethod
+
 START_CHUNK_SIZE = 10240 # Buffer size for ReadableStream
 
 
@@ -77,6 +79,7 @@ class ReadableStream(object):
         if self.is_attached:
             self.loop.unregister_read_event(self.pipe.fileno())
 
+    @weakmethod
     def _on_event(self):
         with self.mutex:
             # Bad solution. On python 2.7 and higher - use memoryview and bytearray
@@ -112,6 +115,7 @@ class WritableStream(object):
         self._buffer = list()
         self.tx_offset = 0
 
+    @weakmethod
     def _on_event(self):
         with self.mutex:
             # All data was sent - so unbind writable event
