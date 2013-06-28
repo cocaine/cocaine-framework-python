@@ -329,7 +329,7 @@ class CrashlogListAction(StorageAction):
 
 def parseCrashlogs(crashlogs, timestamp=None):
     flt = lambda x: (x == timestamp if timestamp else True)
-    _list = (log.split(':') for log in crashlogs)
+    _list = (log.split(':', 1) for log in crashlogs)
     return [(ts, time.ctime(float(ts) / 1000000), name) for ts, name in _list if flt(ts)]
 
 
