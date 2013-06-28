@@ -43,6 +43,7 @@ class Chain(object):
             if isinstance(result, Future):
                 future = result
             elif isinstance(result, types.GeneratorType):
+                print
                 future = GeneratorFutureMock(result)
             else:
                 future = FutureMock(result)
