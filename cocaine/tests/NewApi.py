@@ -1,4 +1,6 @@
 import time
+import sys
+from cocaine.services import Service
 from tornado.ioloop import IOLoop
 from tornado.testing import AsyncTestCase
 from cocaine.futures.chain import ChainFactory
@@ -7,6 +9,10 @@ from cocaine.futures import Future
 __author__ = 'esafronov'
 
 import unittest
+
+
+class ChokeEvent(Exception):
+    pass
 
 
 class FutureTestMock(Future):
@@ -34,7 +40,7 @@ class FutureTestMock(Future):
             return self.callback(chunk)
 
         def choke(self):
-            self.errorback(StopIteration('Choke'))
+            self.errorback(ChokeEvent('Choke'))
 
 
 class ServiceMock(object):
@@ -49,23 +55,18 @@ class ServiceMock(object):
         return self.T([lambda: FutureTestMock(self.ioLoop, self.chunks)], ioLoop=self.ioLoop)
 
 
-def multiThenStopAssert(obj, expected):
-    def wrapper(func):
-        class decorator(object):
-            def __init__(self):
-                self.expected = expected
-                self.pos = 0
-
-            def __call__(self, r):
-                try:
-                    func(self.expected[self.pos], r)
-                    self.pos += 1
-                    if self.pos == len(self.expected):
-                        obj.stop()
-                except StopIteration:
-                    obj.stop()
-        return decorator()
-    return wrapper
+def checker(conditions, self):
+    def check(result):
+        try:
+            condition = conditions.pop(0)
+            condition(result)
+        except AssertionError as err:
+            print('>>>>>>>>>>>>>>>>>>>>>>>>>> {0}'.format(repr(err)))
+            exit(1)
+        finally:
+            if not conditions:
+                self.stop()
+    return check
 
 # =====================================================================================================================
 
@@ -148,59 +149,67 @@ class Chain(object):
         return self
 
 
-class NewApiTestCase(AsyncTestCase):
+class AsynchronousApiTestCase(AsyncTestCase):
     def test_SingleChunk_SingleThen(self):
-        @multiThenStopAssert(self, [1])
-        def check(expected, r):
-            self.assertEqual(r.get(), expected)
+        check = checker([
+            lambda r: self.assertEqual(1, r.get()),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ], self)
         f = ServiceMock(chunks=[1], T=Chain, ioLoop=self.io_loop).execute()
         f.then(check)
         self.wait(timeout=0.5)
 
     def test_MultipleChunks_SingleThen(self):
-        @multiThenStopAssert(self, [1, 2, 3])
-        def check(expected, r):
-            self.assertEqual(r.get(), expected)
+        check = checker([
+            lambda r: self.assertEqual(1, r.get()),
+            lambda r: self.assertEqual(2, r.get()),
+            lambda r: self.assertEqual(3, r.get()),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ], self)
         f = ServiceMock(chunks=[1, 2, 3], T=Chain, ioLoop=self.io_loop).execute()
         f.then(check)
         self.wait(timeout=0.5)
 
     def test_SingleChunk_MultipleThen(self):
-        @multiThenStopAssert(self, [1])
-        def check(expected, r):
-            self.assertEqual(r.get(), expected)
+        check = checker([
+            lambda r: self.assertEqual(1, r.get()),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ], self)
         f = ServiceMock(chunks=[1], T=Chain, ioLoop=self.io_loop).execute()
         f.then(lambda r: r.get()).then(check)
         self.wait(timeout=0.5)
 
     def test_MultipleChunks_MultipleThen(self):
-        @multiThenStopAssert(self, [1, 2, 3])
-        def check(expected, r):
-            self.assertEqual(r.get(), expected)
+        check = checker([
+            lambda r: self.assertEqual(1, r.get()),
+            lambda r: self.assertEqual(2, r.get()),
+            lambda r: self.assertEqual(3, r.get()),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ], self)
         f = ServiceMock(chunks=[1, 2, 3], T=Chain, ioLoop=self.io_loop).execute()
         f.then(lambda r: r.get()).then(check)
         self.wait(timeout=0.5)
 
-    def test_SingleChunk_SingleThen_SyncResult(self):
-        @multiThenStopAssert(self, [1])
-        def check(expected, r):
-            self.assertEqual(r.get(), expected)
+    def test_SingleSyncChunk_SingleThen(self):
+        check = checker([
+            lambda r: self.assertEqual(1, r.get()),
+        ], self)
         f = Chain([lambda: 1], ioLoop=self.io_loop)
         f.then(lambda r: r.get()).then(check)
         self.wait(timeout=0.5)
 
-    def test_SingleChunk_MultipleThen_SyncResult(self):
-        @multiThenStopAssert(self, [2])
-        def check(expected, r):
-            self.assertEqual(r.get(), expected)
+    def test_SingleSyncChunk_MultipleThen(self):
+        check = checker([
+            lambda r: self.assertEqual(2, r.get()),
+        ], self)
         f = Chain([lambda: 1], ioLoop=self.io_loop)
         f.then(lambda r: r.get()).then(lambda r: r.get() + 1).then(check)
         self.wait(timeout=0.5)
 
-    def test_SingleErrorChunk_SingleThen_SyncResult(self):
-        def check(r):
-            self.assertRaises(Exception, r.get)
-            self.stop()
+    def test_SingleErrorChunk_SingleThen(self):
+        check = checker([
+            lambda r: self.assertRaises(Exception, r.get),
+        ], self)
 
         def raiseException():
             raise Exception('Actual')
@@ -209,5 +218,75 @@ class NewApiTestCase(AsyncTestCase):
         f.then(check)
         self.wait(timeout=0.5)
 
+    def test_SingleErrorChunk_MultipleThen(self):
+        check = checker([
+            lambda r: self.assertRaises(Exception, r.get),
+        ], self)
+
+        def raiseException():
+            raise Exception('Actual')
+
+        f = Chain([raiseException], ioLoop=self.io_loop)
+        f.then(lambda r: r.get()).then(check)
+        self.wait(timeout=0.5)
+
+    def test_SingleChunk_MultipleThen_Middleman(self):
+        check = checker([
+            lambda r: self.assertEqual(2, r.get()),
+        ], self)
+
+        def middleMan(result):
+            return result.get() + 1
+        f = ServiceMock(chunks=[1], T=Chain, ioLoop=self.io_loop).execute()
+        f.then(middleMan).then(check)
+        self.wait(timeout=0.5)
+
+    def test_SingleChunk_MultipleThen_ErrorMiddleman(self):
+        check = checker([
+            lambda r: self.assertRaises(Exception, r.get),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ], self)
+
+        def middleMan(result):
+            raise Exception('Middleman')
+        f = ServiceMock(chunks=[1], T=Chain, ioLoop=self.io_loop).execute()
+        f.then(middleMan).then(check)
+        self.wait(timeout=0.5)
+
+    def test_MultipleChunks_MultipleThen_ErrorMiddleman(self):
+        check = checker([
+            lambda r: self.assertEqual(1, r.get()),
+            lambda r: self.assertRaises(Exception, r.get),
+            lambda r: self.assertEqual(3, r.get()),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ], self)
+
+        def middleMan(result):
+            if result.get() == 2:
+                raise Exception('Middleman')
+            else:
+                return result.get()
+        f = ServiceMock(chunks=[1, 2, 3], T=Chain, ioLoop=self.io_loop).execute()
+        f.then(middleMan).then(check)
+        self.wait(timeout=0.5)
+
+
 if __name__ == '__main__':
     unittest.main()
+
+a="""
+    To test:
+        Async API:
+            - service -> future(1) => then
+            - service -> future(*) => then
+            - service -> var(1) => then
+            - service -> error(1) => then
+            - service -> future + error => then
+
+        Sync API:
+            - service -> future(1) => get
+            - service -> future(*) => get *
+            - service -> future(1,e) => get 1,e
+
+            - service -> future(1) => get, get(e)
+    """
