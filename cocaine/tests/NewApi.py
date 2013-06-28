@@ -102,15 +102,16 @@ class ChainItem(object):
 
     def execute(self, *args, **kwargs):
         try:
-            print(2)
+            print(2, args, kwargs)
             future = self.func(*args, **kwargs)
             if isinstance(future, Future):
                 pass
             else:
                 future = FutureMock(future, ioLoop=self.ioLoop)
-            print(3, future)
+            print(2.1, 'ok', future)
             future.bind(self.callback, self.errorback)
         except Exception as err:
+            print(2.2, 'error', err)
             self.errorback(err)
 
     def callback(self, chunk):
@@ -118,7 +119,7 @@ class ChainItem(object):
         futureResult = FutureResult(chunk)
         if self.nextChainItem:
             self.ioLoop.add_callback(self.nextChainItem.execute, futureResult)
-            #self.nextChainItem.execute(futureResult)
+            # self.nextChainItem.execute(futureResult)
 
     def errorback(self, error):
         print('error', error)
@@ -135,12 +136,13 @@ class Chain(object):
             self.then(func)
 
     def then(self, func):
+        print(1)
         chainItem = ChainItem(func, self.ioLoop)
         if len(self.chainItems) > 0:
             self.chainItems[-1].nextChainItem = chainItem
 
         if len(self.chainItems) == 0:
-            print(1)
+            print(1.1)
             self.ioLoop.add_callback(chainItem.execute)
         self.chainItems.append(chainItem)
         return self
@@ -185,6 +187,26 @@ class NewApiTestCase(AsyncTestCase):
             self.assertEqual(r.get(), expected)
         f = Chain([lambda: 1], ioLoop=self.io_loop)
         f.then(lambda r: r.get()).then(check)
+        self.wait(timeout=0.5)
+
+    def test_SingleChunk_MultipleThen_SyncResult(self):
+        @multiThenStopAssert(self, [2])
+        def check(expected, r):
+            self.assertEqual(r.get(), expected)
+        f = Chain([lambda: 1], ioLoop=self.io_loop)
+        f.then(lambda r: r.get()).then(lambda r: r.get() + 1).then(check)
+        self.wait(timeout=0.5)
+
+    def test_SingleErrorChunk_SingleThen_SyncResult(self):
+        def check(r):
+            self.assertRaises(Exception, r.get)
+            self.stop()
+
+        def raiseException():
+            raise Exception('Actual')
+
+        f = Chain([raiseException], ioLoop=self.io_loop)
+        f.then(check)
         self.wait(timeout=0.5)
 
 if __name__ == '__main__':
