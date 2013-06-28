@@ -88,7 +88,6 @@ class ChainFactory():
 
     def then(self, func):
         chain = Chain(func)
-        # if len(self.chains) > 0:
         if not self._ready:
             lastChain = self.chains[-1]
             lastChain.nextChain = chain

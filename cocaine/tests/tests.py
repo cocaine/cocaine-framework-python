@@ -1,6 +1,10 @@
 # coding=utf-8
 import unittest
 import msgpack
+import time
+from tornado.ioloop import IOLoop
+from tornado.testing import AsyncTestCase
+from cocaine.futures import Future
 from mockito import mock, when, verify, any, unstub
 from cocaine.tools.tools import *
 from cocaine.futures.chain import ChainFactory
@@ -645,6 +649,109 @@ class NodeTestCase(unittest.TestCase):
         action.execute().get()
 
         verify(method).__call__()
+
+
+class FutureTestMock(Future):
+        def __init__(self, ioLoop, chunks=None, interval=0.1):
+            super(FutureTestMock, self).__init__()
+            self.ioLoop = ioLoop
+            self.chunks = chunks
+            self.interval = interval
+            self.currentChunkId = 0
+
+        def bind(self, callback, errorback=None, on_done=None):
+            self.callback = callback
+            self.errorback = errorback
+            self.doneback = on_done
+            self.start()
+
+        def start(self):
+            for pos, value in enumerate(self.chunks):
+                self.ioLoop.add_timeout(time.time() + (pos + 1) * self.interval, self.invoke)
+
+        def invoke(self):
+            chunk = self.chunks[self.currentChunkId]
+            self.currentChunkId += 1
+            return self.callback(chunk)
+
+
+class ServiceMock(object):
+    def __init__(self, ioLoop, chunks=None, T=ChainFactory):
+        self.ioLoop = ioLoop
+        self.T = T
+        if not chunks:
+            chunks = [None]
+        self.chunks = chunks
+
+    def execute(self):
+        return self.T([lambda: FutureTestMock(self.ioLoop, self.chunks)])
+
+
+def multiThenAssert(obj, expected):
+    def wrapper(func):
+        class decorator(object):
+            def __init__(self):
+                self.expected = expected
+                self.pos = 0
+
+            def __call__(self, r):
+                func(self.expected[self.pos], r)
+                self.pos += 1
+                if self.pos == len(self.expected):
+                    obj.stop()
+        return decorator()
+    return wrapper
+
+
+class ApiTestCase(AsyncTestCase):
+    """
+    To test:
+        Async API:
+            - service -> future(1) => then
+            - service -> future(*) => then
+            - service -> var(1) => then
+            - service -> error(1) => then
+            - service -> future + error => then
+
+        Sync API:
+            - service -> future(1) => get
+            - service -> future(*) => get *
+            - service -> future(1,e) => get 1,e
+
+            - service -> future(1) => get, get(e)
+    """
+    def test_ThenOneAsyncChunk(self):
+        @multiThenAssert(self, [1])
+        def check(expected, r):
+            try:
+                self.assertEqual(r.get(), expected)
+            except Exception as err:
+                print(err)
+        s = ServiceMock(self.io_loop, chunks=[1]).execute()
+        s.then(check)
+        self.wait()
+
+    def test_ThenMultipleAsyncChunks(self):
+        @multiThenAssert(self, [1, 2, 3])
+        def check(expected, r):
+            try:
+                self.assertEqual(r.get(), expected)
+            except Exception as err:
+                print(err)
+        s = ServiceMock(self.io_loop, chunks=[1, 2, 3]).execute()
+        s.then(check)
+        self.wait()
+
+    # def test_ThenOneSyncChunk(self):
+    #     @multiThenAssert(self, [1])
+    #     def check(expected, r):
+    #         try:
+    #             self.assertEqual(r.get(), expected)
+    #         except Exception as err:
+    #             print(err)
+    #     s = ChainFactory([lambda: 1])
+    #     s.then(check)
+    #     self.wait(timeout=0.5)
 
 
 if __name__ == '__main__':
