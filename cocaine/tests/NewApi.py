@@ -45,15 +45,16 @@ class FutureTestMock(Future):
 
 
 class ServiceMock(object):
-    def __init__(self, chunks=None, T=ChainFactory, ioLoop=IOLoop.instance()):
+    def __init__(self, chunks=None, T=ChainFactory, ioLoop=IOLoop.instance(), interval=0.01):
         if not chunks:
             chunks = [None]
         self.chunks = chunks
         self.ioLoop = ioLoop
         self.T = T
+        self.interval = interval
 
     def execute(self):
-        return self.T([lambda: FutureTestMock(self.ioLoop, self.chunks)], ioLoop=self.ioLoop)
+        return self.T([lambda: FutureTestMock(self.ioLoop, self.chunks, self.interval)], ioLoop=self.ioLoop)
 
 
 def checker(conditions, self):
@@ -97,6 +98,19 @@ class FutureMock(Future):
             self.ioLoop.add_callback(errorback, err)
 
 
+class FutureCallableMock(Future):
+    def bind(self, callback, errorback=None, on_done=None):
+        self.callback = callback
+        self.errorback = errorback
+
+    def ready(self, result):
+        try:
+            self.callback(result)
+        except Exception as err:
+            if self.errorback:
+                self.errorback(err)
+
+
 class GeneratorFutureMock(Future):
     def __init__(self, coroutine, ioLoop=IOLoop.instance()):
         super(GeneratorFutureMock, self).__init__()
@@ -106,13 +120,25 @@ class GeneratorFutureMock(Future):
     def bind(self, callback, errorback=None, on_done=None):
         self.callback = callback
         self.errorback = errorback
-        self.do()
+        self.advance()
 
-    def do(self, value=None):
+    def advance(self, value=None):
         try:
-            r = self.coroutine.send(value)
-            self.ioLoop.add_callback(self.do, r)
-            print(value, '->', r)
+            result = self.coroutine.send(value)
+            print(value, '->', result)
+
+            ## wrap to future
+            if isinstance(result, Future):
+                future = result
+            elif isinstance(result, Chain):
+                chainFuture = FutureCallableMock()
+                result.then(lambda r: chainFuture.ready(r.get()))
+                future = chainFuture
+            else:
+                future = FutureMock(result, ioLoop=self.ioLoop)
+
+            if result is not None:
+                future.bind(self.advance)
         except StopIteration as err:
             print(StopIteration, err, value)
             self.callback(value)
@@ -318,6 +344,22 @@ class AsynchronousApiTestCase(AsyncTestCase):
     def test_SingleChunk_SingleThen_YieldMiddleman(self):
         expected = [
             lambda r: self.assertEqual(3, r.get()),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ]
+        check = checker(expected, self)
+
+        def middleMan(result):
+            result.get()
+            yield 'Any'
+            yield 3
+        f = ServiceMock(chunks=[1], T=Chain, ioLoop=self.io_loop).execute()
+        f.then(middleMan).then(check)
+        self.wait()
+        self.assertTrue(len(expected) == 0)
+
+    def test_MultipleChunk_SingleThen_YieldMiddleman(self):
+        expected = [
+            lambda r: self.assertEqual(3, r.get()),
             lambda r: self.assertEqual(3, r.get()),
             lambda r: self.assertEqual(3, r.get()),
             lambda r: self.assertRaises(ChokeEvent, r.get),
@@ -329,6 +371,25 @@ class AsynchronousApiTestCase(AsyncTestCase):
             yield 'Any'
             yield 3
         f = ServiceMock(chunks=[1, 2, 3], T=Chain, ioLoop=self.io_loop).execute()
+        f.then(middleMan).then(check)
+        self.wait()
+        self.assertTrue(len(expected) == 0)
+
+    def test_MultipleChunk_SingleThen_YieldAsyncMiddleman(self):
+        expected = [
+            lambda r: self.assertEqual([4, 5], r.get()),
+            lambda r: self.assertEqual([4, 5], r.get()),
+            lambda r: self.assertEqual([4, 5], r.get()),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ]
+        check = checker(expected, self)
+
+        def middleMan(result):
+            result.get()
+            s1 = yield ServiceMock(chunks=[4, 5], T=Chain, ioLoop=self.io_loop, interval=0.001).execute()
+            s2 = yield
+            yield [s1, s2]
+        f = ServiceMock(chunks=[1, 2, 3], T=Chain, ioLoop=self.io_loop, interval=0.01).execute()
         f.then(middleMan).then(check)
         self.wait()
         self.assertTrue(len(expected) == 0)
