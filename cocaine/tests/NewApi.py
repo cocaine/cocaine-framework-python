@@ -60,7 +60,7 @@ def checker(conditions, self):
     def check(result):
         try:
             condition = conditions.pop(0)
-            print('>>>>>>>>>>>>>>>>>>>>>>>>>> {0}'.format(result))
+            print('>>>>>>>>>>>>>>>>>>>>>>>>>> {0}'.format(result.result))
             condition(result)
         except AssertionError as err:
             print('>>>>>>>>>>>>>>>>>>>>>>>>>> {0}'.format(repr(err)))
@@ -106,49 +106,19 @@ class GeneratorFutureMock(Future):
     def bind(self, callback, errorback=None, on_done=None):
         self.callback = callback
         self.errorback = errorback
-        self.advance()
+        self.do()
 
-    def advance(self, value=None):
-        print(1, value)
+    def do(self, value=None):
         try:
-            result = self.nextStep(value)
-            print(2, result)
-            future = self.wrapResult(result)
-            print(3, future)
-            # If user typed something like this: r1 = yield 1; r2 = yield 2
-            if result is not None:
-                future.bind(self.advance, self.advance)
-        except StopIteration:
-            print(4, value)
+            r = self.coroutine.send(value)
+            self.ioLoop.add_callback(self.do, r)
+            print(value, '->', r)
+        except StopIteration as err:
+            print(StopIteration, err, value)
             self.callback(value)
         except Exception as err:
-            print(5, err)
-            if self.errorback:
-                self.errorback(err)
-
-    def nextStep(self, value):
-        if isinstance(value, Exception):
-            result = self.coroutine.throw(value)
-        else:
-            result = self.coroutine.send(value)
-            print('!', result)
-        return result
-
-    def wrapResult(self, result):
-        if isinstance(result, Future):
-            future = result
-        # elif isinstance(result, ChainFactory):
-        #     chainFuture = FutureCallableMock()
-        #     result.then(lambda r: chainFuture.ready(r.get()))
-        #     result.run()
-        #     future = chainFuture
-        # elif isinstance(result, ThreadWorker):
-        #     threadFuture = FutureCallableMock()
-        #     result.runBackground(lambda r: threadFuture.ready(r))
-        #     future = threadFuture
-        else:
-            future = FutureMock(result)
-        return future
+            print(Exception, err)
+            self.errorback(err)
 
 
 class ChainItem(object):
@@ -348,17 +318,17 @@ class AsynchronousApiTestCase(AsyncTestCase):
     def test_SingleChunk_SingleThen_YieldMiddleman(self):
         expected = [
             lambda r: self.assertEqual(3, r.get()),
+            lambda r: self.assertEqual(3, r.get()),
+            lambda r: self.assertEqual(3, r.get()),
             lambda r: self.assertRaises(ChokeEvent, r.get),
         ]
         check = checker(expected, self)
 
         def middleMan(result):
-            print('R', result, result.result)
             result.get()
-            r = yield 2
-            print('RR == 2?', r)
+            yield 'Any'
             yield 3
-        f = ServiceMock(chunks=[1], T=Chain, ioLoop=self.io_loop).execute()
+        f = ServiceMock(chunks=[1, 2, 3], T=Chain, ioLoop=self.io_loop).execute()
         f.then(middleMan).then(check)
         self.wait()
         self.assertTrue(len(expected) == 0)
