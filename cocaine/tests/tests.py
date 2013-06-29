@@ -441,6 +441,22 @@ class CrashlogTestCase(unittest.TestCase):
         verify(storage).find('crashlogs', ('AppName',))
         verify(storage).read('crashlogs', '10000:hash1')
 
+    def test_CrashlogViewActionWithColonNamedApps(self):
+        storage = mock()
+        action = CrashlogViewAction(storage, **{'name': 'AppName', 'manifest': '10000'})
+        when(storage).find(any(str), any(tuple)).thenReturn([
+            '10000::appName',
+            '10000:app:name',
+            '10000:appName:'
+        ])
+        when(storage).read(any(str), any(str)).thenReturn('content')
+        action.execute().get()
+
+        verify(storage).find('crashlogs', ('AppName',))
+        verify(storage).read('crashlogs', '10000::appName')
+        verify(storage).read('crashlogs', '10000:app:name')
+        verify(storage).read('crashlogs', '10000:appName:')
+
     def test_CrashlogViewActionWithoutTimestampSpecified(self):
         storage = mock()
         action = CrashlogViewAction(storage, **{'name': 'AppName', 'manifest': ''})
