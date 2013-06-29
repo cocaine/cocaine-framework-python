@@ -1,7 +1,5 @@
 import time
-import sys
 import types
-from cocaine.services import Service
 from tornado.ioloop import IOLoop
 from tornado.testing import AsyncTestCase
 from cocaine.futures.chain import ChainFactory
@@ -38,7 +36,11 @@ class FutureTestMock(Future):
         def invoke(self):
             chunk = self.chunks[self.currentChunkId]
             self.currentChunkId += 1
-            return self.callback(chunk)
+            print('+++', chunk)
+            if isinstance(chunk, Exception):
+                self.errorback(chunk)
+            else:
+                self.callback(chunk)
 
         def choke(self):
             self.errorback(ChokeEvent('Choke'))
@@ -61,10 +63,10 @@ def checker(conditions, self):
     def check(result):
         try:
             condition = conditions.pop(0)
-            print('>>>>>>>>>>>>>>>>>>>>>>>>>> {0}'.format(result.result))
+            print('>>>>>>>>>>>>>>>>>>>>>>>>>> R', result.result)
             condition(result)
         except AssertionError as err:
-            print('>>>>>>>>>>>>>>>>>>>>>>>>>> {0}'.format(repr(err)))
+            print('>>>>>>>>>>>>>>>>>>>>>>>>>> R Assert Error', result.result, err)
             exit(1)
         finally:
             if not conditions:
@@ -99,14 +101,31 @@ class FutureMock(Future):
 
 
 class FutureCallableMock(Future):
+    def __init__(self):
+        super(FutureCallableMock, self).__init__()
+        self.unbind()
+
     def bind(self, callback, errorback=None, on_done=None):
         self.callback = callback
         self.errorback = errorback
 
+    def unbind(self):
+        self.callback = None
+        self.errorback = None
+
+    def isBound(self):
+        return any([self.callback, self.errorback])
+
     def ready(self, result):
+        if not self.isBound():
+            return
+
         try:
+            print('---1', result, result.result)
+            result = result.get()
             self.callback(result)
         except Exception as err:
+            print('---2', err)
             if self.errorback:
                 self.errorback(err)
 
@@ -116,6 +135,8 @@ class GeneratorFutureMock(Future):
         super(GeneratorFutureMock, self).__init__()
         self.coroutine = coroutine
         self.ioLoop = ioLoop
+        self.__chunks = []
+        self.__future = None
 
     def bind(self, callback, errorback=None, on_done=None):
         self.callback = callback
@@ -124,7 +145,11 @@ class GeneratorFutureMock(Future):
 
     def advance(self, value=None):
         try:
-            result = self.coroutine.send(value)
+            self.__chunks.append(value)
+            if isinstance(value, Exception):
+                result = self.coroutine.throw(value)
+            else:
+                result = self.coroutine.send(value)
             print(value, '->', result)
 
             ## wrap to future
@@ -132,19 +157,26 @@ class GeneratorFutureMock(Future):
                 future = result
             elif isinstance(result, Chain):
                 chainFuture = FutureCallableMock()
-                result.then(lambda r: chainFuture.ready(r.get()))
+                result.then(lambda r: chainFuture.ready(r))
                 future = chainFuture
             else:
                 future = FutureMock(result, ioLoop=self.ioLoop)
 
             if result is not None:
-                future.bind(self.advance)
+                future.bind(self.advance, self.advance)
+                self.__future = future
         except StopIteration as err:
-            print(StopIteration, err, value)
+            print('StopIteration', StopIteration, err, value)
             self.callback(value)
-        except Exception as err:
-            print(Exception, err)
+        except ChokeEvent as err:
             self.errorback(err)
+        except Exception as err:
+            print('Exception', Exception, err)
+            if self.__future and self.__future.isBound():
+                self.__future.unbind()
+            self.errorback(err)
+        finally:
+            print('C & F', self.__chunks, self.__future)
 
 
 class ChainItem(object):
@@ -164,6 +196,7 @@ class ChainItem(object):
                 future = FutureMock(future, ioLoop=self.ioLoop)
             future.bind(self.callback, self.errorback)
         except (AssertionError, AttributeError, TypeError):
+            # Rethrow programming errors
             raise
         except Exception as err:
             self.errorback(err)
@@ -171,8 +204,8 @@ class ChainItem(object):
     def callback(self, chunk):
         futureResult = FutureResult(chunk)
         if self.nextChainItem:
-            self.ioLoop.add_callback(self.nextChainItem.execute, futureResult)
-            # self.nextChainItem.execute(futureResult)
+            # self.ioLoop.add_callback(self.nextChainItem.execute, futureResult)
+            self.nextChainItem.execute(futureResult)
 
     def errorback(self, error):
         self.callback(error)
@@ -199,13 +232,15 @@ class Chain(object):
 
 
 class AsynchronousApiTestCase(AsyncTestCase):
+    T = Chain
+
     def test_SingleChunk_SingleThen(self):
         expected = [
             lambda r: self.assertEqual(1, r.get()),
             lambda r: self.assertRaises(ChokeEvent, r.get),
         ]
         check = checker(expected, self)
-        f = ServiceMock(chunks=[1], T=Chain, ioLoop=self.io_loop).execute()
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
         f.then(check)
         self.wait(timeout=0.5)
         self.assertTrue(len(expected) == 0)
@@ -218,7 +253,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
             lambda r: self.assertRaises(ChokeEvent, r.get),
         ]
         check = checker(expected, self)
-        f = ServiceMock(chunks=[1, 2, 3], T=Chain, ioLoop=self.io_loop).execute()
+        f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
         f.then(check)
         self.wait(timeout=0.5)
         self.assertTrue(len(expected) == 0)
@@ -229,7 +264,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
             lambda r: self.assertRaises(ChokeEvent, r.get),
         ]
         check = checker(expected, self)
-        f = ServiceMock(chunks=[1], T=Chain, ioLoop=self.io_loop).execute()
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
         f.then(lambda r: r.get()).then(check)
         self.wait(timeout=0.5)
         self.assertTrue(len(expected) == 0)
@@ -242,7 +277,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
             lambda r: self.assertRaises(ChokeEvent, r.get),
         ]
         check = checker(expected, self)
-        f = ServiceMock(chunks=[1, 2, 3], T=Chain, ioLoop=self.io_loop).execute()
+        f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
         f.then(lambda r: r.get()).then(check)
         self.wait(timeout=0.5)
         self.assertTrue(len(expected) == 0)
@@ -303,7 +338,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
 
         def middleMan(result):
             return result.get() + 1
-        f = ServiceMock(chunks=[1], T=Chain, ioLoop=self.io_loop).execute()
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
         f.then(middleMan).then(check)
         self.wait(timeout=0.5)
         self.assertTrue(len(expected) == 0)
@@ -317,7 +352,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
 
         def middleMan(result):
             raise Exception('Middleman')
-        f = ServiceMock(chunks=[1], T=Chain, ioLoop=self.io_loop).execute()
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
         f.then(middleMan).then(check)
         self.wait(timeout=0.5)
         self.assertTrue(len(expected) == 0)
@@ -336,7 +371,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
                 raise Exception('Middleman')
             else:
                 return result.get()
-        f = ServiceMock(chunks=[1, 2, 3], T=Chain, ioLoop=self.io_loop).execute()
+        f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
         f.then(middleMan).then(check)
         self.wait(timeout=0.5)
         self.assertTrue(len(expected) == 0)
@@ -352,7 +387,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
             result.get()
             yield 'Any'
             yield 3
-        f = ServiceMock(chunks=[1], T=Chain, ioLoop=self.io_loop).execute()
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
         f.then(middleMan).then(check)
         self.wait()
         self.assertTrue(len(expected) == 0)
@@ -370,7 +405,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
             result.get()
             yield 'Any'
             yield 3
-        f = ServiceMock(chunks=[1, 2, 3], T=Chain, ioLoop=self.io_loop).execute()
+        f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
         f.then(middleMan).then(check)
         self.wait()
         self.assertTrue(len(expected) == 0)
@@ -386,10 +421,54 @@ class AsynchronousApiTestCase(AsyncTestCase):
 
         def middleMan(result):
             result.get()
-            s1 = yield ServiceMock(chunks=[4, 5], T=Chain, ioLoop=self.io_loop, interval=0.001).execute()
+            s1 = yield ServiceMock(chunks=[4, 5], T=self.T, ioLoop=self.io_loop, interval=0.001).execute()
             s2 = yield
             yield [s1, s2]
-        f = ServiceMock(chunks=[1, 2, 3], T=Chain, ioLoop=self.io_loop, interval=0.01).execute()
+        f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop, interval=0.01).execute()
+        f.then(middleMan).then(check)
+        self.wait()
+        self.assertTrue(len(expected) == 0)
+
+    def test_MultipleChunk_SingleThen_YieldErrorMiddleman(self):
+        expected = [
+            lambda r: self.assertEqual(1, r.get()),
+            lambda r: self.assertRaises(Exception, r.get),
+            lambda r: self.assertEqual(3, r.get()),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ]
+        check = checker(expected, self)
+
+        def middleMan(result):
+            r = result.get()
+            if r == 2:
+                raise Exception('=(')
+            yield r
+        f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
+        f.then(middleMan).then(check)
+        self.wait()
+        self.assertTrue(len(expected) == 0)
+
+    def test_MultipleChunk_SingleThen_YieldAsyncErrorMiddleman(self):
+        expected = [
+            lambda r: self.assertRaises(Exception, r.get),
+            lambda r: self.assertRaises(Exception, r.get),
+            lambda r: self.assertRaises(Exception, r.get),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ]
+        check = checker(expected, self)
+
+        def middleMan(result):
+            result.get()
+            s1 = yield ServiceMock(chunks=[4, Exception(), 6], T=self.T, ioLoop=self.io_loop, interval=0.001).execute()
+            print('s1', s1)
+            # Here exception comes
+            s2 = yield
+            print('s2', s2)
+            s3 = yield
+            print('s3', s3)
+            print('!!!', s1, s2, s3)
+            yield 1
+        f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
         f.then(middleMan).then(check)
         self.wait()
         self.assertTrue(len(expected) == 0)
