@@ -1,3 +1,4 @@
+import hashlib
 import time
 import types
 from tornado.ioloop import IOLoop
@@ -78,14 +79,34 @@ def checker(conditions, self):
 
 
 class FutureResult(object):
+    NONE_RESULT = hashlib.sha1('__None__')
+
     def __init__(self, result):
         self.result = result
 
+    def isNone(self):
+        return self.result == self.NONE_RESULT
+
     def get(self):
-        if isinstance(self.result, Exception):
-            raise self.result
+        return self._returnOrRaise(self.result)
+
+    def reset(self):
+        self.result = self.NONE_RESULT
+
+    def getAndReset(self):
+        result = self.result
+        self.reset()
+        return self._returnOrRaise(result)
+
+    def _returnOrRaise(self, result):
+        if isinstance(result, Exception):
+            raise result
         else:
-            return self.result
+            return result
+
+    @classmethod
+    def NONE(cls):
+        return FutureResult(cls.NONE_RESULT)
 
 
 class FutureMock(Future):
@@ -222,7 +243,7 @@ class Chain(object):
         for func in functions:
             self.then(func)
 
-        self._lastResult = FutureResult(TimeoutError())
+        self._lastResult = FutureResult.NONE()
 
     def then(self, func):
         chainItem = ChainItem(func, self.ioLoop)
@@ -234,27 +255,55 @@ class Chain(object):
         self.chainItems.append(chainItem)
         return self
 
+    def __nonzero__(self):
+        return self.hasPendingResult()
+
+    def hasPendingResult(self):
+        return not self._lastResult.isNone()
+
     def get(self, timeout=None):
         """
         Do not mix asynchronous and synchronous chain usage! This one will stop event loop
         """
+        self._checkTimeout(timeout)
+        if self.hasPendingResult():
+            return self._getLastResult()
+        self._trackLastResult()
+
+        if timeout:
+            self.ioLoop.add_timeout(time.time() + timeout, lambda: self._saveLastResult(FutureResult(TimeoutError())))
+        self.ioLoop.start()
+        return self._getLastResult()
+
+    def wait(self, timeout=None):
+        self._checkTimeout(timeout)
+        if self.hasPendingResult():
+            return
+        self._trackLastResult()
+        if timeout:
+            self.ioLoop.add_timeout(time.time() + timeout, lambda: self.ioLoop.stop())
+        self.ioLoop.start()
+
+    def _checkTimeout(self, timeout):
         if timeout is not None and timeout < 0.001:
             raise ValueError('Timeout can not be less then 1 ms')
 
-        if not self._isChainWaitingForResult():
-            self.then(self._stashLastResult)
+    def _trackLastResult(self):
+        if not self._isTrackingForLastResult():
+            self.then(self._saveLastResult)
 
-        if timeout:
-            self.ioLoop.add_timeout(time.time() + timeout, lambda: self._stashLastResult(FutureResult(TimeoutError())))
-        self.ioLoop.start()
-        return self._lastResult.get()
-
-    def _stashLastResult(self, result):
+    def _saveLastResult(self, result):
         self._lastResult = result
         self.ioLoop.stop()
 
-    def _isChainWaitingForResult(self):
-        return self.chainItems[-1].func == self._stashLastResult
+    def _isTrackingForLastResult(self):
+        return self.chainItems[-1].func == self._saveLastResult
+
+    def _getLastResult(self):
+        if isinstance(self._lastResult.result, ChokeEvent):
+            return self._lastResult.get()
+        else:
+            return self._lastResult.getAndReset()
 
 
 class AsynchronousApiTestCase(AsyncTestCase):
@@ -554,6 +603,61 @@ class SynchronousApiTestCase(AsyncTestCase):
         self.assertRaises(TypeError, f.get, 'str')
         self.assertRaises(TypeError, f.get, '0.1')
 
+    def test_GetExtraChunksResultsInChokeEvent(self):
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
+        r = f.get()
+        self.assertEqual(1, r)
+        self.assertRaises(ChokeEvent, f.get)
+        self.assertRaises(ChokeEvent, f.get)
+
+    def test_GetSingleChunkAfterWaiting(self):
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
+        f.wait()
+        r = f.get()
+        self.assertEqual(1, r)
+
+    def test_GetSingleChunkAfterMultipleWaiting(self):
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
+        f.wait()
+        f.wait()
+        f.wait()
+        r = f.get()
+        self.assertEqual(1, r)
+
+    def test_GetMultipleChunksAfterMultipleWaiting(self):
+        f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
+        f.wait()
+        f.wait()
+        r1 = f.get()
+        f.wait()
+        f.wait()
+        f.wait()
+        r2 = f.get()
+        r3 = f.get()
+        self.assertEqual(1, r1)
+        self.assertEqual(2, r2)
+        self.assertEqual(3, r3)
+
+    def test_HasPendingResult(self):
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
+        self.assertFalse(f.hasPendingResult())
+        f.wait()
+        self.assertTrue(f.hasPendingResult())
+
+    def test_MagicHasPendingResult(self):
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
+        self.assertFalse(bool(f))
+        f.wait()
+        self.assertTrue(bool(f))
+
+    def test_WaitWithTimeout(self):
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop, interval=0.1).execute()
+        f.wait(0.050)
+        self.assertTrue(f._lastResult.isNone())
+        f.wait(0.049)
+        self.assertTrue(f._lastResult.isNone())
+        f.wait(0.001)
+        self.assertFalse(f._lastResult.isNone())
 
 if __name__ == '__main__':
     unittest.main()
