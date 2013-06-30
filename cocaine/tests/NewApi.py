@@ -2,8 +2,9 @@ import time
 import types
 from tornado.ioloop import IOLoop
 from tornado.testing import AsyncTestCase
-from cocaine.futures.chain import ChainFactory
 from cocaine.futures import Future
+from cocaine.futures.chain import ChainFactory
+from cocaine.exceptions import TimeoutError
 
 __author__ = 'esafronov'
 
@@ -202,23 +203,26 @@ class ChainItem(object):
             self.errorback(err)
 
     def callback(self, chunk):
+        print('cb', chunk)
         futureResult = FutureResult(chunk)
         if self.nextChainItem:
-            # self.ioLoop.add_callback(self.nextChainItem.execute, futureResult)
-            self.nextChainItem.execute(futureResult)
+            self.ioLoop.add_callback(self.nextChainItem.execute, futureResult)
+            # self.nextChainItem.execute(futureResult)
 
     def errorback(self, error):
         self.callback(error)
 
 
 class Chain(object):
-    def __init__(self, functions=None, ioLoop=IOLoop.instance()):
+    def __init__(self, functions=None, ioLoop=None):
         if not functions:
             functions = []
-        self.ioLoop = ioLoop
+        self.ioLoop = ioLoop or IOLoop.instance()
         self.chainItems = []
         for func in functions:
             self.then(func)
+
+        self._lastResult = FutureResult(TimeoutError())
 
     def then(self, func):
         chainItem = ChainItem(func, self.ioLoop)
@@ -229,6 +233,28 @@ class Chain(object):
             self.ioLoop.add_callback(chainItem.execute)
         self.chainItems.append(chainItem)
         return self
+
+    def get(self, timeout=None):
+        """
+        Do not mix asynchronous and synchronous chain usage! This one will stop event loop
+        """
+        if timeout is not None and timeout < 0.001:
+            raise ValueError('Timeout can not be less then 1 ms')
+
+        if not self._isChainWaitingForResult():
+            self.then(self._stashLastResult)
+
+        if timeout:
+            self.ioLoop.add_timeout(time.time() + timeout, lambda: self._stashLastResult(FutureResult(TimeoutError())))
+        self.ioLoop.start()
+        return self._lastResult.get()
+
+    def _stashLastResult(self, result):
+        self._lastResult = result
+        self.ioLoop.stop()
+
+    def _isChainWaitingForResult(self):
+        return self.chainItems[-1].func == self._stashLastResult
 
 
 class AsynchronousApiTestCase(AsyncTestCase):
@@ -463,15 +489,70 @@ class AsynchronousApiTestCase(AsyncTestCase):
             print('s1', s1)
             # Here exception comes
             s2 = yield
-            print('s2', s2)
             s3 = yield
-            print('s3', s3)
-            print('!!!', s1, s2, s3)
+            print('This should not be seen!', s1, s2, s3)
             yield 1
         f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
         f.then(middleMan).then(check)
         self.wait()
         self.assertTrue(len(expected) == 0)
+
+
+class SynchronousApiTestCase(AsyncTestCase):
+    T = Chain
+
+    def test_GetSingleChunk(self):
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
+        r = f.get()
+        self.assertEqual(1, r)
+
+    def test_GetMultipleChunks(self):
+        f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
+        r1 = f.get()
+        r2 = f.get()
+        r3 = f.get()
+        self.assertEqual(1, r1)
+        self.assertEqual(2, r2)
+        self.assertEqual(3, r3)
+
+    def test_GetSingleErrorChunk(self):
+        f = ServiceMock(chunks=[Exception('Oops')], T=self.T, ioLoop=self.io_loop).execute()
+        self.assertRaises(Exception, f.get)
+
+    def test_GetMultipleErrorChunks(self):
+        f = ServiceMock(chunks=[ValueError('Oops1'), IOError('Oops2')], T=self.T, ioLoop=self.io_loop).execute()
+        self.assertRaises(ValueError, f.get)
+        self.assertRaises(IOError, f.get)
+
+    def test_GetMultipleMixChunks(self):
+        f = ServiceMock(chunks=[ValueError('Oops1'), 1, IOError('Oops2')], T=self.T, ioLoop=self.io_loop).execute()
+        self.assertRaises(ValueError, f.get)
+        self.assertEqual(1, f.get())
+        self.assertRaises(IOError, f.get)
+
+    def test_GetMultipleMixChunksWithComplexChain(self):
+        def middleMan(result):
+            r = result.get()
+            if r == 2:
+                raise Exception('=(')
+            yield r
+        f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
+        f.then(middleMan)
+        self.assertEqual(1, f.get())
+        self.assertRaises(Exception, f.get)
+        self.assertEqual(3, f.get())
+
+    def test_GetSingleChunkTimeout(self):
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop, interval=0.2).execute()
+        self.assertRaises(TimeoutError, f.get, 0.1)
+
+    def test_GetValueErrors(self):
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
+        self.assertRaises(ValueError, f.get, 0)
+        self.assertRaises(ValueError, f.get, -1.0)
+        self.assertRaises(ValueError, f.get, 0.0009)
+        self.assertRaises(TypeError, f.get, 'str')
+        self.assertRaises(TypeError, f.get, '0.1')
 
 
 if __name__ == '__main__':
