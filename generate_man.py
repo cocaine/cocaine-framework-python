@@ -3,7 +3,11 @@
 import opster
 import imp
 
-cocaine_tool = imp.load_module("cocaine_tool", open("scripts/cocaine-tool","rw"), "scripts/cocaine_tool", ("","r",imp.PY_SOURCE))
+cocaine_tool = imp.load_module("cocaine_tool",
+                               open("scripts/cocaine-tool", "rw"),
+                               "scripts/cocaine_tool",
+                               ("", "r", imp.PY_SOURCE))
+
 
 class Man(object):
 
@@ -45,14 +49,14 @@ class Man(object):
             else:
                 return r"\fB--%s\fR" % opt.name
         self._synopsis.append(' '.join([path, name]) + ' '
-                    + ' '.join(reversed(map(gen_synopsis_for_opt, opts)))
-                    + '\n')
+                              + ' '.join(reversed(map(gen_synopsis_for_opt, opts)))
+                              + '\n')
         self._body.append(r"\fI%s %s\fR %s" % (path, name, func.__doc__.strip('\n')))
         for opt in opts:
             l = r"\fb-%s\fR, " % opt.short if opt.short else ""
-            l +=  r"\fb--%s\fR " % opt.name if opt.name else ""
+            l += r"\fb--%s\fR " % opt.name if opt.name else ""
             l += opt.helpmsg
-            l +=  r" (default: %s)" % opt.default if opt.default else ""
+            l += r" (default: %s)" % opt.default if opt.default else ""
             self._body.append(l)
             self._body.append(".PP")
 
