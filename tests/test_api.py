@@ -2,21 +2,27 @@ import hashlib
 import time
 import types
 import unittest
+import logging
 from tornado.ioloop import IOLoop
 from tornado.testing import AsyncTestCase
 from cocaine.futures import Future
 from cocaine.futures.chain import ChainFactory
-from cocaine.exceptions import TimeoutError
+from cocaine.exceptions import TimeoutError, ChokeEvent
+
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-class Tests(object):
-    DEBUG = True
-
-
-class ChokeEvent(Exception):
-    pass
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+log.setLevel(logging.DEBUG)
+log.propagate = False
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+# formatter = logging.Formatter('[%(asctime)s] %(name)s: %(levelname)-8s: %(message)s')
+formatter = logging.Formatter('%(name)s: %(levelname)-8s: %(message)s')
+ch.setFormatter(formatter)
+log.addHandler(ch)
 
 
 class FutureTestMock(Future):
@@ -51,11 +57,11 @@ class FutureTestMock(Future):
 
 
 class ServiceMock(object):
-    def __init__(self, chunks=None, T=ChainFactory, ioLoop=IOLoop.instance(), interval=0.01):
+    def __init__(self, chunks=None, T=ChainFactory, ioLoop=None, interval=0.01):
         if not chunks:
             chunks = [None]
         self.chunks = chunks
-        self.ioLoop = ioLoop
+        self.ioLoop = ioLoop or IOLoop.instance()
         self.T = T
         self.interval = interval
 
@@ -67,12 +73,10 @@ def checker(conditions, self):
     def check(result):
         try:
             condition = conditions.pop(0)
-            if Tests.DEBUG:
-                print('>>>>>>>>>>>>>>>>>>>>>>>>>> R', result.result)
+            log.debug('>>>>>>>>>>>>>>>>>>>>>>>>>> Test check. Actual: {0}'.format(repr(result.result)))
             condition(result)
         except AssertionError as err:
-            if Tests.DEBUG:
-                print('>>>>>>>>>>>>>>>>>>>>>>>>>> R Assert Error', result.result, err)
+            log.debug('>>>>>>>>>>>>>>>>>>>>>>>>>> Test check failed. Actual - {0}. Error - {1}', result.result, err)
             exit(1)
         finally:
             if not conditions:
@@ -114,10 +118,10 @@ class FutureResult(object):
 
 
 class FutureMock(Future):
-    def __init__(self, result, ioLoop=IOLoop.instance()):
+    def __init__(self, result, ioLoop=None):
         super(FutureMock, self).__init__()
         self.result = result
-        self.ioLoop = ioLoop
+        self.ioLoop = ioLoop or IOLoop.instance()
         self._bound = False
 
     def bind(self, callback, errorback=None, on_done=None):
@@ -156,22 +160,22 @@ class FutureCallableMock(Future):
             return
 
         try:
-            print('---1', result, result.result)
+            log.debug('FutureCallableMock.ready() - {0}({1})'.format(result, repr(result.result)))
             result = result.get()
             self.callback(result)
         except Exception as err:
-            print('---2', err)
+            log.debug('FutureCallableMock.ready() Error - {0})'.format(repr(err)))
             if self.errorback:
                 self.errorback(err)
 
 
 class GeneratorFutureMock(Future):
-    def __init__(self, coroutine, ioLoop=IOLoop.instance()):
+    def __init__(self, coroutine, ioLoop=None):
         super(GeneratorFutureMock, self).__init__()
         self.coroutine = coroutine
-        self.ioLoop = ioLoop
+        self.ioLoop = ioLoop or IOLoop.instance()
+        self._currentFuture = None
         self.__chunks = []
-        self.__future = None
 
     def bind(self, callback, errorback=None, on_done=None):
         self.callback = callback
@@ -181,45 +185,52 @@ class GeneratorFutureMock(Future):
     def advance(self, value=None):
         try:
             self.__chunks.append(value)
-            if isinstance(value, Exception):
-                result = self.coroutine.throw(value)
-            else:
-                result = self.coroutine.send(value)
-            print(value, '->', result)
-
-            ## wrap to future
-            if isinstance(result, Future):
-                future = result
-            elif isinstance(result, Chain):
-                chainFuture = FutureCallableMock()
-                result.then(lambda r: chainFuture.ready(r))
-                future = chainFuture
-            else:
-                future = FutureMock(result, ioLoop=self.ioLoop)
-
+            result = self._next(value)
+            future = self._wrapFuture(result)
             if result is not None:
                 future.bind(self.advance, self.advance)
-                if self.__future and hasattr(self.__future, 'isBound') and self.__future.isBound():
-                    self.__future.unbind()
-                self.__future = future
-        except StopIteration as err:
-            print('StopIteration', StopIteration, err, value)
+                #Todo: May be it is deprecated?:
+                #if self._currentFuture and hasattr(self._currentFuture, 'isBound'):# and self._currentFuture.isBound():
+                if self._currentFuture:
+                    self._currentFuture.unbind()
+                self._currentFuture = future
+        except StopIteration:
+            log.debug('GeneratorFutureMock.advance() - StopIteration caught. Value - {0}'.format(repr(value)))
             self.callback(value)
         except ChokeEvent as err:
             self.errorback(err)
         except Exception as err:
-            print('Exception', Exception, err)
-            if self.__future and self.__future.isBound():
-                self.__future.unbind()
+            log.debug('GeneratorFutureMock.advance - Error: {0}'.format(repr(err)))
+            if self._currentFuture and self._currentFuture.isBound():
+                self._currentFuture.unbind()
             self.errorback(err)
         finally:
-            print('C & F', self.__chunks, self.__future)
+            log.debug('Just for fun! Chunks - {0}. Current future - {1}'.format(self.__chunks, self._currentFuture))
+
+    def _next(self, value):
+        if isinstance(value, Exception):
+            result = self.coroutine.throw(value)
+        else:
+            result = self.coroutine.send(value)
+        log.debug('GeneratorFutureMock._next - {0} -> {1}'.format(repr(value), repr(result)))
+        return result
+
+    def _wrapFuture(self, result):
+        if isinstance(result, Future):
+            future = result
+        elif isinstance(result, Chain):
+            chainFuture = FutureCallableMock()
+            result.then(lambda r: chainFuture.ready(r))
+            future = chainFuture
+        else:
+            future = FutureMock(result, ioLoop=self.ioLoop)
+        return future
 
 
 class ChainItem(object):
-    def __init__(self, func, ioLoop=IOLoop.instance()):
+    def __init__(self, func, ioLoop=None):
         self.func = func
-        self.ioLoop = ioLoop
+        self.ioLoop = ioLoop or IOLoop.instance()
         self.nextChainItem = None
 
     def execute(self, *args, **kwargs):
@@ -239,9 +250,11 @@ class ChainItem(object):
             self.errorback(err)
 
     def callback(self, chunk):
-        print('cb', chunk)
+        log.debug('ChainItem.callback - {0}'.format(repr(chunk)))
         futureResult = FutureResult(chunk)
         if self.nextChainItem:
+            # Actually it does not matter if we invoke next chain item synchronously or not. But for convenience, let's
+            # do it asynchronously.
             self.ioLoop.add_callback(self.nextChainItem.execute, futureResult)
             # self.nextChainItem.execute(futureResult)
 
@@ -329,6 +342,8 @@ class Chain(object):
         else:
             return self._lastResult.getAndReset()
 
+
+# Actually testing is coming here
 
 class AsynchronousApiTestCase(AsyncTestCase):
     T = Chain
@@ -636,7 +651,6 @@ class AsynchronousApiTestCase(AsyncTestCase):
         def middleMan(result):
             result.get()
             s1 = yield ServiceMock(chunks=[4, Exception(), 6], T=self.T, ioLoop=self.io_loop, interval=0.001).execute()
-            print('s1', s1)
             # Here exception comes
             s2 = yield
             s3 = yield

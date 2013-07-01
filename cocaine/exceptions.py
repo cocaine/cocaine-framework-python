@@ -81,3 +81,7 @@ class ConnectionRefusedError(ConnectionError):
     def __init__(self, host, port):
         message = 'Invalid cocaine-runtime endpoint: {host}:{port}'.format(host=host, port=port)
         super(ConnectionRefusedError, self).__init__(message)
+
+
+class ChokeEvent(Exception):
+    pass
