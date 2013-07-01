@@ -12,7 +12,7 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
 class Tests(object):
-    DEBUG = False
+    DEBUG = True
 
 
 class ChokeEvent(Exception):
@@ -118,12 +118,21 @@ class FutureMock(Future):
         super(FutureMock, self).__init__()
         self.result = result
         self.ioLoop = ioLoop
+        self._bound = False
 
     def bind(self, callback, errorback=None, on_done=None):
         try:
             self.ioLoop.add_callback(callback, self.result)
         except Exception as err:
             self.ioLoop.add_callback(errorback, err)
+        finally:
+            self._bound = True
+
+    def isBound(self):
+        return self._bound
+
+    def unbind(self):
+        return
 
 
 class FutureCallableMock(Future):
@@ -190,6 +199,8 @@ class GeneratorFutureMock(Future):
 
             if result is not None:
                 future.bind(self.advance, self.advance)
+                if self.__future and hasattr(self.__future, 'isBound') and self.__future.isBound():
+                    self.__future.unbind()
                 self.__future = future
         except StopIteration as err:
             print('StopIteration', StopIteration, err, value)
@@ -513,6 +524,44 @@ class AsynchronousApiTestCase(AsyncTestCase):
             s2 = yield
             yield [s1, s2]
         f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop, interval=0.01).execute()
+        f.then(middleMan).then(check)
+        self.wait()
+        self.assertTrue(len(expected) == 0)
+
+    def test_SingleChunk_SingleThen_YieldAsyncDoubleMiddlemanWithLessChunks(self):
+        expected = [
+            lambda r: self.assertEqual([4, 5, 6], r.get()),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ]
+        check = checker(expected, self)
+
+        def middleMan(result):
+            result.get()
+            s1 = yield ServiceMock(chunks=[4, 5], T=self.T, ioLoop=self.io_loop, interval=0.001).execute()
+            s2 = yield
+            s3 = yield ServiceMock(chunks=[6], T=self.T, ioLoop=self.io_loop, interval=0.001).execute()
+            yield [s1, s2, s3]
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop, interval=0.01).execute()
+        f.then(middleMan).then(check)
+        self.wait()
+        self.assertTrue(len(expected) == 0)
+
+    def test_SingleChunk_SingleThen_YieldAsyncDoubleMiddlemanWithMoreChunks(self):
+        expected = [
+            lambda r: self.assertEqual([4, 5, 6, 7, 8], r.get()),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ]
+        check = checker(expected, self)
+
+        def middleMan(result):
+            result.get()
+            s1 = yield ServiceMock(chunks=[4, 5], T=self.T, ioLoop=self.io_loop, interval=0.001).execute()
+            s2 = yield
+            s3 = yield ServiceMock(chunks=[6, 7, 8], T=self.T, ioLoop=self.io_loop, interval=0.001).execute()
+            s4 = yield
+            s5 = yield
+            yield [s1, s2, s3, s4, s5]
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop, interval=0.01).execute()
         f.then(middleMan).then(check)
         self.wait()
         self.assertTrue(len(expected) == 0)
