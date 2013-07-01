@@ -55,6 +55,7 @@ class Worker(object):
         self.heartbeat_timer.start()
 
         self.pipe = Pipe(self.endpoint)
+        self.pipe.connect()
         self.loop.bind_on_fd(self.pipe.fileno())
 
         self.decoder = Decoder()

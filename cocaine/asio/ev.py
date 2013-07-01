@@ -19,11 +19,15 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
+from threading import Lock
+
 from tornado import ioloop as ev
 
 
 class Loop(object):
     """ Event loop wrapper"""
+
+    _instance_lock = Lock() # Lock for instance method
 
     def __init__(self, ioloop=None):
         self._ioloop = ioloop or ev.IOLoop.instance()
@@ -34,6 +38,16 @@ class Loop(object):
         self.READ = self._ioloop.READ
         self.ERROR = self._ioloop.ERROR
         self.WRITE = self._ioloop.WRITE
+        self.add_handler = self._ioloop.add_handler
+        self.add_timeout = self._ioloop.add_timeout
+
+    @staticmethod
+    def instance():
+        if not hasattr(Loop, "_instance"):
+            with Loop._instance_lock:
+                if not hasattr(Loop, "_instance"):
+                    Loop._instance = Loop()
+        return Loop._instance
 
     def run(self):
         self._ioloop.start()

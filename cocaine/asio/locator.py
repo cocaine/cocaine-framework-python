@@ -22,12 +22,18 @@ import socket
 import time
 import heapq
 from threading import Lock
+from functools import partial
 
 import msgpack
 
 from cocaine.asio.message import Message
+from cocaine.asio.stream import WritableStream
+from cocaine.asio.stream import ReadableStream
+from cocaine.asio.pipe import Pipe
+from cocaine.asio.ev import Loop
 from cocaine.asio import message
 from cocaine.exceptions import LocatorResolveError
+from cocaine.exceptions import ServiceError
 
 #todo: Need asynchronous locator (without loooooong tcp blocking timeout), plz plz plz
 
@@ -65,22 +71,12 @@ class Cache(object):
 
 class Locator(object):
 
-    cache = Cache()
-
-    def __init__(self, cached=False, cache_lifetime=10):
-        self.cache.set_cache_lifetime(cache_lifetime)
-        self.cached = cached
+    def __init__(self):
+        self.r_streams = dict()
+        self.w_streams = dict()
 
     def resolve(self, name, endpoint, port):
-        if not self.cached:
-            return self._get_api(name, endpoint, port)
-        res = self.cache.get_item((name, endpoint, port))
-        if res is not None:
-            return res
-        else:
-            res = self._get_api(name, endpoint, port)
-            self.cache.cache_it((name, endpoint, port), res)
-            return res
+        return self._get_api(name, endpoint, port)
 
     def _get_api(self, name, endpoint, port):
         locator_pipe = None
@@ -104,3 +100,49 @@ class Locator(object):
             return msgpack.unpackb(msg.data)
         if msg.id == message.RPC_ERROR:
             raise Exception(msg.message)
+
+    def async_resolve(self, name, endpoint, port, callback, timeout, _ioloop=None):
+        sock = Pipe((endpoint, port))
+        ioloop = _ioloop or Loop.instance()
+
+        def closure(res):
+            def unpack_response(data):
+                msg = None
+                while msg is None:
+                    msg = Message.initialize(data.next())
+                self.r_streams.pop(sock.fileno(), None)
+                self.w_streams.pop(sock.fileno(), None)
+                ioloop.stop_listening(sock.fileno())
+                sock.close()
+                _res = AsyncLocatorResult()
+                if msg.id == message.RPC_CHUNK:
+                    _res.set_res(*msgpack.unpackb(msg.data))
+                elif msg.id == message.RPC_ERROR:
+                    _res.set_error(ServiceError(name, msg.message, msg.code))
+                callback(_res)
+
+            try:
+                res.get()
+            except Exception as err:
+                callback(res)
+            else:
+                ioloop.bind_on_fd(sock.fileno())
+                wr = WritableStream(ioloop, sock)
+                rd = ReadableStream(ioloop, sock)
+                self.r_streams[sock.fileno] = rd
+                self.w_streams[sock.fileno] = wr
+                rd.bind(unpack_response)
+                wr.write([0, 1, [name]])
+
+        sock.async_connect(closure, timeout, ioloop)
+
+class AsyncLocatorResult(object):
+
+    def set_error(self, exc):
+        def res():
+            raise exc
+        setattr(self, 'get', res)
+
+    def set_res(self, endpoint, version, api):
+        setattr(self, 'get', lambda: (endpoint, version, api))
+

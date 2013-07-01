@@ -85,6 +85,7 @@ class BaseService(object):
         self._service_api = service_api
         # msgpack convert in list or tuple depend on version - make it tuple
         self.pipe = Pipe(tuple(self.service_endpoint), self.reconnect if self._try_reconnect else None)
+        self.pipe.connect()
         self.loop.bind_on_fd(self.pipe.fileno())
         
     def reconnect(self):
