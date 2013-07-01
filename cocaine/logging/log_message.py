@@ -19,8 +19,6 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-import msgpack
-
 from itertools import izip
 
 PROTOCOL_LIST = (
@@ -28,10 +26,10 @@ PROTOCOL_LIST = (
 )
 
 PROTOCOL = {
-   "Message" : {
-        "id" : PROTOCOL_LIST.index("Message"),
-        "tuple_type" : ("level", "appname", "content")
-   }
+    "Message": {
+        "id": PROTOCOL_LIST.index("Message"),
+        "tuple_type": ("level", "appname", "content")
+    }
 }
 
 
