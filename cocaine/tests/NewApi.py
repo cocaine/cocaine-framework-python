@@ -1,15 +1,18 @@
 import hashlib
 import time
 import types
+import unittest
 from tornado.ioloop import IOLoop
 from tornado.testing import AsyncTestCase
 from cocaine.futures import Future
 from cocaine.futures.chain import ChainFactory
 from cocaine.exceptions import TimeoutError
 
-__author__ = 'esafronov'
+__author__ = 'Evgeny Safronov <division494@gmail.com>'
 
-import unittest
+
+class Tests(object):
+    DEBUG = False
 
 
 class ChokeEvent(Exception):
@@ -38,7 +41,6 @@ class FutureTestMock(Future):
         def invoke(self):
             chunk = self.chunks[self.currentChunkId]
             self.currentChunkId += 1
-            print('+++', chunk)
             if isinstance(chunk, Exception):
                 self.errorback(chunk)
             else:
@@ -65,10 +67,12 @@ def checker(conditions, self):
     def check(result):
         try:
             condition = conditions.pop(0)
-            print('>>>>>>>>>>>>>>>>>>>>>>>>>> R', result.result)
+            if Tests.DEBUG:
+                print('>>>>>>>>>>>>>>>>>>>>>>>>>> R', result.result)
             condition(result)
         except AssertionError as err:
-            print('>>>>>>>>>>>>>>>>>>>>>>>>>> R Assert Error', result.result, err)
+            if Tests.DEBUG:
+                print('>>>>>>>>>>>>>>>>>>>>>>>>>> R Assert Error', result.result, err)
             exit(1)
         finally:
             if not conditions:
@@ -283,6 +287,15 @@ class Chain(object):
         if timeout:
             self.ioLoop.add_timeout(time.time() + timeout, lambda: self.ioLoop.stop())
         self.ioLoop.start()
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        try:
+            return self.get()
+        except ChokeEvent:
+            raise StopIteration
 
     def _checkTimeout(self, timeout):
         if timeout is not None and timeout < 0.001:
@@ -504,6 +517,45 @@ class AsynchronousApiTestCase(AsyncTestCase):
         self.wait()
         self.assertTrue(len(expected) == 0)
 
+    def test_YieldAsyncMiddlemanExtraChunkResultsInChokeEvent(self):
+        expected = [
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ]
+        check = checker(expected, self)
+
+        def middleMan(result):
+            result.get()
+            s1 = yield ServiceMock(chunks=[4, 5], T=self.T, ioLoop=self.io_loop, interval=0.001).execute()
+            s2 = yield
+            # This one will lead to the ChokeEvent
+            s3 = yield
+            yield [s1, s2, s3]
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop, interval=0.01).execute()
+        f.then(middleMan).then(check)
+        self.wait()
+        self.assertTrue(len(expected) == 0)
+
+    def test_YieldAsyncMiddlemanExtraChunksResultsInChokeEventForever(self):
+        expected = [
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ]
+        check = checker(expected, self)
+
+        def middleMan(result):
+            result.get()
+            s1 = yield ServiceMock(chunks=[4, 5], T=self.T, ioLoop=self.io_loop, interval=0.001).execute()
+            s2 = yield
+            # This one will lead to the ChokeEvent
+            s3 = yield
+            s4 = yield
+            yield [s1, s2, s3, s4]
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop, interval=0.01).execute()
+        f.then(middleMan).then(check)
+        self.wait()
+        self.assertTrue(len(expected) == 0)
+
     def test_MultipleChunk_SingleThen_YieldErrorMiddleman(self):
         expected = [
             lambda r: self.assertEqual(1, r.get()),
@@ -658,6 +710,21 @@ class SynchronousApiTestCase(AsyncTestCase):
         self.assertTrue(f._lastResult.isNone())
         f.wait(0.001)
         self.assertFalse(f._lastResult.isNone())
+
+    def test_Generator(self):
+        f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
+        collect = []
+        for r in f:
+            collect.append(r)
+        self.assertEqual([1, 2, 3], collect)
+
+    def test_PartialGenerator(self):
+        f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
+        collect = [f.get()]
+        for r in f:
+            collect.append(r)
+        self.assertEqual([1, 2, 3], collect)
+
 
 if __name__ == '__main__':
     unittest.main()
