@@ -1,4 +1,5 @@
 import time
+import sys
 from tornado.ioloop import IOLoop
 from cocaine.exceptions import ChokeEvent
 from cocaine.futures import Future
@@ -50,7 +51,7 @@ class FutureTestMock(Future):
                 self.callback(chunk)
 
         def choke(self):
-            self.errorback(ChokeEvent('Choke'))
+            self.errorback(ChokeEvent())
 
 
 class ServiceMock(object):
@@ -70,11 +71,14 @@ def checker(conditions, self):
     def check(result):
         try:
             condition = conditions.pop(0)
-            log.debug('>>>>>>>>>>>>>>>>>>>>>>>>>> Test check. Actual: {0}'.format(repr(result.result)))
+            log.debug('>>> Check Condition. Actual: {0}'.format(repr(result.result)))
             condition(result)
         except AssertionError as err:
-            log.debug('>>>>>>>>>>>>>>>>>>>>>>>>>> Test check failed. Actual - {0}. Error - {1}', result.result, err)
-            exit(1)
+            log.debug('>>> Assert Error. Actual - {0}. Error - {1}', result.result, err)
+            sys.exit(1)
+        except Exception as err:
+            log.debug('>>>> Unknown Error. Actual - {0}. Error - {1}', result.result, err)
+            sys.exit(2)
         finally:
             if not conditions:
                 self.stop()
