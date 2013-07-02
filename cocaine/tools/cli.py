@@ -46,6 +46,8 @@ def AwaitDoneWrapper(onDoneMessage=None, onErrorMessage=None):
                 try:
                     status.get()
                     print((onDoneMessage or 'Action for "{name}" - done').format(name=self.name))
+                except ChokeEvent:
+                    print((onDoneMessage or 'Action for "{name}" - done').format(name=self.name))
                 except Exception as err:
                     printError((onErrorMessage or 'Error occurred on action for "{name}": {error}').format(
                         name=self.name, error=err)
@@ -105,6 +107,7 @@ class PrettyPrintableCrashlogListAction(CrashlogListAction):
             for item in parseCrashlogs(result.get()):
                 print ' '.join(item)
         except Exception as err:
+            print(repr(err))
             printError(('' or 'Unable to view "{name}" - {error}').format(name=self.name, error=err))
         finally:
             IOLoop.instance().stop()

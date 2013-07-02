@@ -375,6 +375,7 @@ class CrashlogRemoveAction(CrashlogAction):
         for crashlog in parsedCrashlogs:
             key = '%s:%s' % (crashlog[0], crashlog[2])
             yield self.storage.remove('crashlogs', key)
+        yield 'Done'
 
 
 class CrashlogRemoveAllAction(CrashlogRemoveAction):
