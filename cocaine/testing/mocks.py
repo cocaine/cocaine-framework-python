@@ -1,3 +1,4 @@
+import datetime
 import time
 import sys
 from tornado.ioloop import IOLoop
@@ -38,9 +39,16 @@ class FutureTestMock(Future):
             self.start()
 
         def start(self):
+            TIME_FORMAT = '%H:%M:%S.%f'
+            now = datetime.datetime.now()
             for pos, value in enumerate(self.chunks):
-                self.ioLoop.add_timeout(time.time() + (pos + 1) * self.interval, self.invoke)
-            self.ioLoop.add_timeout(time.time() + (len(self.chunks) + 1) * self.interval, self.choke)
+                delta = datetime.timedelta(seconds=(pos + 1) * self.interval)
+                self.ioLoop.add_timeout(delta, self.invoke)
+                log.debug('Chunk will come in {0}'.format((now + delta).strftime(TIME_FORMAT)))
+
+            delta = datetime.timedelta(seconds=len(self.chunks) * self.interval + 0.01)
+            self.ioLoop.add_timeout(delta, self.choke)
+            log.debug('Choke will come in {0}'.format((now + delta).strftime(TIME_FORMAT)))
 
         def invoke(self):
             chunk = self.chunks[self.currentChunkId]

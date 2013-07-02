@@ -133,6 +133,8 @@ class GeneratorFutureMock(Future):
             result = self._next(value)
             future = self._wrapFuture(result)
             if result is not None:
+                log.debug('GeneratorFutureMock.advance() - Result in None. Binding future {0} instead of {1}'.format(
+                    future, self._currentFuture))
                 future.bind(self.advance, self.advance)
                 #Todo: May be it is deprecated?:
                 #if self._currentFuture and hasattr(self._currentFuture, 'isBound'):# and self._currentFuture.isBound():
@@ -301,7 +303,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
         check = checker(expected, self)
         f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
         f.then(check)
-        self.wait(timeout=0.5)
+        self.wait()
         self.assertTrue(len(expected) == 0)
 
     def test_MultipleChunks_SingleThen(self):
@@ -314,7 +316,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
         check = checker(expected, self)
         f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
         f.then(check)
-        self.wait(timeout=0.5)
+        self.wait()
         self.assertTrue(len(expected) == 0)
 
     def test_SingleChunk_MultipleThen(self):
@@ -329,7 +331,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
             r = futureResult.get()
             return r * 2
         f.then(firstStep).then(check)
-        self.wait(timeout=0.5)
+        self.wait()
         self.assertTrue(len(expected) == 0)
 
     def test_MultipleChunks_MultipleThen(self):
@@ -347,7 +349,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
             r *= 2
             return r
         f.then(firstStep).then(check)
-        self.wait(timeout=0.5)
+        self.wait()
         self.assertTrue(len(expected) == 0)
 
     def test_SingleSyncChunk_SingleThen(self):
@@ -431,7 +433,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
             raise ValueError('Middleman')
         f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
         f.then(middleMan).then(check)
-        self.wait(timeout=0.5)
+        self.wait()
         self.assertTrue(len(expected) == 0)
 
     def test_SingleChunk_MultipleThen_ErrorMiddlemanWithValueUnpacking(self):
@@ -446,7 +448,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
             raise ValueError('Middleman')
         f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
         f.then(middleMan).then(check)
-        self.wait(timeout=0.5)
+        self.wait()
         self.assertTrue(len(expected) == 0)
 
     def test_MultipleChunks_MultipleThen_ErrorMiddleman(self):
@@ -465,7 +467,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
                 return result.get() * 2
         f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
         f.then(middleMan).then(check)
-        self.wait(timeout=0.5)
+        self.wait()
         self.assertTrue(len(expected) == 0)
 
     def test_SingleChunk_SingleThen_YieldMiddleman(self):
@@ -823,6 +825,27 @@ class SynchronousApiTestCase(AsyncTestCase):
         for r in f:
             collect.append(r)
         self.assertEqual([1, 2, 3], collect)
+
+
+class TTT(AsyncTestCase):
+    T = Chain
+
+    def test_Govno(self):
+        expected = [
+            lambda r: self.assertEqual([4, 6], r.get()),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ]
+        check = checker(expected, self)
+
+        def middleMan(result):
+            result.get()
+            s1 = yield ServiceMock(chunks=[4, 5], T=self.T, ioLoop=self.io_loop, interval=0.002).execute()
+            s3 = yield ServiceMock(chunks=[6], T=self.T, ioLoop=self.io_loop, interval=0.001).execute()
+            yield [s1, s3]
+        f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop, interval=0.01).execute()
+        f.then(middleMan).then(check)
+        self.wait()
+        self.assertTrue(len(expected) == 0)
 
 
 if __name__ == '__main__':
