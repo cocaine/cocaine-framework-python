@@ -19,6 +19,7 @@
 #
 
 import sys
+import time
 
 from msgpack import Unpacker, packb, unpackb
 
@@ -63,6 +64,7 @@ class BaseService(object):
         self._try_reconnect = kwargs.get("reconnect_once", True)
         self._counter = 1
         self.loop = ev.Loop()
+        self.pipe = None
 
         self._locator_host = endpoint
         self._locator_port = port
@@ -79,6 +81,8 @@ class BaseService(object):
 
         self.loop.register_read_event(self.r_stream._on_event, self.pipe.fileno())
 
+        self._reconnecting = False
+
     def _init_endpoint(self):
         locator = Locator()
         self.service_endpoint, _, service_api = locator.resolve(self.servicename, self._locator_host, self._locator_port)
@@ -90,10 +94,6 @@ class BaseService(object):
         
     def reconnect(self):
         self.loop.stop_listening(self.pipe.fileno())
-        #try:
-        #    self.pipe.sock.close()
-        #except Exception as err:
-        #    print(str(err))
         try:
             self._init_endpoint()
         except LocatorResolveError as err:
@@ -101,6 +101,50 @@ class BaseService(object):
         else:
             self.w_stream.reconnect(self.pipe)
             self.r_stream.reconnect(self.pipe)
+
+    def async_reconnect(self, callback, timeout):
+        if self._reconnecting:
+            result = AsyncReconnectionResult()
+            result.set_error(Exception("Already"))
+            callback(result)
+            return
+
+        limit = time.time() + timeout
+        self.loop.stop_listening(self.pipe.fileno())
+        self._reconnecting = True
+
+        def on_locator_resolve(res):
+            def on_connect(res):
+                result = AsyncReconnectionResult()
+                self._reconnecting = False
+                try:
+                    self.loop.bind_on_fd(self.pipe.fileno())
+                    self.w_stream.reconnect(self.pipe)
+                    self.r_stream.reconnect(self.pipe)
+                    result.set_res(res.get())
+                except Exception as err:
+                    result.set_error(err)
+                finally:
+                    callback(result)
+
+            try:
+                self.service_endpoint, _, service_api = res.get()
+            except Exception as err:
+                result = AsyncReconnectionResult()
+                self._reconnecting = False
+                result.set_error(err)
+                callback(result)
+            else:
+                self.pipe = Pipe(tuple(self.service_endpoint), None)
+                self.pipe.async_connect(on_connect, limit - time.time())
+
+
+
+        locator = Locator()
+        locator.async_resolve(self.servicename,
+                                 self._locator_host, 
+                                 self._locator_port, on_locator_resolve, timeout)
+
 
     def perform_sync(self, method, *args, **kwargs):
         """ Do not use the service synchronously after treatment to him asynchronously!
@@ -149,4 +193,17 @@ class BaseService(object):
 
     @property
     def connected(self):
-        return self.pipe.connected
+        if self.pipe is not None:
+            return self.pipe.connected
+        else:
+            return False
+
+class AsyncReconnectionResult(object):
+
+    def set_error(self, err):
+        def res():
+            raise err
+        setattr(self, "get", res)
+
+    def set_res(self, res):
+        setattr(self, "get", lambda: res)

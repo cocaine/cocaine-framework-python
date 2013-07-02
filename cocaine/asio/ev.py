@@ -100,6 +100,7 @@ class Loop(object):
         self._ioloop.remove_handler(fd)
         self._callbacks.pop((fd, self.READ), None)
         self._callbacks.pop((fd, self.WRITE), None)
+        self._fd_events.pop(fd, None)
         return True
 
     def proxy(self, fd, event):
@@ -111,6 +112,10 @@ class Loop(object):
     @property
     def ioloop(self):
         return self._ioloop
+
+    @property
+    def fds(self):
+        return self._fd_events.keys()
 
 
 class Timer(ev.PeriodicCallback):

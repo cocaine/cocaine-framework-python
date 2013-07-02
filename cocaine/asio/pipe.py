@@ -43,7 +43,7 @@ class Pipe(object):
         else:
             raise Exception("Invalid connection path type")
         self._connected = False
-        self._connection_failed = False
+        self._connection_failed = False # Implement states for this
         self.path = path
         assert(on_disconnect_clb is None or callable(on_disconnect_clb))
         self._on_disconnect = on_disconnect_clb or (lambda : None)
@@ -204,6 +204,7 @@ class UNIX(object):
         sock.setblocking(0)
         fcntl.fcntl(sock.fileno(), fcntl.F_SETFD, fcntl.FD_CLOEXEC)
 
+# TODO: merge all async results
 
 class ConnectionResult(object):
 
