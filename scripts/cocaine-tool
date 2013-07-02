@@ -2,7 +2,7 @@
 """Description of cocaine-tool"""
 from opster import Dispatcher
 import sys
-from cocaine.tools.cli import ToolsExecutor, NodeExecutor, coloredOutput, ToolsError, printError
+from cocaine.tools.cli import StorageExecutor, NodeExecutor, coloredOutput, ToolsError, printError
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
@@ -21,15 +21,19 @@ class Locator(object):
         ('h', 'host', DEFAULT_HOST, 'hostname'),
         ('p', 'port', DEFAULT_PORT, 'port'),
         ('', 'color', False, 'enable colored output'),
-        ('', 'timeout', 1.0, 'timeout, s')
+        ('', 'timeout', 1.0, 'timeout, s'),
+        ('', 'debug', False, 'enable debug mode')
     ]
 
-    def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, color=False, timeout=False):
-        self.host = host
-        self.port = port
-        self.color = color
-        self.timeout = timeout
-        self.tools = ToolsExecutor()
+    def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, color=False, timeout=False, debug=False):
+        config = {
+            'host': host,
+            'port': port,
+            'timeout': timeout,
+            'debug': debug
+        }
+        self.nodeExecutor = NodeExecutor(**config)
+        self.storageExecutor = StorageExecutor(**config)
         if not color:
             coloredOutput.disable()
 
@@ -42,7 +46,7 @@ def middleware(func):
         return dest
 
     def inner(*args, **kwargs):
-        opts = extract_dict(kwargs, 'host', 'port', 'color', 'timeout')
+        opts = extract_dict(kwargs, 'host', 'port', 'color', 'timeout', 'debug')
         if func.__name__ == 'help_inner':
             return func(*args, **kwargs)
         locator = Locator(**opts)
@@ -62,11 +66,7 @@ def info(locator):
     """
     Shows information about cocaine runtime
     """
-    node = NodeExecutor()
-    node.executeAction('info', **{
-        'host': locator.host,
-        'port': locator.port
-    })
+    locator.nodeExecutor.executeAction('info', **{})
 
 @d.command()
 def call(locator,
@@ -80,10 +80,7 @@ def call(locator,
         `cocaine-tool call node info` will invoke `info` method from `node` service and prints result
     """
     command = service + '.' + method + '(' + args + ')'
-    node = NodeExecutor()
-    node.executeAction('call', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.nodeExecutor.executeAction('call', **{
         'command': command,
     })
 
@@ -92,10 +89,7 @@ def app_list(locator):
     """
     Shows installed applications list
     """
-    locator.tools.executeAction('app:list', **{
-        'host': locator.host,
-        'port': locator.port
-    })
+    locator.storageExecutor.executeAction('app:list', **{})
 
 
 @appDispatcher.command(usage='--name=NAME', name='view')
@@ -104,11 +98,8 @@ def app_view(locator,
     """
     Shows manifest context for application
     """
-    locator.tools.executeAction('app:view', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.storageExecutor.executeAction('app:view', **{
         'name': name,
-        'timeout': locator.timeout
     })
 
 
@@ -120,9 +111,7 @@ def app_upload(locator,
     """
     Uploads application into storage
     """
-    locator.tools.executeAction('app:upload', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.storageExecutor.executeAction('app:upload', **{
         'name': name,
         'manifest': manifest,
         'package': package
@@ -135,9 +124,7 @@ def app_remove(locator,
     """
     Removes application from storage
     """
-    locator.tools.executeAction('app:remove', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.storageExecutor.executeAction('app:remove', **{
         'name': name
     })
 
@@ -149,10 +136,7 @@ def app_start(locator,
     """
     Starts application
     """
-    node = NodeExecutor()
-    node.executeAction('app:start', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.nodeExecutor.executeAction('app:start', **{
         'name': name,
         'profile': profile
     })
@@ -166,24 +150,18 @@ def app_pause(locator,
 
     This command is alias for `cocaine-tool app stop`
     """
-    node = NodeExecutor()
-    node.executeAction('app:pause', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.nodeExecutor.executeAction('app:pause', **{
         'name': name
     })
 
 
 @appDispatcher.command(name='stop')
 def app_stop(locator,
-              name=('n', '', 'application name')):
+             name=('n', '', 'application name')):
     """
     Stops application
     """
-    node = NodeExecutor()
-    node.executeAction('app:stop', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.nodeExecutor.executeAction('app:stop', **{
         'name': name
     })
 
@@ -198,10 +176,7 @@ def app_restart(locator,
     Equivalent of `cocaine-tool app pause --name [NAME]; cocaine-tool app start --name [NAME] --profile [PROFILE]`.
     If profile is not specified, application will be restarted with the current profile.
     """
-    node = NodeExecutor()
-    node.executeAction('app:restart', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.nodeExecutor.executeAction('app:restart', **{
         'name': name,
         'profile': profile
     })
@@ -215,10 +190,7 @@ def check(locator,
     """
     Checks application status
     """
-    node = NodeExecutor()
-    node.executeAction('app:check', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.nodeExecutor.executeAction('app:check', **{
         'name': name
     })
 
@@ -228,10 +200,7 @@ def profile_list(locator):
     """
     Shows installed profiles list
     """
-    locator.tools.executeAction('profile:list', **{
-        'host': locator.host,
-        'port': locator.port
-    })
+    locator.storageExecutor.executeAction('profile:list', **{})
 
 
 @profileDispatcher.command(name='view')
@@ -240,9 +209,7 @@ def profile_view(locator,
     """
     Shows configuration context
     """
-    locator.tools.executeAction('profile:view', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.storageExecutor.executeAction('profile:view', **{
         'name': name
     })
 
@@ -254,9 +221,7 @@ def profile_upload(locator,
     """
     Uploads profile into storage
     """
-    locator.tools.executeAction('profile:upload', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.storageExecutor.executeAction('profile:upload', **{
         'name': name,
         'manifest': profile
     })
@@ -268,9 +233,7 @@ def profile_upload(locator,
     """
     Removes profile from storage
     """
-    locator.tools.executeAction('profile:remove', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.storageExecutor.executeAction('profile:remove', **{
         'name': name
     })
 
@@ -280,10 +243,7 @@ def runlist_list(locator):
     """
     Shows uploaded runlists
     """
-    locator.tools.executeAction('runlist:list', **{
-        'host': locator.host,
-        'port': locator.port
-    })
+    locator.storageExecutor.executeAction('runlist:list', **{})
 
 
 @runlistDispatcher.command(name='view')
@@ -292,9 +252,7 @@ def runlist_view(locator,
     """
     Shows configuration context for runlist
     """
-    locator.tools.executeAction('runlist:view', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.storageExecutor.executeAction('runlist:view', **{
         'name': name
     })
 
@@ -306,9 +264,7 @@ def runlist_upload(locator,
     """
     Uploads runlist with context into storage
     """
-    locator.tools.executeAction('runlist:upload', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.storageExecutor.executeAction('runlist:upload', **{
         'name': name,
         'manifest': runlist
     })
@@ -320,9 +276,7 @@ def runlist_remove(locator,
     """
     Removes runlist from storage
     """
-    locator.tools.executeAction('runlist:remove', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.storageExecutor.executeAction('runlist:remove', **{
         'name': name
     })
 
@@ -335,9 +289,7 @@ def runlist_add_app(locator,
     """
     Adds specified application with profile to runlist
     """
-    locator.tools.executeAction('runlist:add-app', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.storageExecutor.executeAction('runlist:add-app', **{
         'name': name,
         'app': app,
         'profile': profile
@@ -350,9 +302,7 @@ def crashlog_list(locator,
     """
     Shows crashlogs list for application
     """
-    locator.tools.executeAction('crashlog:list', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.storageExecutor.executeAction('crashlog:list', **{
         'name': name
     })
 
@@ -364,9 +314,7 @@ def crashlog_view(locator,
     """
     Shows crashlog for application with specified timestamp
     """
-    locator.tools.executeAction('crashlog:view', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.storageExecutor.executeAction('crashlog:view', **{
         'name': name,
         'manifest': timestamp
     })
@@ -379,9 +327,7 @@ def crashlog_remove(locator,
     """
     Removes crashlog for application with specified timestamp
     """
-    locator.tools.executeAction('crashlog:remove', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.storageExecutor.executeAction('crashlog:remove', **{
         'name': name,
         'manifest': timestamp
     })
@@ -393,9 +339,7 @@ def crashlog_removeall(locator,
     """
     Removes all crashlogs for application
     """
-    locator.tools.executeAction('crashlog:removeall', **{
-        'host': locator.host,
-        'port': locator.port,
+    locator.storageExecutor.executeAction('crashlog:removeall', **{
         'name': name,
         'manifest': None
     })

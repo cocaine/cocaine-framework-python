@@ -222,35 +222,33 @@ AVAILABLE_NODE_ACTIONS = {
 }
 
 
-DEBUG = True
-
-if DEBUG:
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(name)s: %(levelname)-8s: %(message)s')
-    ch.setFormatter(formatter)
-
-    logNames = [
-        __name__,
-        'cocaine.futures.chain',
-        'cocaine.testing.mocks',
-    ]
-
-    for logName in logNames:
-        log = logging.getLogger(logName)
-        log.setLevel(logging.DEBUG)
-        log.propagate = False
-        log.addHandler(ch)
-
-
 class Executor(object):
     """
     This class represents abstract action executor for specified service 'serviceName' and actions pool
     """
-    def __init__(self, serviceName, availableActions):
+    def __init__(self, serviceName, availableActions, **config):
         self.serviceName = serviceName
         self.availableActions = availableActions
+        self.config = config
         self.loop = IOLoop.instance()
+
+        if config.get('debug'):
+            ch = logging.StreamHandler()
+            ch.setLevel(logging.DEBUG)
+            formatter = logging.Formatter('%(name)s: %(levelname)-8s: %(message)s')
+            ch.setFormatter(formatter)
+
+            logNames = [
+                __name__,
+                'cocaine.futures.chain',
+                'cocaine.testing.mocks',
+            ]
+
+            for logName in logNames:
+                log = logging.getLogger(logName)
+                log.setLevel(logging.DEBUG)
+                log.propagate = False
+                log.addHandler(ch)
 
     def executeAction(self, actionName, **options):
         """
@@ -261,12 +259,12 @@ class Executor(object):
         :param options: various action configuration
         """
         try:
-            service = self.createService(options.get('host'), options.get('port'))
+            service = self.createService(self.config.get('host'), self.config.get('port'))
 
             Action = self.availableActions[actionName]
-            action = Action(service, **options)
+            action = Action(service, **dict(self.config.items() + options.items()))
             action.execute()
-            self.loop.add_timeout(time() + options.get('timeout', 1.0), self.timeoutErrorback)
+            self.loop.add_timeout(time() + self.config.get('timeout'), self.timeoutErrorback)
             IOLoop.instance().start()
         except CocaineError as err:
             raise ToolsError(err)
@@ -292,11 +290,11 @@ class Executor(object):
         self.loop.stop()
 
 
-class ToolsExecutor(Executor):
-    def __init__(self):
-        super(ToolsExecutor, self).__init__('storage', AVAILABLE_TOOLS_ACTIONS)
+class StorageExecutor(Executor):
+    def __init__(self, **config):
+        super(StorageExecutor, self).__init__('storage', AVAILABLE_TOOLS_ACTIONS, **config)
 
 
 class NodeExecutor(Executor):
-    def __init__(self):
-        super(NodeExecutor, self).__init__('node', AVAILABLE_NODE_ACTIONS)
+    def __init__(self, **config):
+        super(NodeExecutor, self).__init__('node', AVAILABLE_NODE_ACTIONS, **config)

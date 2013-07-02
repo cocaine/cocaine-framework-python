@@ -42,7 +42,7 @@ class Future(object):
 
     def close(self):
         self._state = None
-        print('Future.close', self, self._clbk, self._errbk)
+        # print('Future.close', self, self._clbk, self._errbk)
         if self._clbk is None and self._errbk is None:
             self.cache.append(ChokeEvent())
             return
@@ -56,7 +56,8 @@ class Future(object):
         #     self._done = True
 
     def bind(self, callback, errorback=None, on_done=None):
-        print('Future.bind(start)', self, callback, errorback, self.cache)
+        #TODO: Remove commented strings
+        # print('Future.bind(start)', self, callback, errorback, self.cache)
         if len(self.cache) > 0: # There are some chunks in cache - return immediatly
             self._clbk = callback
             self._errbk = errorback
@@ -74,7 +75,7 @@ class Future(object):
             self._on_done = on_done or self.default_on_done
         elif self._done: # No chunks, but choke has been received
             on_done()
-        print('Future.bind(end)', self, self._clbk, self._errbk)
+        # print('Future.bind(end)', self, self._clbk, self._errbk)
 
 
 class Sleep(object):
