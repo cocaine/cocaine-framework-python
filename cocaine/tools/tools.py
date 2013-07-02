@@ -10,7 +10,7 @@ import time
 import msgpack
 
 from cocaine.futures import chain
-from cocaine.futures.chain import ChainFactory
+from cocaine.futures.chain import Chain
 from cocaine.services import Service
 from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError, ServiceError
 from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
@@ -180,13 +180,14 @@ class AppUploadAction(StorageAction):
         """
         Encodes manifest and package files and (if successful) uploads them into storage
         """
-        return ChainFactory().then(self.do)
+        return Chain().then(self.do)
 
     def do(self):
         manifest = self.jsonEncoder.encode(self.manifest)
         package = self.packageEncoder.encode(self.package)
         yield self.storage.write('manifests', self.name, manifest, APPS_TAGS)
         yield self.storage.write('apps', self.name, package, APPS_TAGS)
+        yield 'Done'
 
 
 class AppRemoveAction(StorageAction):
@@ -200,11 +201,12 @@ class AppRemoveAction(StorageAction):
             raise ValueError('Empty application name')
 
     def execute(self):
-        return ChainFactory([self.do])
+        return Chain([self.do])
 
     def do(self):
         yield self.storage.remove('manifests', self.name)
         yield self.storage.remove('apps', self.name)
+        yield 'Done'
 
 
 class ProfileListAction(ListAction):
@@ -294,7 +296,7 @@ class RunlistAddApplicationAction(SpecificRunlistAction):
             raise ValueError('Please specify profile')
 
     def execute(self):
-        return ChainFactory([self.do])
+        return Chain([self.do])
 
     def do(self):
         runlistInfo = yield RunlistViewAction(self.storage, **{'name': self.name}).execute()
@@ -347,7 +349,7 @@ class CrashlogViewAction(CrashlogAction):
         super(CrashlogViewAction, self).__init__(storage, **config)
 
     def execute(self):
-        return ChainFactory([self.do])
+        return Chain([self.do])
 
     def do(self):
         crashlogs = yield self.storage.find('crashlogs', (self.name,))
@@ -365,7 +367,7 @@ class CrashlogRemoveAction(CrashlogAction):
         super(CrashlogRemoveAction, self).__init__(storage, **config)
 
     def execute(self):
-        return ChainFactory([self.do])
+        return Chain([self.do])
 
     def do(self):
         crashlogs = yield self.storage.find('crashlogs', (self.name,))
@@ -433,7 +435,7 @@ class AppRestartAction(NodeAction):
             raise ValueError('Please specify application name')
 
     def execute(self):
-        return ChainFactory([self.doAction])
+        return Chain([self.doAction])
 
     def doAction(self):
         try:
@@ -489,7 +491,7 @@ class AppUploadFromRepositoryAction(StorageAction):
             self.name = match.group('name')
 
     def execute(self):
-        return ChainFactory([self.doWork])
+        return Chain([self.doWork])
 
     def doWork(self):
         repositoryPath = tempfile.mkdtemp()
@@ -540,7 +542,7 @@ class CallAction(NodeAction):
             self.methodName = methodWithArguments
 
     def execute(self):
-        return ChainFactory([self.callService])
+        return Chain([self.callService])
 
     def callService(self):
         service = self.getService()

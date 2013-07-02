@@ -2,12 +2,13 @@ import errno
 import socket
 from cocaine.services import Service
 from time import time
-from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError, ServiceError
+from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError, ChokeEvent
 from cocaine.tools.tools import *
 import json
 import msgpack
 import sys
 from tornado.ioloop import IOLoop
+import logging
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
@@ -39,7 +40,7 @@ def AwaitDoneWrapper(onDoneMessage=None, onErrorMessage=None):
         class Wrapper(cls):
             def execute(self):
                 chain = super(Wrapper, self).execute()
-                chain.then(self.processResult).run()
+                chain.then(self.processResult)
 
             def processResult(self, status):
                 try:
@@ -68,6 +69,8 @@ def AwaitJsonWrapper(onErrorMessage=None, unpack=False):
                     if unpack:
                         result = msgpack.loads(result)
                     print(json.dumps(result, indent=4))
+                except ChokeEvent:
+                    pass
                 except Exception as err:
                     printError((onErrorMessage or 'Error occurred: {0}').format(err))
                 finally:
@@ -214,6 +217,27 @@ AVAILABLE_NODE_ACTIONS = {
     'app:restart': AwaitJsonWrapper()(AppRestartAction),
     'app:check': AwaitJsonWrapper()(AppCheckAction)
 }
+
+
+DEBUG = True
+
+if DEBUG:
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(name)s: %(levelname)-8s: %(message)s')
+    ch.setFormatter(formatter)
+
+    logNames = [
+        __name__,
+        'cocaine.futures.chain',
+        'cocaine.testing.mocks',
+    ]
+
+    for logName in logNames:
+        log = logging.getLogger(logName)
+        log.setLevel(logging.DEBUG)
+        log.propagate = False
+        log.addHandler(ch)
 
 
 class Executor(object):
