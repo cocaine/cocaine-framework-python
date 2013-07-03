@@ -513,15 +513,15 @@ class AppUploadFromRepositoryAction(StorageAction):
         except (RepositoryDownloadError, ModuleInstallError) as err:
             print(err)
 
-    @chain.threaded
+    @chain.concurrent
     def cloneRepository(self, repositoryPath):
         self.repositoryDownloader.download(self.url, repositoryPath)
 
-    @chain.threaded
+    @chain.concurrent
     def installRepository(self):
         self.moduleInstaller.install()
 
-    @chain.threaded
+    @chain.concurrent
     def createPackage(self, repositoryPath, packagePath):
         with tarfile.open(packagePath, mode='w:gz') as tar:
             tar.add(repositoryPath, arcname='')

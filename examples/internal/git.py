@@ -11,14 +11,24 @@ storage = Service('storage')
 
 
 if __name__ == '__main__':
-    log = logging.getLogger('cocaine.tools.installer')
-    log.setLevel(logging.DEBUG)
-    log.propagate = False
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('[%(asctime)s] %(name)s:%(levelname)-8s: %(message)s')
+    formatter = logging.Formatter('%(name)s: %(levelname)-8s: %(message)s')
     ch.setFormatter(formatter)
-    log.addHandler(ch)
+
+    logNames = [
+        __name__,
+        'cocaine.tools.installer',
+        # 'cocaine.futures.chain',
+        # 'cocaine.testing.mocks',
+    ]
+
+    for logName in logNames:
+        log = logging.getLogger(logName)
+        log.setLevel(logging.DEBUG)
+        log.propagate = False
+        log.addHandler(ch)
+
 
     a1 = AppUploadFromRepositoryAction(storage, **{'url': 'file:///Users/esafronov/mock_repo/repo_echo'})
     a2 = AppUploadFromRepositoryAction(storage, **{'url': 'file:///Users/esafronov/mock_repo/repo_echo'})
@@ -26,10 +36,10 @@ if __name__ == '__main__':
     a4 = AppUploadFromRepositoryAction(storage, **{'url': 'file:///Users/esafronov/mock_repo/repo_echo'})
     a5 = AppUploadFromRepositoryAction(storage, **{'url': 'file:///Users/esafronov/mock_repo/repo_echo'})
     # Run all of them simultaneously
-    r = a1.execute().run()
-    r = a2.execute().run()
-    r = a3.execute().run()
-    r = a4.execute().run()
-    r = a5.execute().run()
+    r = a1.execute()
+    r = a2.execute()
+    r = a3.execute()
+    r = a4.execute()
+    r = a5.execute()
     IOLoop.instance().start()
     # print('R', r)

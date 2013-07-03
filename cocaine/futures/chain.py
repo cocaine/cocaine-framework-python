@@ -1,4 +1,5 @@
 import hashlib
+from threading import Thread
 import time
 import types
 from tornado.ioloop import IOLoop
@@ -95,14 +96,37 @@ class FutureCallableMock(Future):
                 self.errorback(err)
 
 
+class ConcurrentWorker(object):
+    def __init__(self, func, *args, **kwargs):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        self.thread = Thread(target=self._run)
+        self.thread.setDaemon(True)
+        self.callback = None
+
+    def _run(self):
+        try:
+            result = self.func(*self.args, **self.kwargs)
+            self.callback(result)
+        except Exception as err:
+            self.callback(err)
+
+    def runBackground(self, callback):
+        def onDone(result):
+            IOLoop.instance().add_callback(lambda: callback(FutureResult(result)))
+        self.callback = onDone
+        self.thread.start()
+
+
 class GeneratorFutureMock(Future):
     def __init__(self, coroutine, ioLoop=None):
         super(GeneratorFutureMock, self).__init__()
         self.coroutine = coroutine
         self.ioLoop = ioLoop or IOLoop.instance()
         self._currentFuture = None
-        self.__chunks = []
-        self.results = []
+        self._chunks = []
+        self._results = []
 
     def bind(self, callback, errorback=None, on_done=None):
         self.callback = callback
@@ -111,7 +135,7 @@ class GeneratorFutureMock(Future):
 
     def advance(self, value=None):
         try:
-            self.__chunks.append(value)
+            self._chunks.append(value)
             result = self._next(value)
             future = self._wrapFuture(result)
 
@@ -134,11 +158,11 @@ class GeneratorFutureMock(Future):
                 self._currentFuture.unbind()
             self.errorback(err)
         finally:
-            log.debug('Just for fun! Chunks - {0}. Current future - {1}'.format(self.__chunks, self._currentFuture))
+            log.debug('Just for fun! Chunks - {0}. Current future - {1}'.format(self._chunks, self._currentFuture))
 
     def _next(self, value):
         if isinstance(value, ChokeEvent):
-            if self.results and self.results[-1] is None:
+            if self._results and self._results[-1] is None:
                 result = self.coroutine.throw(ChokeEvent())
             else:
                 result = self.coroutine.send(None)
@@ -146,7 +170,7 @@ class GeneratorFutureMock(Future):
             result = self.coroutine.throw(value)
         else:
             result = self.coroutine.send(value)
-        self.results.append(result)
+        self._results.append(result)
         log.debug('GeneratorFutureMock._next() - {0} -> {1}'.format(repr(value), repr(result)))
         return result
 
@@ -157,6 +181,10 @@ class GeneratorFutureMock(Future):
             chainFuture = FutureCallableMock()
             result.then(lambda r: chainFuture.ready(r))
             future = chainFuture
+        elif isinstance(result, ConcurrentWorker):
+            concurrentFuture = FutureCallableMock()
+            result.runBackground(lambda r: concurrentFuture.ready(r))
+            future = concurrentFuture
         else:
             future = FutureMock(result, ioLoop=self.ioLoop)
         log.debug('GeneratorFutureMock._wrap() - {0} -> {1}'.format(result, future))
@@ -284,9 +312,8 @@ class Chain(object):
             return self._lastResult.getAndReset()
 
 
-def threaded(func):
+def concurrent(func):
     def wrapper(*args, **kwargs):
-        # mock = ThreadWorker(func, *args, **kwargs)
-        # return mock
-        raise NotImplementedError
+        mock = ConcurrentWorker(func, *args, **kwargs)
+        return mock
     return wrapper
