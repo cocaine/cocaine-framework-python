@@ -1,4 +1,16 @@
-cocaine-framework-python (0.10.5-1) lucid; urgency=low
+cocaine-framework-python (0.10.5-3) unstable; urgency=low
+
+  * A lot of asynchronous staff added.
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 03 Jul 2013 15:48:47 +0400
+
+cocaine-framework-python (0.10.5-2) unstable; urgency=low
+
+  * Add asynchronous reconnect for services.
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 02 Jul 2013 17:31:52 +0400
+
+cocaine-framework-python (0.10.5-1) unstable; urgency=low
 
   * Critiacal bug with not collecting services with GC fixed. 
 
@@ -6,7 +18,7 @@ cocaine-framework-python (0.10.5-1) lucid; urgency=low
 
 cocaine-framework-python (0.10.5-0) unstable; urgency=low
 
-  * Send error if user emitss event without handler
+  * Send error if user emits event without handler
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 25 Jun 2013 16:28:52 +0400
 
