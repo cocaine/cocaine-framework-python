@@ -1,4 +1,6 @@
 import hashlib
+from multiprocessing import Process
+from multiprocessing.pool import Pool
 from threading import Thread
 import time
 import types
@@ -101,8 +103,9 @@ class ConcurrentWorker(object):
         self.func = func
         self.args = args
         self.kwargs = kwargs
-        self.thread = Thread(target=self._run)
-        self.thread.setDaemon(True)
+
+        self.worker = Thread(target=self._run)
+        self.worker.setDaemon(True)
         self.callback = None
 
     def _run(self):
@@ -116,7 +119,7 @@ class ConcurrentWorker(object):
         def onDone(result):
             IOLoop.instance().add_callback(lambda: callback(FutureResult(result)))
         self.callback = onDone
-        self.thread.start()
+        self.worker.start()
 
 
 class GeneratorFutureMock(Future):

@@ -19,8 +19,8 @@ if __name__ == '__main__':
     logNames = [
         __name__,
         'cocaine.tools.installer',
-        # 'cocaine.futures.chain',
-        # 'cocaine.testing.mocks',
+        'cocaine.futures.chain',
+        'cocaine.testing.mocks',
     ]
 
     for logName in logNames:
