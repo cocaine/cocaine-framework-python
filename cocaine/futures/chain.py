@@ -32,6 +32,11 @@ class FutureResult(object):
     def isNone(self):
         """
         Checks if there is some result stored in this object.
+
+        >>> FutureResult(1).isNone()
+        False
+        >>> FutureResult.NONE().isNone()
+        True
         """
         return self.result == self.NONE_RESULT
 
@@ -41,12 +46,24 @@ class FutureResult(object):
 
         If an exception is stored in this object, than it will be raised, so surround dangerous code with try/except
         blocks.
+
+        >>> FutureResult(1).get()
+        1
+        >>> FutureResult(ValueError('ErrorMessage')).get()
+        Traceback (most recent call last):
+        ...
+        ValueError: ErrorMessage
         """
         return self._returnOrRaise(self.result)
 
     def reset(self):
         """
         Clears stored result and set it to the uninitialized state.
+
+        >>> r = FutureResult(1)
+        >>> r.reset()
+        >>> r.isNone()
+        True
         """
         self.result = self.NONE_RESULT
 
@@ -56,6 +73,12 @@ class FutureResult(object):
 
         If an exception is stored in this object, than it will be raised, so surround dangerous code with try/except
         blocks. Anyway, it is guaranteed that stored result object will be reset.
+
+        >>> r = FutureResult(1)
+        >>> r.getAndReset()
+        1
+        >>> r.isNone()
+        True
         """
         result = self.result
         self.reset()
@@ -65,6 +88,9 @@ class FutureResult(object):
     def NONE(cls):
         """
         Constructs uninitialized future result object.
+
+        >>> FutureResult.NONE().isNone()
+        True
         """
         return FutureResult(cls.NONE_RESULT)
 
@@ -345,6 +371,12 @@ class Chain(object):
 
 
 def concurrent(func):
+    """
+    Wraps function or method, so it can be invoked concurrently by yielding in chain context.
+
+    Program control will be returned to the yield statement once processing is done. Current implementation invokes
+    function in separate thread.
+    """
     def wrapper(*args, **kwargs):
         mock = ConcurrentWorker(func, *args, **kwargs)
         return mock
