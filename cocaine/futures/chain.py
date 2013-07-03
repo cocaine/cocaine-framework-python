@@ -138,7 +138,6 @@ class GeneratorFutureMock(Future):
 
     def _next(self, value):
         if isinstance(value, ChokeEvent):
-            print(self.__chunks)
             result = self.coroutine.send(None)
         elif isinstance(value, Exception):
             result = self.coroutine.throw(value)
