@@ -452,37 +452,56 @@ class AsynchronousApiTestCase(AsyncTestCase):
         self.wait()
         self.assertTrue(len(expected) == 0)
 
-    # def test_Chain_YieldEmptyServicesInside(self):
-    #     expected = [
-    #         lambda r: self.assertEqual('Ok', r.get()),
-    #     ]
-    #     check = checker(expected, self)
-    #
-    #     def firstStep():
-    #         yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=0.002).execute()
-    #         yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=0.002).execute()
-    #         yield 'Ok'
-    #
-    #     f = Chain([firstStep], ioLoop=self.io_loop)
-    #     f.then(check)
-    #     self.wait()
-    #     self.assertTrue(len(expected) == 0)
-    #
-    # def test_Chain_YieldChainAndEmptyServiceInside(self):
-    #     expected = [
-    #         lambda r: self.assertEqual(1, r.get()),
-    #     ]
-    #     check = checker(expected, self)
-    #
-    #     def firstStep():
-    #         r1 = yield Chain([lambda: 1], ioLoop=self.io_loop)
-    #         yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=0.002).execute()
-    #         yield r1
-    #
-    #     f = Chain([firstStep], ioLoop=self.io_loop)
-    #     f.then(check)
-    #     self.wait()
-    #     self.assertTrue(len(expected) == 0)
+    def test_Chain_YieldEmptyServicesInside(self):
+        expected = [
+            lambda r: self.assertEqual('Ok', r.get()),
+        ]
+        check = checker(expected, self)
+
+        def firstStep():
+            yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=0.002).execute()
+            yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=0.002).execute()
+            yield 'Ok'
+
+        f = Chain([firstStep], ioLoop=self.io_loop)
+        f.then(check)
+        self.wait()
+        self.assertTrue(len(expected) == 0)
+
+    def test_Chain_YieldChainAndEmptyServiceInside(self):
+        expected = [
+            lambda r: self.assertEqual(1, r.get()),
+        ]
+        check = checker(expected, self)
+
+        def firstStep():
+            r1 = yield Chain([lambda: 1], ioLoop=self.io_loop)
+            yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=0.002).execute()
+            yield r1
+
+        f = Chain([firstStep], ioLoop=self.io_loop)
+        f.then(check)
+        self.wait()
+        self.assertTrue(len(expected) == 0)
+
+    def test_YieldChainAndEmptyServiceInside_MultipleSteps(self):
+        expected = [
+            lambda r: self.assertEqual('Really Ok', r.get()),
+        ]
+        check = checker(expected, self)
+
+        def firstStep():
+            yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=1).execute()
+            yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=0.002).execute()
+            yield 'Ok'
+
+        def secondStep(result):
+            yield 'Really ' + result.get()
+
+        f = Chain([firstStep], ioLoop=self.io_loop).then(secondStep)
+        f.then(check)
+        self.wait()
+        self.assertTrue(len(expected) == 0)
 
 
 class SynchronousApiTestCase(AsyncTestCase):
@@ -610,29 +629,6 @@ class SynchronousApiTestCase(AsyncTestCase):
         for r in f:
             collect.append(r)
         self.assertEqual([1, 2, 3], collect)
-
-
-class TTT(AsyncTestCase):
-    T = Chain
-
-    # def test_YieldChainAndEmptyServiceInside_MultipleSteps(self):
-    #     expected = [
-    #         lambda r: self.assertEqual('Really Ok', r.get()),
-    #     ]
-    #     check = checker(expected, self)
-    #
-    #     def firstStep():
-    #         yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=1).execute()
-    #         yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=0.002).execute()
-    #         yield 'Ok'
-    #
-    #     def secondStep(result):
-    #         yield 'Really ' + result.get()
-    #
-    #     f = Chain([firstStep], ioLoop=self.io_loop).then(secondStep)
-    #     f.then(check)
-    #     self.wait()
-    #     self.assertTrue(len(expected) == 0)
 
 
 if __name__ == '__main__':

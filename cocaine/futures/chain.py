@@ -102,6 +102,7 @@ class GeneratorFutureMock(Future):
         self.ioLoop = ioLoop or IOLoop.instance()
         self._currentFuture = None
         self.__chunks = []
+        self.results = []
 
     def bind(self, callback, errorback=None, on_done=None):
         self.callback = callback
@@ -113,12 +114,11 @@ class GeneratorFutureMock(Future):
             self.__chunks.append(value)
             result = self._next(value)
             future = self._wrapFuture(result)
+
             if result is not None:
-                log.debug('GeneratorFutureMock.advance() - Result is None. Binding future {0} instead of {1}'.format(
+                log.debug('GeneratorFutureMock.advance() - Binding future {0} instead of {1}'.format(
                     future, self._currentFuture))
                 future.bind(self.advance, self.advance)
-                #Todo: May be it is deprecated?:
-                #if self._currentFuture and hasattr(self._currentFuture, 'isBound'):# and self._currentFuture.isBound():
                 if self._currentFuture:
                     self._currentFuture.unbind()
                 self._currentFuture = future
@@ -138,11 +138,15 @@ class GeneratorFutureMock(Future):
 
     def _next(self, value):
         if isinstance(value, ChokeEvent):
-            result = self.coroutine.send(None)
+            if self.results and self.results[-1] is None:
+                result = self.coroutine.throw(ChokeEvent())
+            else:
+                result = self.coroutine.send(None)
         elif isinstance(value, Exception):
             result = self.coroutine.throw(value)
         else:
             result = self.coroutine.send(value)
+        self.results.append(result)
         log.debug('GeneratorFutureMock._next() - {0} -> {1}'.format(repr(value), repr(result)))
         return result
 
