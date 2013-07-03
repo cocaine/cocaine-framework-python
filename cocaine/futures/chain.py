@@ -16,34 +16,63 @@ log = logging.getLogger(__name__)
 
 
 class FutureResult(object):
+    """
+    Represents future result and provides methods to obtain this result, manipulate or reset.
+
+    The result itself can be any object or exception. If some exception is stored, then it will be thrown after user
+    invokes `get` method.
+    Note, that `NoneType` is also some result, so it cannot be used as mark to store uninitialized future result.
+    You can call `FutureResult.NONE()` constructor if an empty uninitialized result is needed.
+    """
     NONE_RESULT = hashlib.sha1('__None__')
 
     def __init__(self, result):
         self.result = result
 
     def isNone(self):
+        """
+        Checks if there is some result stored in this object.
+        """
         return self.result == self.NONE_RESULT
 
     def get(self):
+        """
+        Extracts future result from object.
+
+        If an exception is stored in this object, than it will be raised, so surround dangerous code with try/except
+        blocks.
+        """
         return self._returnOrRaise(self.result)
 
     def reset(self):
+        """
+        Clears stored result and set it to the uninitialized state.
+        """
         self.result = self.NONE_RESULT
 
     def getAndReset(self):
+        """
+        Extracts future result from object and resets it to the uninitialized state.
+
+        If an exception is stored in this object, than it will be raised, so surround dangerous code with try/except
+        blocks. Anyway, it is guaranteed that stored result object will be reset.
+        """
         result = self.result
         self.reset()
         return self._returnOrRaise(result)
+
+    @classmethod
+    def NONE(cls):
+        """
+        Constructs uninitialized future result object.
+        """
+        return FutureResult(cls.NONE_RESULT)
 
     def _returnOrRaise(self, result):
         if isinstance(result, Exception):
             raise result
         else:
             return result
-
-    @classmethod
-    def NONE(cls):
-        return FutureResult(cls.NONE_RESULT)
 
 
 class FutureMock(Future):
