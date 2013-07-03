@@ -99,8 +99,9 @@ class FutureCallableMock(Future):
 
 
 class ConcurrentWorker(object):
-    def __init__(self, func, *args, **kwargs):
+    def __init__(self, func, ioLoop=None, *args, **kwargs):
         self.func = func
+        self.ioLoop = ioLoop or IOLoop.instance()
         self.args = args
         self.kwargs = kwargs
 
@@ -117,7 +118,7 @@ class ConcurrentWorker(object):
 
     def runBackground(self, callback):
         def onDone(result):
-            IOLoop.instance().add_callback(lambda: callback(FutureResult(result)))
+            self.ioLoop.add_callback(lambda: callback(FutureResult(result)))
         self.callback = onDone
         self.worker.start()
 
@@ -199,7 +200,6 @@ class ChainItem(object):
         self.func = func
         self.ioLoop = ioLoop or IOLoop.instance()
         self.nextChainItem = None
-        self.__cache = []
 
     def execute(self, *args, **kwargs):
         try:
@@ -211,7 +211,6 @@ class ChainItem(object):
             else:
                 future = FutureMock(future, ioLoop=self.ioLoop)
             future.bind(self.callback, self.errorback)
-            self.__cache.append(future)
         except (AssertionError, AttributeError, TypeError):
             # Rethrow programming errors
             raise
@@ -228,6 +227,7 @@ class ChainItem(object):
             # self.nextChainItem.execute(futureResult)
 
     def errorback(self, error):
+        log.debug('ChainItem.errorback - {0}'.format(repr(error)))
         self.callback(error)
 
 

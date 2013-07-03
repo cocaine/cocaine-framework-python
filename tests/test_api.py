@@ -491,7 +491,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
         check = checker(expected, self)
 
         def firstStep():
-            yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=1).execute()
+            yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=0.004).execute()
             yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=0.002).execute()
             yield 'Ok'
 
@@ -500,6 +500,26 @@ class AsynchronousApiTestCase(AsyncTestCase):
 
         f = Chain([firstStep], ioLoop=self.io_loop).then(secondStep)
         f.then(check)
+        self.wait()
+        self.assertTrue(len(expected) == 0)
+
+    def test_1(self):
+        expected = [
+            lambda r: self.assertEqual({'app': 'info'}, r.get()),
+            lambda r: self.assertRaises(ChokeEvent, r.get),
+        ]
+        check = checker(expected, self)
+
+        def firstStep(result):
+            r = result.get()
+            return {'app': r}
+
+        def secondStep(result):
+            r = result.get()
+            return r
+
+        s = ServiceMock(chunks=['info'], T=self.T, ioLoop=self.io_loop).execute()
+        s.then(firstStep).then(secondStep).then(check)
         self.wait()
         self.assertTrue(len(expected) == 0)
 

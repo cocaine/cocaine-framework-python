@@ -465,18 +465,18 @@ class AppCheckAction(NodeAction):
             raise ValueError('Please specify application name')
 
     def execute(self):
-        return self.node.info().then(self.parseInfo)
+        return Chain([self.do])
 
-    def parseInfo(self, result):
+    def do(self):
         state = 'stopped or missing'
         try:
-            info = result.get()
+            info = yield self.node.info()
             apps = info['apps']
             app = apps[self.name]
             state = app['state']
         except KeyError:
             pass
-        return {self.name: state}
+        yield {self.name: state}
 
 
 class AppUploadFromRepositoryAction(StorageAction):
