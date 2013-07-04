@@ -1,6 +1,6 @@
 # coding=utf-8
 import sys
-from cocaine.futures.chain import ChainFactory
+from cocaine.futures.chain import Chain
 import msgpack
 from cocaine.services import Service
 
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     service = Service('Echo')
     example_SynchronousFetching()
     example_Synchronous()
-    ChainFactory([example_AsynchronousYielding]).wait()
+    Chain([example_AsynchronousYielding]).wait()
     example_AsynchronousChaining()\
         .then(lambda r: msgpack.loads(r.get()))\
         .then(lambda r: sys.stdout.write('example_AsynchronousChaining: Response received - {0}'.format(r.get())))\

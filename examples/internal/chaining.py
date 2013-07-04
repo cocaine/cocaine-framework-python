@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 import functools
-from cocaine.futures.chain import ChainFactory
+from cocaine.futures.chain import Chain
 import time
 from tornado.ioloop import IOLoop
 from cocaine.services import Service
@@ -51,7 +51,7 @@ if __name__ == '__main__':
         loop.stop()
         assert handle.called == 1
 
-    ChainFactory([func2, func3]).run()
+    Chain([func2, func3]).run()
     loop = IOLoop.instance()
     loop.add_timeout(time.time() + 0.2, shutdown)
     loop.start()

@@ -116,7 +116,7 @@ if __name__ == '__main__':
         service = Service('storage', 'localhost', 10053)
         loop = IOLoop.instance()
         log.info('Entering tornado event loop. It will be stopped after 10 seconds')
-        chain.ChainFactory().then(f1).then(f2).then(f3).then(f4).then(f5).then(f6).then(f7).then(f8).then(f_finish).run()
+        chain.Chain().then(f1).then(f2).then(f3).then(f4).then(f5).then(f6).then(f7).then(f8).then(f_finish).run()
         loop.add_timeout(time.time() + 10.0, loop.stop)
         loop.start()
     except socket.error as err:

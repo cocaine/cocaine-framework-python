@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 import msgpack
-from cocaine.futures.chain import ChainFactory
+from cocaine.futures.chain import Chain
 from cocaine.services import Service
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
@@ -27,5 +27,5 @@ if __name__ == '__main__':
         print(len(leData))
 
     service = Service('Chunker')
-    c = ChainFactory([fetchAll])
+    c = Factory([fetchAll])
     c.get(timeout=60.0)
