@@ -1,24 +1,18 @@
 # coding=utf-8
+from __future__ import absolute_import
 import unittest
 import msgpack
 from mockito import mock, when, verify, any, unstub
+from cocaine.testing.mocks import CallableMock
 from cocaine.tools.tools import *
-from cocaine.futures.chain import ChainFactory
+from cocaine.futures.chain import Chain
 from cocaine.exceptions import ServiceError
 
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
-class CallableMock(object):
-    def __init__(self, mock):
-        self.mock = mock
-
-    def __call__(self, *args, **kwargs):
-        return self.mock.__call__(*args, **kwargs)
-
-    def __getattr__(self, methodName):
-        return self.mock.__getattr__(methodName)
+#todo: doc. merge. test & profit
 
 
 def verifyInit(patchedClassName, expected):
@@ -148,7 +142,7 @@ class AppTestCase(unittest.TestCase):
                 }
             }
         }
-        when(node).info().thenReturn(ChainFactory([lambda: mockInfo]))
+        when(node).info().thenReturn(Chain([lambda: mockInfo]))
         actual = action.execute().get(timeout=0.1)
 
         verify(node).info()
@@ -161,7 +155,7 @@ class AppTestCase(unittest.TestCase):
             'apps': {
             }
         }
-        when(node).info().thenReturn(ChainFactory([lambda: mockInfo]))
+        when(node).info().thenReturn(Chain([lambda: mockInfo]))
         actual = action.execute().get(timeout=0.1)
 
         verify(node).info()
@@ -177,7 +171,7 @@ class AppTestCase(unittest.TestCase):
     def test_AppRestartActionAppIsRunningProfileIsNotSpecified(self):
         node = mock()
         action = AppRestartAction(node, **{'name': 'AppName', 'host': '', 'port': ''})
-        when(NodeInfoAction).execute().thenReturn(ChainFactory([lambda: {
+        when(NodeInfoAction).execute().thenReturn(Chain([lambda: {
             'apps': {
                 'AppName': {
                     'profile': 'ProfileName',
@@ -186,8 +180,8 @@ class AppTestCase(unittest.TestCase):
             }
         }]))
 
-        when(AppPauseAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Stopped'}]))
-        when(AppStartAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Started'}]))
+        when(AppPauseAction).execute().thenReturn(Chain([lambda: {'AppName': 'Stopped'}]))
+        when(AppStartAction).execute().thenReturn(Chain([lambda: {'AppName': 'Started'}]))
         action.execute().get()
 
         verify(NodeInfoAction).execute()
@@ -199,7 +193,7 @@ class AppTestCase(unittest.TestCase):
     def test_AppRestartActionAppIsRunningProfileIsSpecified(self):
         node = mock()
         action = AppRestartAction(node, **{'name': 'AppName', 'profile': 'NewProfile', 'host': '', 'port': ''})
-        when(NodeInfoAction).execute().thenReturn(ChainFactory([lambda: {
+        when(NodeInfoAction).execute().thenReturn(Chain([lambda: {
             'apps': {
                 'AppName': {
                     'profile': 'ProfileName',
@@ -208,8 +202,8 @@ class AppTestCase(unittest.TestCase):
             }
         }]))
 
-        when(AppPauseAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Stopped'}]))
-        when(AppStartAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Started'}]))
+        when(AppPauseAction).execute().thenReturn(Chain([lambda: {'AppName': 'Stopped'}]))
+        when(AppStartAction).execute().thenReturn(Chain([lambda: {'AppName': 'Started'}]))
         action.execute().get()
 
         verify(NodeInfoAction).execute()
@@ -221,12 +215,12 @@ class AppTestCase(unittest.TestCase):
     def test_AppRestartActionAppIsNotRunningProfileIsSpecified(self):
         node = mock()
         action = AppRestartAction(node, **{'name': 'AppName', 'profile': 'NewProfile', 'host': '', 'port': ''})
-        when(NodeInfoAction).execute().thenReturn(ChainFactory([lambda: {
+        when(NodeInfoAction).execute().thenReturn(Chain([lambda: {
             'apps': {}
         }]))
 
-        when(AppPauseAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'NotRunning'}]))
-        when(AppStartAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Started'}]))
+        when(AppPauseAction).execute().thenReturn(Chain([lambda: {'AppName': 'NotRunning'}]))
+        when(AppStartAction).execute().thenReturn(Chain([lambda: {'AppName': 'Started'}]))
         action.execute().get()
 
         verify(NodeInfoAction).execute()
@@ -238,12 +232,12 @@ class AppTestCase(unittest.TestCase):
     def test_AppRestartActionAppIsNotRunningProfileIsNotSpecified(self):
         node = mock()
         action = AppRestartAction(node, **{'name': 'AppName', 'host': '', 'port': ''})
-        when(NodeInfoAction).execute().thenReturn(ChainFactory([lambda: {
+        when(NodeInfoAction).execute().thenReturn(Chain([lambda: {
             'apps': {}
         }]))
 
-        when(AppPauseAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'NotRunning'}]))
-        when(AppStartAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Started'}]))
+        when(AppPauseAction).execute().thenReturn(Chain([lambda: {'AppName': 'NotRunning'}]))
+        when(AppStartAction).execute().thenReturn(Chain([lambda: {'AppName': 'Started'}]))
         self.assertRaises(ToolsError, action.execute().get)
 
         verify(NodeInfoAction).execute()
@@ -256,7 +250,7 @@ class ProfileTestCase(unittest.TestCase):
     def test_ProfileListAction(self):
         storage = mock()
         action = ProfileListAction(storage)
-        when(storage).find(any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        when(storage).find(any(str), any(tuple)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).find('profiles', PROFILES_TAGS)
@@ -269,7 +263,7 @@ class ProfileTestCase(unittest.TestCase):
     def test_ProfileViewAction(self):
         storage = mock()
         action = ProfileViewAction(storage, **{'name': 'ProfileName'})
-        when(storage).read(any(str), any(str)).thenReturn(ChainFactory([lambda: 'Ok']))
+        when(storage).read(any(str), any(str)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).read('profiles', 'ProfileName')
@@ -286,7 +280,7 @@ class ProfileTestCase(unittest.TestCase):
         action = ProfileUploadAction(storage, **{'name': 'ProfileName', 'manifest': 'p.json'})
         action.jsonEncoder = jsonEncoder
         when(jsonEncoder).encode('p.json').thenReturn('{-encodedJson-}')
-        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).write('profiles', 'ProfileName', '{-encodedJson-}', PROFILES_TAGS)
@@ -308,7 +302,7 @@ class ProfileTestCase(unittest.TestCase):
     def test_ProfileRemoveAction(self):
         storage = mock()
         action = ProfileRemoveAction(storage, **{'name': 'ProfileName'})
-        when(storage).remove(any(str), any(str)).thenReturn(ChainFactory([lambda: 'Ok']))
+        when(storage).remove(any(str), any(str)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).remove('profiles', 'ProfileName')
@@ -327,7 +321,7 @@ class RunlistTestCase(unittest.TestCase):
     def test_RunlistListAction(self):
         storage = mock()
         action = RunlistListAction(storage)
-        when(storage).find(any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        when(storage).find(any(str), any(tuple)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).find('runlists', RUNLISTS_TAGS)
@@ -340,7 +334,7 @@ class RunlistTestCase(unittest.TestCase):
     def test_RunlistViewAction(self):
         storage = mock()
         action = RunlistViewAction(storage, **{'name': 'RunlistName'})
-        when(storage).read(any(str), any(str)).thenReturn(ChainFactory([lambda: 'Ok']))
+        when(storage).read(any(str), any(str)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).read('runlists', 'RunlistName')
@@ -357,7 +351,7 @@ class RunlistTestCase(unittest.TestCase):
         action = RunlistUploadAction(storage, **{'name': 'RunlistName', 'manifest': 'r.json'})
         action.jsonEncoder = jsonEncoder
         when(jsonEncoder).encode('r.json').thenReturn('{-encodedJson-}')
-        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).write('runlists', 'RunlistName', '{-encodedJson-}', RUNLISTS_TAGS)
@@ -365,7 +359,7 @@ class RunlistTestCase(unittest.TestCase):
     def test_RunlistUploadActionRawRunlistProvided(self):
         storage = mock()
         action = RunlistUploadAction(storage, **{'name': 'RunlistName', 'runlist-raw': '{raw-data}'})
-        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).write('runlists', 'RunlistName', msgpack.dumps('{raw-data}'), RUNLISTS_TAGS)
@@ -378,7 +372,7 @@ class RunlistTestCase(unittest.TestCase):
     def test_RunlistRemoveAction(self):
         storage = mock()
         action = RunlistRemoveAction(storage, **{'name': 'RunlistName'})
-        when(storage).remove(any(str), any(str)).thenReturn(ChainFactory([lambda: 'Ok']))
+        when(storage).remove(any(str), any(str)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).remove('runlists', 'RunlistName')
@@ -418,7 +412,7 @@ class CrashlogTestCase(unittest.TestCase):
     def test_CrashlogListAction(self):
         storage = mock()
         action = CrashlogListAction(storage, **{'name': 'CrashlogName'})
-        when(storage).find(any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        when(storage).find(any(str), any(tuple)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).find('crashlogs', ('CrashlogName', ))

@@ -135,7 +135,7 @@ class Request(Future):
                 self._logger.error("No errorback. Can't throw error")
 
     def read(self):
-        return chain.ChainFactory().then(lambda : self)
+        return chain.Chain([lambda: self])
 
     def default_errorback(self, err):
         self._logger.error("No errorback.\

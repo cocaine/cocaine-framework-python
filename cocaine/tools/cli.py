@@ -2,12 +2,13 @@ import errno
 import socket
 from cocaine.services import Service
 from time import time
-from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError, ServiceError
+from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError, ChokeEvent
 from cocaine.tools.tools import *
 import json
 import msgpack
 import sys
 from tornado.ioloop import IOLoop
+import logging
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
@@ -39,11 +40,13 @@ def AwaitDoneWrapper(onDoneMessage=None, onErrorMessage=None):
         class Wrapper(cls):
             def execute(self):
                 chain = super(Wrapper, self).execute()
-                chain.then(self.processResult).run()
+                chain.then(self.processResult)
 
             def processResult(self, status):
                 try:
                     status.get()
+                    print((onDoneMessage or 'Action for "{name}" - done').format(name=self.name))
+                except ChokeEvent:
                     print((onDoneMessage or 'Action for "{name}" - done').format(name=self.name))
                 except Exception as err:
                     printError((onErrorMessage or 'Error occurred on action for "{name}": {error}').format(
@@ -68,6 +71,8 @@ def AwaitJsonWrapper(onErrorMessage=None, unpack=False):
                     if unpack:
                         result = msgpack.loads(result)
                     print(json.dumps(result, indent=4))
+                except ChokeEvent:
+                    pass
                 except Exception as err:
                     printError((onErrorMessage or 'Error occurred: {0}').format(err))
                 finally:
@@ -102,6 +107,7 @@ class PrettyPrintableCrashlogListAction(CrashlogListAction):
             for item in parseCrashlogs(result.get()):
                 print ' '.join(item)
         except Exception as err:
+            print(repr(err))
             printError(('' or 'Unable to view "{name}" - {error}').format(name=self.name, error=err))
         finally:
             IOLoop.instance().stop()
@@ -220,10 +226,29 @@ class Executor(object):
     """
     This class represents abstract action executor for specified service 'serviceName' and actions pool
     """
-    def __init__(self, serviceName, availableActions):
+    def __init__(self, serviceName, availableActions, **config):
         self.serviceName = serviceName
         self.availableActions = availableActions
+        self.config = config
         self.loop = IOLoop.instance()
+
+        if config.get('debug'):
+            ch = logging.StreamHandler()
+            ch.setLevel(logging.DEBUG)
+            formatter = logging.Formatter('%(name)s: %(levelname)-8s: %(message)s')
+            ch.setFormatter(formatter)
+
+            logNames = [
+                __name__,
+                'cocaine.futures.chain',
+                'cocaine.testing.mocks',
+            ]
+
+            for logName in logNames:
+                log = logging.getLogger(logName)
+                log.setLevel(logging.DEBUG)
+                log.propagate = False
+                log.addHandler(ch)
 
     def executeAction(self, actionName, **options):
         """
@@ -234,12 +259,12 @@ class Executor(object):
         :param options: various action configuration
         """
         try:
-            service = self.createService(options.get('host'), options.get('port'))
+            service = self.createService(self.config.get('host'), self.config.get('port'))
 
             Action = self.availableActions[actionName]
-            action = Action(service, **options)
+            action = Action(service, **dict(self.config.items() + options.items()))
             action.execute()
-            self.loop.add_timeout(time() + options.get('timeout', 1.0), self.timeoutErrorback)
+            self.loop.add_timeout(time() + self.config.get('timeout'), self.timeoutErrorback)
             IOLoop.instance().start()
         except CocaineError as err:
             raise ToolsError(err)
@@ -265,11 +290,11 @@ class Executor(object):
         self.loop.stop()
 
 
-class ToolsExecutor(Executor):
-    def __init__(self):
-        super(ToolsExecutor, self).__init__('storage', AVAILABLE_TOOLS_ACTIONS)
+class StorageExecutor(Executor):
+    def __init__(self, **config):
+        super(StorageExecutor, self).__init__('storage', AVAILABLE_TOOLS_ACTIONS, **config)
 
 
 class NodeExecutor(Executor):
-    def __init__(self):
-        super(NodeExecutor, self).__init__('node', AVAILABLE_NODE_ACTIONS)
+    def __init__(self, **config):
+        super(NodeExecutor, self).__init__('node', AVAILABLE_NODE_ACTIONS, **config)

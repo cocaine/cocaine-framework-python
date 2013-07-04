@@ -8,6 +8,7 @@
 # [Build]
 build/
 dist/
+doc/
 manpages/
 *.egg-info/
 cocaine_toolc

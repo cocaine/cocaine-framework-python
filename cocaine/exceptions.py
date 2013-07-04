@@ -83,14 +83,20 @@ class ConnectionRefusedError(ConnectionError):
         message = 'Invalid cocaine-runtime endpoint: {host}:{port}'.format(host=host, port=port)
         super(ConnectionRefusedError, self).__init__(message)
 
+
 class AsyncConnectionTimeoutError(ConnectionError):
 
     def __init__(self, path):
         message = 'TimeOutError: {endpoint}'.format(endpoint=path)
         super(AsyncConnectionTimeoutError, self).__init__(message)
 
+
 class AsyncConnectionError(ConnectionError):
 
     def __init__(self, path, errcode):
         message = 'ConnectionError: {endpoint} {error}'.format(endpoint=path, error=errcode)
         super(AsyncConnectionError, self).__init__(message)
+
+
+class ChokeEvent(Exception):
+    pass

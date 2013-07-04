@@ -10,7 +10,7 @@ import time
 import msgpack
 
 from cocaine.futures import chain
-from cocaine.futures.chain import ChainFactory
+from cocaine.futures.chain import Chain
 from cocaine.services import Service
 from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError, ServiceError
 from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
@@ -180,13 +180,14 @@ class AppUploadAction(StorageAction):
         """
         Encodes manifest and package files and (if successful) uploads them into storage
         """
-        return ChainFactory().then(self.do)
+        return Chain().then(self.do)
 
     def do(self):
         manifest = self.jsonEncoder.encode(self.manifest)
         package = self.packageEncoder.encode(self.package)
         yield self.storage.write('manifests', self.name, manifest, APPS_TAGS)
         yield self.storage.write('apps', self.name, package, APPS_TAGS)
+        yield 'Done'
 
 
 class AppRemoveAction(StorageAction):
@@ -200,11 +201,12 @@ class AppRemoveAction(StorageAction):
             raise ValueError('Empty application name')
 
     def execute(self):
-        return ChainFactory([self.do])
+        return Chain([self.do])
 
     def do(self):
         yield self.storage.remove('manifests', self.name)
         yield self.storage.remove('apps', self.name)
+        yield 'Done'
 
 
 class ProfileListAction(ListAction):
@@ -294,7 +296,7 @@ class RunlistAddApplicationAction(SpecificRunlistAction):
             raise ValueError('Please specify profile')
 
     def execute(self):
-        return ChainFactory([self.do])
+        return Chain([self.do])
 
     def do(self):
         runlistInfo = yield RunlistViewAction(self.storage, **{'name': self.name}).execute()
@@ -347,7 +349,7 @@ class CrashlogViewAction(CrashlogAction):
         super(CrashlogViewAction, self).__init__(storage, **config)
 
     def execute(self):
-        return ChainFactory([self.do])
+        return Chain([self.do])
 
     def do(self):
         crashlogs = yield self.storage.find('crashlogs', (self.name,))
@@ -365,7 +367,7 @@ class CrashlogRemoveAction(CrashlogAction):
         super(CrashlogRemoveAction, self).__init__(storage, **config)
 
     def execute(self):
-        return ChainFactory([self.do])
+        return Chain([self.do])
 
     def do(self):
         crashlogs = yield self.storage.find('crashlogs', (self.name,))
@@ -373,6 +375,7 @@ class CrashlogRemoveAction(CrashlogAction):
         for crashlog in parsedCrashlogs:
             key = '%s:%s' % (crashlog[0], crashlog[2])
             yield self.storage.remove('crashlogs', key)
+        yield 'Done'
 
 
 class CrashlogRemoveAllAction(CrashlogRemoveAction):
@@ -433,7 +436,7 @@ class AppRestartAction(NodeAction):
             raise ValueError('Please specify application name')
 
     def execute(self):
-        return ChainFactory([self.doAction])
+        return Chain([self.doAction])
 
     def doAction(self):
         try:
@@ -462,18 +465,18 @@ class AppCheckAction(NodeAction):
             raise ValueError('Please specify application name')
 
     def execute(self):
-        return self.node.info().then(self.parseInfo)
+        return Chain([self.do])
 
-    def parseInfo(self, result):
+    def do(self):
         state = 'stopped or missing'
         try:
-            info = result.get()
+            info = yield self.node.info()
             apps = info['apps']
             app = apps[self.name]
             state = app['state']
         except KeyError:
             pass
-        return {self.name: state}
+        yield {self.name: state}
 
 
 class AppUploadFromRepositoryAction(StorageAction):
@@ -489,7 +492,7 @@ class AppUploadFromRepositoryAction(StorageAction):
             self.name = match.group('name')
 
     def execute(self):
-        return ChainFactory([self.doWork])
+        return Chain([self.doWork])
 
     def doWork(self):
         repositoryPath = tempfile.mkdtemp()
@@ -510,15 +513,15 @@ class AppUploadFromRepositoryAction(StorageAction):
         except (RepositoryDownloadError, ModuleInstallError) as err:
             print(err)
 
-    @chain.threaded
+    @chain.concurrent
     def cloneRepository(self, repositoryPath):
         self.repositoryDownloader.download(self.url, repositoryPath)
 
-    @chain.threaded
+    @chain.concurrent
     def installRepository(self):
         self.moduleInstaller.install()
 
-    @chain.threaded
+    @chain.concurrent
     def createPackage(self, repositoryPath, packagePath):
         with tarfile.open(packagePath, mode='w:gz') as tar:
             tar.add(repositoryPath, arcname='')
@@ -540,7 +543,7 @@ class CallAction(NodeAction):
             self.methodName = methodWithArguments
 
     def execute(self):
-        return ChainFactory([self.callService])
+        return Chain([self.callService])
 
     def callService(self):
         service = self.getService()

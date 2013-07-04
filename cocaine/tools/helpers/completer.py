@@ -30,7 +30,7 @@ if __name__ == '__main__':
         import sys
         from time import time
         from tornado.ioloop import IOLoop
-        from cocaine.futures.chain import ChainFactory
+        from cocaine.futures.chain import Chain
         from cocaine.services import Service
         import os
 
@@ -57,7 +57,7 @@ if __name__ == '__main__':
                 loop.stop()
 
         storage = Service('storage', config['host'], int(config['port']))
-        ChainFactory().then(locateApps).run()
+        Chain().then(locateApps).run()
         loop = IOLoop.instance()
         loop.add_timeout(time() + ADEQUATE_TIMEOUT, lambda: loop.stop())
         loop.start()

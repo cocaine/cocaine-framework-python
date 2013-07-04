@@ -1,312 +1,167 @@
-from __future__ import absolute_import
+import hashlib
+from multiprocessing import Process
+from multiprocessing.pool import Pool
 from threading import Thread
 import time
 import types
-import warnings
 from tornado.ioloop import IOLoop
+from cocaine.exceptions import ChokeEvent, TimeoutError
 from cocaine.futures import Future
-from cocaine.exceptions import TimeoutError
+import logging
 
-__author__ = 'EvgenySafronov <division494@gmail.com>'
+__author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-class Result(object):
+log = logging.getLogger(__name__)
+
+
+class FutureResult(object):
     """
-    Simple object which main aim is to store some result and to provide 'get' method to unpack the result.
-    The result can be any object or exception. If it is an exception then it will be thrown after user calls 'get'.
+    Represents future result and provides methods to obtain this result, manipulate or reset.
+
+    The result itself can be any object or exception. If some exception is stored, then it will be thrown after user
+    invokes `get` method.
+    Note, that `NoneType` is also some result, so it cannot be used as mark to store uninitialized future result.
+    You can call `FutureResult.NONE()` constructor if an empty uninitialized result is needed.
     """
-    def __init__(self, obj):
-        self.obj = obj
+    NONE_RESULT = hashlib.sha1('__None__')
+
+    def __init__(self, result):
+        self.result = result
+
+    def isNone(self):
+        """
+        Checks if there is some result stored in this object.
+
+        >>> FutureResult(1).isNone()
+        False
+        >>> FutureResult.NONE().isNone()
+        True
+        """
+        return self.result == self.NONE_RESULT
 
     def get(self):
-        if isinstance(self.obj, Exception):
-            raise self.obj
+        """
+        Extracts future result from object.
+
+        If an exception is stored in this object, than it will be raised, so surround dangerous code with try/except
+        blocks.
+
+        >>> FutureResult(1).get()
+        1
+        >>> FutureResult(ValueError('ErrorMessage')).get()
+        Traceback (most recent call last):
+        ...
+        ValueError: ErrorMessage
+        """
+        return self._returnOrRaise(self.result)
+
+    def reset(self):
+        """
+        Clears stored result and set it to the uninitialized state.
+
+        >>> r = FutureResult(1)
+        >>> r.reset()
+        >>> r.isNone()
+        True
+        """
+        self.result = self.NONE_RESULT
+
+    def getAndReset(self):
+        """
+        Extracts future result from object and resets it to the uninitialized state.
+
+        If an exception is stored in this object, than it will be raised, so surround dangerous code with try/except
+        blocks. Anyway, it is guaranteed that stored result object will be reset.
+
+        >>> r = FutureResult(1)
+        >>> r.getAndReset()
+        1
+        >>> r.isNone()
+        True
+        """
+        result = self.result
+        self.reset()
+        return self._returnOrRaise(result)
+
+    @classmethod
+    def NONE(cls):
+        """
+        Constructs uninitialized future result object.
+
+        >>> FutureResult.NONE().isNone()
+        True
+        """
+        return FutureResult(cls.NONE_RESULT)
+
+    def _returnOrRaise(self, result):
+        if isinstance(result, Exception):
+            raise result
         else:
-            return self.obj
-
-
-class Chain(object):
-    def __init__(self, func, nextChain=None):
-        """
-        This class represents chain element by storing some function and invoking it as is turn comes.
-        If method `run` is called it invokes `func` with specified arguments and receives its result or catches an
-        exception
-        """
-        self.func = func
-        self.nextChain = nextChain
-        self.finished = False
-        self.currentResult = None
-
-    def run(self, *args, **kwargs):
-        try:
-            result = self.func(*args, **kwargs)
-            if isinstance(result, Future):
-                future = result
-            elif isinstance(result, types.GeneratorType):
-                future = GeneratorFutureMock(result)
-            else:
-                future = FutureMock(result)
-            future.bind(self.on, self.error, self.done)
-        except Exception as err:
-            self.error(err)
-
-    def on(self, chunk):
-        result = Result(chunk)
-        self.currentResult = result
-        if self.nextChain and not self.finished:
-            self.nextChain.run(result)
-
-    def error(self, exception):
-        if not self.finished:
-            self.on(exception)
-            self.finished = True
-
-    #todo: Determine if this method is really invoked by somebody
-    def done(self):
-        if not self.finished:
-            self.on(None)
-            self.finished = True
-
-
-class ChainFactory():
-    """
-    This class - is some syntax sugar over `Chain` object chains. Instead of writing code like this:
-        `c1 = Chain(f1, Chain(f2, Chain(f3, ...Chain(fn)))...).run()`
-    you can write:
-        `ChainFactory().then(f1).then(f2).then(f3) ... then(fn).run()`
-    and this looks like more prettier.
-    """
-    def __init__(self, functions=None):
-        self._ready = True
-        self._result = None
-        if not functions:
-            functions = []
-
-        self.chains = []
-        for func in functions:
-            self.then(func)
-
-    def then(self, func):
-        chain = Chain(func)
-        # if len(self.chains) > 0:
-        if not self._ready:
-            lastChain = self.chains[-1]
-            lastChain.nextChain = chain
-        else:
-            if len(self.chains) == 0:
-                chain.run()
-            else:
-                lastChain = self.chains[-1]
-                chain.run(lastChain.currentResult)
-        self.chains.append(chain)
-        self._ready = False
-        self._result = None
-        return self
-
-    def run(self):
-        warnings.warn('This method is deprecated. Method "then" starts chain automatically', DeprecationWarning)
-
-    def get(self, timeout=None):
-        """
-        Returns result of chaining execution. If chain haven't been completed after `timeout` seconds, there will be
-        exception raised.
-
-        This method is like syntax sugar over asynchronous receiving future result from chain expression. It simply
-        starts event loop, sets timeout condition and run chain expression. Event loop will be stopped after getting
-        final chain result or after timeout expired.
-
-        :param timeout: Timeout in seconds after which TimeoutError will be raised. If timeout is not set (default) it
-                        means forever waiting.
-        :raises ValueError: If timeout is set and it is less than 1 ms.
-        :raises TimeoutError: If timeout expired.
-        """
-        if timeout is not None and timeout < 0.001:
-            raise ValueError('Timeout cannot be less than 1 ms')
-
-        if self._ready:
-            return Result(self._result).get()
-
-        if len(self.chains) > 0 and self.chains[-1].finished:
-            return self.chains[-1].currentResult.get()
-
-        loop = IOLoop.instance()
-
-        def startNestedEventLoop(result):
-            try:
-                startNestedEventLoop.result = result.get()
-            except Exception as err:
-                startNestedEventLoop.result = err
-            finally:
-                startNestedEventLoop.ready = True
-                loop.stop()
-
-        def stopNestedEventLoop():
-            stopNestedEventLoop.raiseTimeoutError = True
-            loop.stop()
-
-        startNestedEventLoop.ready = False
-        startNestedEventLoop.result = None
-        stopNestedEventLoop.raiseTimeoutError = False
-        self.then(startNestedEventLoop).run()
-        if timeout is not None:
-            loop.add_timeout(time.time() + timeout, stopNestedEventLoop)
-        loop.start()
-
-        if stopNestedEventLoop.raiseTimeoutError and not startNestedEventLoop.ready:
-            raise TimeoutError('Timeout')
-        if isinstance(startNestedEventLoop.result, Exception):
-            raise startNestedEventLoop.result
-        return startNestedEventLoop.result
-
-    def wait(self, timeout=None):
-        """
-        Waits chaining execution during some time or forever.
-
-        This method provides you nice way to do asynchronous waiting future result from chain expression. It simply
-        starts event loop, sets timeout condition and run chain expression. Event loop will be stopped after getting
-        final chain result or after timeout expired. Unlike `get` method there will be no exception raised if timeout
-        is occurred while chaining execution running.
-
-        :param timeout: Timeout in seconds after which event loop will be stopped. If timeout is not set (default) it
-                        means forever waiting.
-        :raises ValueError: If timeout is set and it is less than 1 ms.
-        """
-        if timeout is not None and timeout < 0.001:
-            raise ValueError('Timeout cannot be less than 1 ms')
-
-        if self._ready:
-            return
-
-        loop = IOLoop.instance()
-
-        def startNestedEventLoop(result):
-            try:
-                self._result = result.get()
-            except Exception as err:
-                self._result = err
-            finally:
-                self._ready = True
-                loop.stop()
-
-        def stopNestedEventLoop():
-            loop.stop()
-
-        self._ready = False
-        self._result = None
-        self.then(startNestedEventLoop).run()
-        if timeout is not None:
-            loop.add_timeout(time.time() + timeout, stopNestedEventLoop)
-        loop.start()
-
-    def ready(self):
-        return self._ready
-
-    def __nonzero__(self):
-        return self.ready()
+            return result
 
 
 class FutureMock(Future):
-    def __init__(self, obj=None):
-        """
-        This class represents simple future wrapper on some result. It simple deferredly calls `callback` function with
-        single `obj` parameter when `bind` method is called or `errorback` when some error occurred during `callback`
-        invoking.
-        """
+    def __init__(self, result, ioLoop=None):
         super(FutureMock, self).__init__()
-        self.obj = obj
+        self.result = result
+        self.ioLoop = ioLoop or IOLoop.instance()
+        self._bound = False
 
     def bind(self, callback, errorback=None, on_done=None):
-        """
-        NOTE: `on_done` callback is not used because it's not needed. You have to use this object only to store any
-        data. Doneback hasn't any result, so it left here only for having the same signature with Future.bind method
-        """
         try:
-            self.invokeAsynchronously(lambda: callback(self.obj))
+            self.ioLoop.add_callback(callback, self.result)
         except Exception as err:
-            if errorback:
-                self.invokeAsynchronously(lambda: errorback(err))
+            self.ioLoop.add_callback(errorback, err)
+        finally:
+            self._bound = True
 
-    def invokeAsynchronously(self, callback):
-        IOLoop.instance().add_timeout(time.time(), lambda: callback())
+    def isBound(self):
+        return self._bound
 
-
-class GeneratorFutureMock(Future):
-    """
-    This class represents future wrapper over coroutine function as chain item.
-    """
-    def __init__(self, obj=None):
-        super(GeneratorFutureMock, self).__init__()
-        self.obj = obj
-
-    def bind(self, callback, errorback=None, on_done=None):
-        self.cb = callback
-        self.eb = errorback
-        self.advance()
-
-    def advance(self, value=None):
-        try:
-            result = self.nextStep(value)
-            future = self.wrapResult(result)
-            if result is not None:
-                future.bind(self.advance, self.advance)
-        except StopIteration:
-            self.cb(value)
-        except Exception as err:
-            if self.eb:
-                self.eb(err)
-
-    def nextStep(self, value):
-        if isinstance(value, Exception):
-            result = self.obj.throw(value)
-            print self.obj
-        else:
-            result = self.obj.send(value)
-        return result
-
-    def wrapResult(self, result):
-        if isinstance(result, Future):
-            future = result
-        elif isinstance(result, ChainFactory):
-            chainFuture = FutureCallableMock()
-            result.then(lambda r: chainFuture.ready(r.get()))
-            result.run()
-            future = chainFuture
-        elif isinstance(result, ThreadWorker):
-            threadFuture = FutureCallableMock()
-            result.runBackground(lambda r: threadFuture.ready(r))
-            future = threadFuture
-        else:
-            future = FutureMock(result)
-        return future
+    def unbind(self):
+        return
 
 
 class FutureCallableMock(Future):
-    """
-    This class represents future wrapper over your asynchronous functions (i.e. tornado async callee).
-    Once done, you must call `ready` method and pass the result to it.
+    def __init__(self):
+        super(FutureCallableMock, self).__init__()
+        self.unbind()
 
-    WARNING: `on_done` function is not used. Do not pass it!
-    """
     def bind(self, callback, errorback=None, on_done=None):
         self.callback = callback
         self.errorback = errorback
-        self.on_done = on_done
+
+    def unbind(self):
+        self.callback = None
+        self.errorback = None
+
+    def isBound(self):
+        return any([self.callback, self.errorback])
 
     def ready(self, result):
+        if not self.isBound():
+            return
+
         try:
+            log.debug('FutureCallableMock.ready() - {0}({1})'.format(result, repr(result.result)))
+            result = result.get()
             self.callback(result)
         except Exception as err:
+            log.debug('FutureCallableMock.ready() Error - {0})'.format(repr(err)))
             if self.errorback:
                 self.errorback(err)
 
 
-class ThreadWorker(object):
-    def __init__(self, func, *args, **kwargs):
+class ConcurrentWorker(object):
+    def __init__(self, func, ioLoop=None, *args, **kwargs):
         self.func = func
+        self.ioLoop = ioLoop or IOLoop.instance()
         self.args = args
         self.kwargs = kwargs
-        self.thread = Thread(target=self._run)
-        self.thread.setDaemon(True)
+
+        self.worker = Thread(target=self._run)
+        self.worker.setDaemon(True)
         self.callback = None
 
     def _run(self):
@@ -318,21 +173,279 @@ class ThreadWorker(object):
 
     def runBackground(self, callback):
         def onDone(result):
-            IOLoop.instance().add_callback(lambda: callback(result))
+            self.ioLoop.add_callback(lambda: callback(FutureResult(result)))
         self.callback = onDone
-        self.thread.start()
+        self.worker.start()
 
 
-def asynchronousCallable(func):
-    def wrapper(*args, **kwargs):
-        future = FutureCallableMock()
-        func(future, *args, **kwargs)
+class GeneratorFutureMock(Future):
+    def __init__(self, coroutine, ioLoop=None):
+        super(GeneratorFutureMock, self).__init__()
+        self.coroutine = coroutine
+        self.ioLoop = ioLoop or IOLoop.instance()
+        self._currentFuture = None
+        self._chunks = []
+        self._results = []
+
+    def bind(self, callback, errorback=None, on_done=None):
+        self.callback = callback
+        self.errorback = errorback
+        self.advance()
+
+    def advance(self, value=None):
+        try:
+            self._chunks.append(value)
+            result = self._next(value)
+            future = self._wrapFuture(result)
+
+            if result is not None:
+                log.debug('GeneratorFutureMock.advance() - Binding future {0} instead of {1}'.format(
+                    future, self._currentFuture))
+                future.bind(self.advance, self.advance)
+                if self._currentFuture:
+                    self._currentFuture.unbind()
+                self._currentFuture = future
+        except StopIteration:
+            log.debug('GeneratorFutureMock.advance() - StopIteration caught. Value - {0}'.format(repr(value)))
+            self.callback(value)
+        except ChokeEvent as err:
+            log.debug('GeneratorFutureMock.advance() - ChokeEvent caught. Value - {0}'.format(repr(value)))
+            self.errorback(err)
+        except Exception as err:
+            log.debug('GeneratorFutureMock.advance - Error: {0}'.format(repr(err)))
+            if self._currentFuture and self._currentFuture.isBound():
+                self._currentFuture.unbind()
+            self.errorback(err)
+        finally:
+            log.debug('Just for fun! Chunks - {0}. Current future - {1}'.format(self._chunks, self._currentFuture))
+
+    def _next(self, value):
+        if isinstance(value, ChokeEvent):
+            if self._results and self._results[-1] is None:
+                result = self.coroutine.throw(ChokeEvent())
+            else:
+                result = self.coroutine.send(None)
+        elif isinstance(value, Exception):
+            result = self.coroutine.throw(value)
+        else:
+            result = self.coroutine.send(value)
+        self._results.append(result)
+        log.debug('GeneratorFutureMock._next() - {0} -> {1}'.format(repr(value), repr(result)))
+        return result
+
+    def _wrapFuture(self, result):
+        if isinstance(result, Future):
+            future = result
+        elif isinstance(result, Chain):
+            chainFuture = FutureCallableMock()
+            result.then(lambda r: chainFuture.ready(r))
+            future = chainFuture
+        elif isinstance(result, ConcurrentWorker):
+            concurrentFuture = FutureCallableMock()
+            result.runBackground(lambda r: concurrentFuture.ready(r))
+            future = concurrentFuture
+        else:
+            future = FutureMock(result, ioLoop=self.ioLoop)
+        log.debug('GeneratorFutureMock._wrap() - {0} -> {1}'.format(result, future))
         return future
-    return wrapper
 
 
-def threaded(func):
+class ChainItem(object):
+    def __init__(self, func, ioLoop=None):
+        self.func = func
+        self.ioLoop = ioLoop or IOLoop.instance()
+        self.nextChainItem = None
+
+    def execute(self, *args, **kwargs):
+        try:
+            future = self.func(*args, **kwargs)
+            if isinstance(future, Future):
+                pass
+            elif isinstance(future, types.GeneratorType):
+                future = GeneratorFutureMock(future, ioLoop=self.ioLoop)
+            else:
+                future = FutureMock(future, ioLoop=self.ioLoop)
+            future.bind(self.callback, self.errorback)
+        except (AssertionError, AttributeError, TypeError):
+            # Rethrow programming errors
+            raise
+        except Exception as err:
+            self.errorback(err)
+
+    def callback(self, chunk):
+        log.debug('ChainItem.callback - {0}'.format(repr(chunk)))
+        futureResult = FutureResult(chunk)
+        if self.nextChainItem:
+            # Actually it does not matter if we invoke next chain item synchronously or not. But for convenience, let's
+            # do it asynchronously.
+            self.ioLoop.add_callback(self.nextChainItem.execute, futureResult)
+            # self.nextChainItem.execute(futureResult)
+
+    def errorback(self, error):
+        log.debug('ChainItem.errorback - {0}'.format(repr(error)))
+        self.callback(error)
+
+
+class Chain(object):
+    """
+    Represents pipeline of processing functions over chunks.
+
+    This class represents chain of processing functions over incoming chunks. It manages creating chunk pipeline by
+    binding them one-by-one.
+    Incoming chunks will be processed separately in direct order.
+    If some of processing function fails and raise an exception, it will be transported to the next chain item over and
+    over again until it will be caught by `except` block or transferred to the event loop exception trap.
+
+    There is also synchronous API provided, but it should be used only for scripting or tests.
+    """
+    def __init__(self, functions=None, ioLoop=None):
+        """
+        Initializes chain object.
+
+        There is `functions` parameter provided for that case, when you can explicitly define chunk source and,
+        probably, some processing functions.
+        Event loop can also be injected. If no event loop specified (default), it will be initialized as tornado io
+        event loop singleton.
+
+        :param functions: optional list of processing functions.
+        :param ioLoop: specified event loop. By default, it is initialized by tornado io event loop global instance.
+        """
+        if not functions:
+            functions = []
+        self.ioLoop = ioLoop or IOLoop.instance()
+        self.chainItems = []
+        for func in functions:
+            self.then(func)
+
+        self._lastResult = FutureResult.NONE()
+
+    def then(self, func):
+        chainItem = ChainItem(func, self.ioLoop)
+        if len(self.chainItems) > 0:
+            self.chainItems[-1].nextChainItem = chainItem
+
+        if len(self.chainItems) == 0:
+            self.ioLoop.add_callback(chainItem.execute)
+        self.chainItems.append(chainItem)
+        return self
+
+    def run(self):
+        pass
+
+    def __nonzero__(self):
+        """
+        Chain object is treat as nonzero if it has some pending result.
+        """
+        return self.hasPendingResult()
+
+    def hasPendingResult(self):
+        """
+        Provides information if chain object has pending result that can be taken from it.
+        """
+        return not self._lastResult.isNone()
+
+    def get(self, timeout=None):
+        """
+        Returns next result of chaining execution. If chain haven't been completed after `timeout` seconds, an
+        `TimeoutError` will be raised.
+
+        Default implementation simply starts event loop, sets timeout condition and run chain expression. Event loop
+        will be stopped after getting chain result or after timeout expired.
+        It is correct to call this method multiple times to receive multiple chain results until you exactly know
+        how much chunks there will be. A `ChokeEvent` will be raised if there is no more chunks to process.
+
+        Warning: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
+
+        :param timeout: Timeout in seconds after which TimeoutError will be raised. If timeout is not set (default) it
+                        means forever waiting.
+        :raises ChokeEvent: If there is no more chunks to process.
+        :raises ValueError: If timeout is set and it is less than 1 ms.
+        :raises TimeoutError: If timeout expired.
+        """
+        self._checkTimeout(timeout)
+        if self.hasPendingResult():
+            return self._getLastResult()
+        self._trackLastResult()
+
+        if timeout:
+            self.ioLoop.add_timeout(time.time() + timeout, lambda: self._saveLastResult(FutureResult(TimeoutError())))
+        self.ioLoop.start()
+        return self._getLastResult()
+
+    def wait(self, timeout=None):
+        """
+        Waits chaining execution during some time or forever.
+
+        This method provides you nice way to do asynchronous waiting future result from chain expression. Default
+        implementation simply starts event loop, sets timeout condition and run chain expression. Event loop will be
+        stopped after getting final chain result or after timeout expired. Unlike `get` method there will be no
+        exception raised if timeout is occurred while chaining execution running.
+
+        Warning: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
+
+        :param timeout: Timeout in seconds after which event loop will be stopped. If timeout is not set (default) it
+                        means forever waiting.
+        :raises ValueError: If timeout is set and it is less than 1 ms.
+        """
+        self._checkTimeout(timeout)
+        if self.hasPendingResult():
+            return
+        self._trackLastResult()
+        if timeout:
+            self.ioLoop.add_timeout(time.time() + timeout, lambda: self.ioLoop.stop())
+        self.ioLoop.start()
+
+    def __iter__(self):
+        """
+        Traits chain object as iterator. Note, that iterator can be used only once. Normally, you should not use this
+        method directly - python uses it automatically in the `for` loop.
+
+        Warning: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
+        """
+        return self
+
+    def next(self):
+        """
+        Gets next chain result. Normally, you should not use this method directly - python uses it automatically in
+        the `for` loop.
+
+        Warning: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
+        """
+        try:
+            return self.get()
+        except ChokeEvent:
+            raise StopIteration
+
+    def _checkTimeout(self, timeout):
+        if timeout is not None and timeout < 0.001:
+            raise ValueError('Timeout can not be less then 1 ms')
+
+    def _trackLastResult(self):
+        if not self._isTrackingForLastResult():
+            self.then(self._saveLastResult)
+
+    def _saveLastResult(self, result):
+        self._lastResult = result
+        self.ioLoop.stop()
+
+    def _isTrackingForLastResult(self):
+        return self.chainItems[-1].func == self._saveLastResult
+
+    def _getLastResult(self):
+        if isinstance(self._lastResult.result, ChokeEvent):
+            return self._lastResult.get()
+        else:
+            return self._lastResult.getAndReset()
+
+
+def concurrent(func):
+    """
+    Wraps function or method, so it can be invoked concurrently by yielding in chain context.
+
+    Program control will be returned to the yield statement once processing is done. Current implementation invokes
+    function in separate thread.
+    """
     def wrapper(*args, **kwargs):
-        mock = ThreadWorker(func, *args, **kwargs)
+        mock = ConcurrentWorker(func, *args, **kwargs)
         return mock
     return wrapper
