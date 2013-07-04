@@ -287,7 +287,29 @@ class ChainItem(object):
 
 
 class Chain(object):
+    """
+    Represents pipeline of processing functions over chunks.
+
+    This class represents chain of processing functions over incoming chunks. It manages creating chunk pipeline by
+    binding them one-by-one.
+    Incoming chunks will be processed separately in direct order.
+    If some of processing function fails and raise an exception, it will be transported to the next chain item over and
+    over again until it will be caught by `except` block or transferred to the event loop exception trap.
+
+    There is also synchronous API provided, but it should be used only for scripting or tests.
+    """
     def __init__(self, functions=None, ioLoop=None):
+        """
+        Initializes chain object.
+
+        There is `functions` parameter provided for that case, when you can explicitly define chunk source and,
+        probably, some processing functions.
+        Event loop can also be injected. If no event loop specified (default), it will be initialized as tornado io
+        event loop singleton.
+
+        :param functions: optional list of processing functions.
+        :param ioLoop: specified event loop. By default, it is initialized by tornado io event loop global instance.
+        """
         if not functions:
             functions = []
         self.ioLoop = ioLoop or IOLoop.instance()
@@ -311,14 +333,34 @@ class Chain(object):
         pass
 
     def __nonzero__(self):
+        """
+        Chain object is treat as nonzero if it has some pending result.
+        """
         return self.hasPendingResult()
 
     def hasPendingResult(self):
+        """
+        Provides information if chain object has pending result that can be taken from it.
+        """
         return not self._lastResult.isNone()
 
     def get(self, timeout=None):
         """
-        Do not mix asynchronous and synchronous chain usage! This one will stop event loop
+        Returns next result of chaining execution. If chain haven't been completed after `timeout` seconds, an
+        `TimeoutError` will be raised.
+
+        Default implementation simply starts event loop, sets timeout condition and run chain expression. Event loop
+        will be stopped after getting chain result or after timeout expired.
+        It is correct to call this method multiple times to receive multiple chain results until you exactly know
+        how much chunks there will be. A `ChokeEvent` will be raised if there is no more chunks to process.
+
+        Warning: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
+
+        :param timeout: Timeout in seconds after which TimeoutError will be raised. If timeout is not set (default) it
+                        means forever waiting.
+        :raises ChokeEvent: If there is no more chunks to process.
+        :raises ValueError: If timeout is set and it is less than 1 ms.
+        :raises TimeoutError: If timeout expired.
         """
         self._checkTimeout(timeout)
         if self.hasPendingResult():
@@ -331,6 +373,20 @@ class Chain(object):
         return self._getLastResult()
 
     def wait(self, timeout=None):
+        """
+        Waits chaining execution during some time or forever.
+
+        This method provides you nice way to do asynchronous waiting future result from chain expression. Default
+        implementation simply starts event loop, sets timeout condition and run chain expression. Event loop will be
+        stopped after getting final chain result or after timeout expired. Unlike `get` method there will be no
+        exception raised if timeout is occurred while chaining execution running.
+
+        Warning: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
+
+        :param timeout: Timeout in seconds after which event loop will be stopped. If timeout is not set (default) it
+                        means forever waiting.
+        :raises ValueError: If timeout is set and it is less than 1 ms.
+        """
         self._checkTimeout(timeout)
         if self.hasPendingResult():
             return
@@ -340,9 +396,21 @@ class Chain(object):
         self.ioLoop.start()
 
     def __iter__(self):
+        """
+        Traits chain object as iterator. Note, that iterator can be used only once. Normally, you should not use this
+        method directly - python uses it automatically in the `for` loop.
+
+        Warning: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
+        """
         return self
 
     def next(self):
+        """
+        Gets next chain result. Normally, you should not use this method directly - python uses it automatically in
+        the `for` loop.
+
+        Warning: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
+        """
         try:
             return self.get()
         except ChokeEvent:
