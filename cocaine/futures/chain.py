@@ -1,6 +1,4 @@
 import hashlib
-from multiprocessing import Process
-from multiprocessing.pool import Pool
 from threading import Thread
 import time
 import types
@@ -21,24 +19,10 @@ class FutureResult(object):
 
     The result itself can be any object or exception. If some exception is stored, then it will be thrown after user
     invokes `get` method.
-    Note, that `NoneType` is also some result, so it cannot be used as mark to store uninitialized future result.
-    You can call `FutureResult.NONE()` constructor if an empty uninitialized result is needed.
     """
-    NONE_RESULT = hashlib.sha1('__None__')
 
     def __init__(self, result):
         self.result = result
-
-    def isNone(self):
-        """
-        Checks if there is some result stored in this object.
-
-        >>> FutureResult(1).isNone()
-        False
-        >>> FutureResult.NONE().isNone()
-        True
-        """
-        return self.result == self.NONE_RESULT
 
     def get(self):
         """
@@ -55,44 +39,6 @@ class FutureResult(object):
         ValueError: ErrorMessage
         """
         return self._returnOrRaise(self.result)
-
-    def reset(self):
-        """
-        Clears stored result and set it to the uninitialized state.
-
-        >>> r = FutureResult(1)
-        >>> r.reset()
-        >>> r.isNone()
-        True
-        """
-        self.result = self.NONE_RESULT
-
-    def getAndReset(self):
-        """
-        Extracts future result from object and resets it to the uninitialized state.
-
-        If an exception is stored in this object, than it will be raised, so surround dangerous code with try/except
-        blocks. Anyway, it is guaranteed that stored result object will be reset.
-
-        >>> r = FutureResult(1)
-        >>> r.getAndReset()
-        1
-        >>> r.isNone()
-        True
-        """
-        result = self.result
-        self.reset()
-        return self._returnOrRaise(result)
-
-    @classmethod
-    def NONE(cls):
-        """
-        Constructs uninitialized future result object.
-
-        >>> FutureResult.NONE().isNone()
-        True
-        """
-        return FutureResult(cls.NONE_RESULT)
 
     def _returnOrRaise(self, result):
         if isinstance(result, Exception):
@@ -255,16 +201,21 @@ class ChainItem(object):
         self.func = func
         self.ioLoop = ioLoop or IOLoop.instance()
         self.nextChainItem = None
+        self.log = logging.getLogger(self.__module__ + '.' + self.__class__.__name__)
 
     def execute(self, *args, **kwargs):
         try:
+            self.log.debug('{0:x} : Executing {1} with {2}'.format(id(self), self.func,
+                                                                   [repr(arg.result) for arg in args]))
             future = self.func(*args, **kwargs)
+            self.log.debug('{0:x}: Execution done. Received - {2}'.format(id(self), self.func, future))
             if isinstance(future, Future):
                 pass
             elif isinstance(future, types.GeneratorType):
                 future = GeneratorFutureMock(future, ioLoop=self.ioLoop)
             else:
                 future = FutureMock(future, ioLoop=self.ioLoop)
+            self.log.debug('{0:x}: Binding future {1}'.format(id(self), future))
             future.bind(self.callback, self.errorback)
         except (AssertionError, AttributeError, TypeError):
             # Rethrow programming errors
@@ -273,7 +224,7 @@ class ChainItem(object):
             self.errorback(err)
 
     def callback(self, chunk):
-        log.debug('ChainItem.callback - {0}'.format(repr(chunk)))
+        self.log.debug('{0:x}: ChainItem.callback - {1}'.format(id(self), repr(chunk)))
         futureResult = FutureResult(chunk)
         if self.nextChainItem:
             # Actually it does not matter if we invoke next chain item synchronously or not. But for convenience, let's
@@ -282,7 +233,7 @@ class ChainItem(object):
             # self.nextChainItem.execute(futureResult)
 
     def errorback(self, error):
-        log.debug('ChainItem.errorback - {0}'.format(repr(error)))
+        self.log.debug('{0:x}: ChainItem.errorback - {1}'.format(id(self), repr(error)))
         self.callback(error)
 
 
@@ -313,19 +264,24 @@ class Chain(object):
         if not functions:
             functions = []
         self.ioLoop = ioLoop or IOLoop.instance()
+        self.log = logging.getLogger(self.__module__ + '.' + self.__class__.__name__)
         self.chainItems = []
         for func in functions:
             self.then(func)
 
-        self._lastResult = FutureResult.NONE()
+        self._lastResults = []
 
     def then(self, func):
+        self.log.debug('Adding function "{0}" to the chain'.format(func))
         chainItem = ChainItem(func, self.ioLoop)
-        if len(self.chainItems) > 0:
-            self.chainItems[-1].nextChainItem = chainItem
 
         if len(self.chainItems) == 0:
+            self.log.debug('Executing first chain item asynchronously - {0}'.format(chainItem))
             self.ioLoop.add_callback(chainItem.execute)
+        else:
+            self.log.debug('Coupling {0} to {1}'.format(chainItem, self.chainItems[-1]))
+            self.chainItems[-1].nextChainItem = chainItem
+
         self.chainItems.append(chainItem)
         return self
 
@@ -342,7 +298,7 @@ class Chain(object):
         """
         Provides information if chain object has pending result that can be taken from it.
         """
-        return not self._lastResult.isNone()
+        return len(self._lastResults) > 0
 
     def get(self, timeout=None):
         """
@@ -425,17 +381,21 @@ class Chain(object):
             self.then(self._saveLastResult)
 
     def _saveLastResult(self, result):
-        self._lastResult = result
+        self._lastResults.append(result)
         self.ioLoop.stop()
 
     def _isTrackingForLastResult(self):
         return self.chainItems[-1].func == self._saveLastResult
 
     def _getLastResult(self):
-        if isinstance(self._lastResult.result, ChokeEvent):
-            return self._lastResult.get()
+        assert len(self._lastResults) > 0
+
+        lastResult = self._lastResults[0]
+        if isinstance(lastResult.result, ChokeEvent):
+            return lastResult.get()
         else:
-            return self._lastResult.getAndReset()
+            self._lastResults.pop(0)
+            return lastResult.get()
 
 
 def concurrent(func):

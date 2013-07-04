@@ -630,11 +630,11 @@ class SynchronousApiTestCase(AsyncTestCase):
     def test_WaitWithTimeout(self):
         f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop, interval=0.1).execute()
         f.wait(0.050)
-        self.assertTrue(f._lastResult.isNone())
+        self.assertTrue(len(f._lastResults) == 0)
         f.wait(0.040)
-        self.assertTrue(f._lastResult.isNone())
+        self.assertTrue(len(f._lastResults) == 0)
         f.wait(0.011)
-        self.assertFalse(f._lastResult.isNone())
+        self.assertFalse(len(f._lastResults) == 0)
 
     def test_Generator(self):
         f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
