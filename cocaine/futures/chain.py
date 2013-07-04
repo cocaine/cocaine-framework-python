@@ -272,6 +272,18 @@ class Chain(object):
         self._lastResults = []
 
     def then(self, func):
+        """
+        Puts specified chunk processing function into chain pipeline.
+
+        With this method, you can create a pipeline of several chunk handlers. Chunks will be processed asynchronously,
+        transported after that to the next chain item.
+        If some error occurred in the middle of chain and no one caught it, it will be redirected next over pipeline,
+        so make sure you catch all exceptions you need and correctly process it.
+
+        :param func: chunk processing function or method. Its signature must have one parameter of class `FutureResult`
+        if specified function is not the chunk source. If function is chunk source (i.e. service execution method) than
+        there is no parameters must be provided in function signature.
+        """
         self.log.debug('Adding function "{0}" to the chain'.format(func))
         chainItem = ChainItem(func, self.ioLoop)
 
