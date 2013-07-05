@@ -8,11 +8,7 @@
 # [Build]
 build/
 dist/
-doc/*
-!doc/source/
-doc/source/*
-!doc/source/conf.py
-!doc/source/index.rst
+docs/_build
 manpages/
 *.egg-info/
 cocaine_toolc
