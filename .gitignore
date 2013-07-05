@@ -12,6 +12,7 @@ doc/*
 !doc/source/
 doc/source/*
 !doc/source/conf.py
+!doc/source/index.rst
 manpages/
 *.egg-info/
 cocaine_toolc
