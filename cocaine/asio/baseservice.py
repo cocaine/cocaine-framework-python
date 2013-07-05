@@ -37,11 +37,14 @@ from locator import Locator
 
 
 class BaseService(object):
-    """ Implements basic functional for services:
+    """
+    Implements basic functional for services.
+
     * all asio stuff
     * perform_sync method for synchronous operations
-    You should reimplement _on_message function - this is callback for decoder,
-    so this function is called with every incoming decoded message
+
+    You should reimplement _on_message function - this is callback for decoder, so this function is called with every
+    incoming decoded message.
     """
 
     def __init__(self, name, endpoint="127.0.0.1", port=10053, init_args=sys.argv, **kwargs):

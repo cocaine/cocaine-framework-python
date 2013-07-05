@@ -1,4 +1,3 @@
-import hashlib
 from threading import Thread
 import time
 import types

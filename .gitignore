@@ -8,7 +8,10 @@
 # [Build]
 build/
 dist/
-doc/
+doc/*
+!doc/source/
+doc/source/*
+!doc/source/conf.py
 manpages/
 *.egg-info/
 cocaine_toolc
