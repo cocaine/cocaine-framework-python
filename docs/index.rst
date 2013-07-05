@@ -21,10 +21,23 @@ Indices and tables
 * :ref:`search`
 
 
+Package cocaine
+===============
+.. automodule:: cocaine.exceptions
+   :members:
 
-cocaine.futures.chain -- module
-=========================
+
+Package cocaine.asio
+====================
+.. automodule:: cocaine.asio.baseservice
+   :members:
 
 
+.. automodule:: cocaine.asio.ev
+   :members:
+
+
+Package cocaine.futures
+=======================
 .. automodule:: cocaine.futures.chain
    :members:

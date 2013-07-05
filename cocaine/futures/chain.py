@@ -280,8 +280,8 @@ class Chain(object):
         so make sure you catch all exceptions you need and correctly process it.
 
         :param func: chunk processing function or method. Its signature must have one parameter of class `FutureResult`
-        if specified function is not the chunk source. If function is chunk source (i.e. service execution method) than
-        there is no parameters must be provided in function signature.
+                     if specified function is not the chunk source. If function is chunk source (i.e. service execution
+                     method) than there is no parameters must be provided in function signature.
         """
         self.log.debug('Adding function "{0}" to the chain'.format(func))
         chainItem = ChainItem(func, self.ioLoop)

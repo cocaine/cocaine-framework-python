@@ -43,19 +43,17 @@ class BaseService(object):
     * all asio stuff
     * perform_sync method for synchronous operations
 
+    It:
+    * goes to Locator and get service api (put into self._service_api)
+    * initializes event loop and all asio elements (write/read streams)
+    * initializes session counter
+    * registers callback on epoll READ event and binds callback to decoder (_on_message)
+
     You should reimplement _on_message function - this is callback for decoder, so this function is called with every
     incoming decoded message.
     """
 
     def __init__(self, name, endpoint="127.0.0.1", port=10053, init_args=sys.argv, **kwargs):
-        """
-        It:
-        * goes to Locator and get service api (put into self._service_api)
-        * initializes event loop and all asio elements (write/read streams)
-        * initializes session counter
-        * registers callback on epoll READ event and\
-        binds callback to decoder (_on_message)
-        """
         if '--locator' in init_args:
             try:
                 port = int(init_args[init_args.index('--locator') + 1])
@@ -99,7 +97,7 @@ class BaseService(object):
         self.loop.stop_listening(self.pipe.fileno())
         try:
             self._init_endpoint()
-        except LocatorResolveError as err:
+        except LocatorResolveError:
             pass
         else:
             self.w_stream.reconnect(self.pipe)
@@ -141,17 +139,17 @@ class BaseService(object):
                 self.pipe = Pipe(tuple(self.service_endpoint), None)
                 self.pipe.async_connect(on_connect, limit - time.time())
 
-
-
         locator = Locator()
         locator.async_resolve(self.servicename,
-                                 self._locator_host, 
-                                 self._locator_port, on_locator_resolve, timeout)
-
+                              self._locator_host,
+                              self._locator_port, on_locator_resolve, timeout)
 
     def perform_sync(self, method, *args, **kwargs):
-        """ Do not use the service synchronously after treatment to him asynchronously!
-        Use for these purposes the other instance of the service!
+        """
+        Performs synchronous chunk retrieving
+
+        Warning: Do not use the service synchronously after treatment to him asynchronously! Use for these purposes
+        the other instance of the service!
         """
 
         timeout = kwargs.get("timeout", 5)

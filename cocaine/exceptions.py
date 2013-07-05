@@ -60,7 +60,7 @@ class ServiceError(CocaineError):
 
 
 class LocatorResolveError(CocaineError):
-    """ get_api failed """
+    """Raises when `get_api` method failed """
 
     def __init__(self, servicename, host, port, reason=""):
         self.message = "Unable to resolve API for service\
