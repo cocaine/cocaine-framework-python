@@ -54,8 +54,11 @@ def exception_trap(func):
         except StopIteration:
             pass
         except Exception as err:
-            self._logger.error("Caught exception: %s" % str(err))
+            self._logger.error("Caught exception: %s" % repr(err))
             traceback.print_stack()
+            if not self._response.closed:
+                self._response.error(1, "Unexpectd error %s" % str(err))
+
     return wrapper
 
 
@@ -80,7 +83,7 @@ class _Coroutine(_Proxy):
 
     @exception_trap
     def error(self, error):
-        self._logger.debug("Error: %s" % str(error))
+        self._logger.debug("Error: %s" % repr(error))
         self._current_future_object = self._func.throw(error)
         while self._current_future_object is None:
             self._current_future_object = self._func.next()
@@ -128,6 +131,7 @@ class _Function(_Proxy):
         except Exception as err:
             self._logger.error("Caught exception in invoke(): %s" % str(err))
             traceback.print_stack()
+            raise
 
     def push(self, chunk):
         try:
@@ -135,6 +139,7 @@ class _Function(_Proxy):
         except Exception as err:
             self._logger.error("Caught exception in push(): %s" % str(err))
             traceback.print_stack()
+            raise
 
     def close(self):
         self._state = None

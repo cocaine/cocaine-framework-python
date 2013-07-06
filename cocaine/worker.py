@@ -21,6 +21,7 @@
 
 import sys
 import traceback
+from functools import partial
 
 from asio import ev
 from asio.pipe import Pipe
@@ -72,6 +73,7 @@ class Worker(object):
         self._send_handshake()
         self._send_heartbeat()
 
+
     def _init_endpoint(self, init_args):
         try:
             self.id = init_args[init_args.index("--uuid") + 1]
@@ -91,6 +93,7 @@ class Worker(object):
     def terminate(self, reason, msg):
         self.w_stream.write(Message(message.RPC_TERMINATE, 0, reason, msg).pack())
         self.loop.stop()
+        exit(1)
 
     # Event machine
     def on(self, event, callback):
@@ -104,24 +107,30 @@ class Worker(object):
         msg = Message.initialize(args)
         if msg is None:
             return
+
         elif msg.id == message.RPC_INVOKE:
             try:
                 _request = Request()
                 _stream = Stream(msg.session, self)
                 self.sandbox.invoke(msg.event, _request, _stream)
                 self.sessions[msg.session] = _request
+            except (ImportError, SyntaxError) as err:
+                _stream.error(2, "unrecoverable error: %s " % str(err))
+                self.terminate(1, "Bad code")
             except Exception as err:
                 self._logger.error("On invoke error: %s" % err)
                 traceback.print_stack()
+                _stream.error(1, "Invokation error")
 
         elif msg.id == message.RPC_CHUNK:
             self._logger.debug("Receive chunk: %d" % msg.session)
-            _session = self.sessions.get(msg.session, None)
-            if _session is not None:
-                try:
-                    _session.push(msg.data)
-                except Exception as err:
-                    self._logger.error("On push error: %s" % str(err))
+            try:
+                _session = self.sessions[msg.session]
+                _session.push(msg.data)
+            except Exception as err:
+                self._logger.error("On push error: %s" % str(err))
+                self.terminate(1, "Push error")
+                return
 
         elif msg.id == message.RPC_CHOKE:
             self._logger.debug("Receive choke: %d" % msg.session)
