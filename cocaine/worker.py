@@ -120,7 +120,7 @@ class Worker(object):
             except Exception as err:
                 self._logger.error("On invoke error: %s" % err)
                 traceback.print_stack()
-                _stream.error(1, "Invokation error")
+                _stream.error(1, "Invocation error")
 
         elif msg.id == message.RPC_CHUNK:
             self._logger.debug("Receive chunk: %d" % msg.session)
