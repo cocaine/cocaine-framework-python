@@ -73,3 +73,4 @@ class Service(BaseService):
                 self._subscribers[msg.session].error(ServiceError(self.servicename, msg.message, msg.code))
         except Exception as err:
             print "Exception in _on_message: %s" % str(err)
+            raise err

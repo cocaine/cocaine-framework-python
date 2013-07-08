@@ -48,13 +48,9 @@ class Decoder(object):
         """
          buffer is msgpack.Unpacker (stream unpacker)
         """
-        try:
-            # if not enough data - 0 iterations
-            for res in buffer:
-                self.callback(res)
-        except Exception as err:
-            # hook - view later
-            pass
+        # if not enough data - 0 iterations
+        for res in buffer:
+            self.callback(res)
 
 
 class ReadableStream(object):
