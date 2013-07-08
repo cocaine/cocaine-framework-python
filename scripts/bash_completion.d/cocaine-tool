@@ -9,7 +9,7 @@ _cocaine_tool()
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     subcommands_1="info app profile runlist crashlog help"
-    subcommands_app="start stop restart pause check list view upload remove"
+    subcommands_app="start stop restart pause check list view upload upload2 remove"
     subcommands_profile="list view upload remove"
     subcommands_runlist="list view upload remove add-app"
     subcommands_crashlog="list view remove removeall"
