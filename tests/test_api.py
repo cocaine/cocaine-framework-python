@@ -614,6 +614,16 @@ class SynchronousApiTestCase(AsyncTestCase):
         r = f.get()
         self.assertEqual(1, r)
 
+    def test_GetSingleChunkMultipleTimesAfterWaiting(self):
+        s = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop)
+        f1 = s.execute()
+        f1.wait()
+        f1.get()
+        f2 = s.execute()
+        f2.wait()
+        r2 = f2.get()
+        self.assertEqual(1, r2)
+
     def test_GetSingleChunkAfterMultipleWaiting(self):
         f = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
         f.wait()
