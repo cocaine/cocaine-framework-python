@@ -406,7 +406,6 @@ class Chain(object):
         return self.chainItems[-1].func == self._saveLastResult
 
     def _getLastResult(self):
-        self.log.error(self._lastResults)
         assert len(self._lastResults) > 0
 
         lastResult = self._lastResults[0]
