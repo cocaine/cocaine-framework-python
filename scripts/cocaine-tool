@@ -120,8 +120,14 @@ def app_upload(locator,
 
 @appDispatcher.command(name='upload2')
 def app_upload2(locator,
-                   path,
-                   name=None):
+                path,
+                name=None):
+    """
+    Uploads application with its environment (directory) into storage.
+
+    Application directory must contain valid manifest file.
+    You can specify application name. By default, directory name is treated as application name.
+    """
     locator.storageExecutor.executeAction('app:upload2', **{
         'path': path,
         'name': name
