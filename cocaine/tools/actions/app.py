@@ -3,16 +3,17 @@ import re
 import shutil
 import tarfile
 import tempfile
+import logging
+
 from cocaine.exceptions import ToolsError
-from cocaine.tools.actions import node
-from cocaine.tools.tags import APPS_TAGS
 from cocaine.futures import chain
+from cocaine.futures.chain import Chain
+from cocaine.tools import actions
+from cocaine.tools.actions import common
 from cocaine.tools.installer import PythonModuleInstaller, ModuleInstallError
 from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
 from cocaine.tools.encoders import JsonEncoder, PackageEncoder
-from cocaine.tools import actions
-from cocaine.futures.chain import Chain
-import logging
+from cocaine.tools.tags import APPS_TAGS
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -84,7 +85,7 @@ class Remove(actions.Storage):
         yield 'Done'
 
 
-class Start(node.Action):
+class Start(common.Node):
     def __init__(self, node, **config):
         super(Start, self).__init__(node, **config)
         self.name = config.get('name')
@@ -101,7 +102,7 @@ class Start(node.Action):
         return self.node.start_app(apps)
 
 
-class Stop(node.Action):
+class Stop(common.Node):
     def __init__(self, node, **config):
         super(Stop, self).__init__(node, **config)
         self.name = config.get('name')
@@ -113,7 +114,7 @@ class Stop(node.Action):
         return future
 
 
-class Restart(node.Action):
+class Restart(common.Node):
     def __init__(self, node, **config):
         super(Restart, self).__init__(node, **config)
         self.name = config.get('name')
@@ -126,7 +127,7 @@ class Restart(node.Action):
 
     def doAction(self):
         try:
-            info = yield node.Info(self.node, **self.config).execute()
+            info = yield common.NodeInfo(self.node, **self.config).execute()
             profile = self.profile or info['apps'][self.name]['profile']
             appStopStatus = yield Stop(self.node, **self.config).execute()
             appStartConfig = {
@@ -143,7 +144,7 @@ class Restart(node.Action):
             raise ToolsError('Unknown error - {0}'.format(err))
 
 
-class Check(node.Action):
+class Check(common.Node):
     def __init__(self, node, **config):
         super(Check, self).__init__(node, **config)
         self.name = config.get('name')

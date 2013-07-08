@@ -8,7 +8,7 @@ from time import time
 
 from tornado.ioloop import IOLoop
 
-from cocaine.tools.actions import runlist, crashlog, app, profile, node
+from cocaine.tools.actions import common, app, profile, runlist, crashlog
 from cocaine.services import Service
 from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError, ChokeEvent, ToolsError
 from cocaine.tools.actions.app import LocalUpload
@@ -152,7 +152,7 @@ def makePrettyCrashlogRemove(cls, onDoneMessage=None):
 
 class CallActionCli(object):
     def __init__(self, node=None, **config):
-        self.action = node.Call(node, **config)
+        self.action = common.Call(node, **config)
         self.config = config
 
     def execute(self):
@@ -236,7 +236,7 @@ AVAILABLE_TOOLS_ACTIONS = {
 }
 
 AVAILABLE_NODE_ACTIONS = {
-    'info': AwaitJsonWrapper()(node.Info),
+    'info': AwaitJsonWrapper()(common.NodeInfo),
     'call': CallActionCli,
     'app:start': AwaitJsonWrapper()(app.Start),
     'app:pause': AwaitJsonWrapper()(app.Stop),

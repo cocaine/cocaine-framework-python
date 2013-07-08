@@ -3,8 +3,9 @@ import os
 import subprocess
 import tempfile
 from threading import Lock
-from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
 import logging
+
+from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 

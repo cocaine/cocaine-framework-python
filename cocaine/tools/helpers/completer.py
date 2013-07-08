@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import json
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
@@ -18,12 +17,6 @@ def getOption(name, default):
             value = sys.argv[index + 1]
     return value
 
-
-
-#todo: Need to implement crashlog completer by --name
-#todo: `noname` noticed crashlogs displaying unsorted, but it's not true for me. Check this
-#todo: There is issue about large crashlogs pulling from storage. Large - means ~400k. Need some indexing or manual
-#todo: ... selecting range.
 
 if __name__ == '__main__':
     try:

@@ -1,5 +1,6 @@
 import socket
 import errno
+
 from cocaine.exceptions import ConnectionRefusedError, ConnectionError
 from cocaine.services import Service
 

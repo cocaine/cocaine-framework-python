@@ -8,7 +8,7 @@ from cocaine.futures.chain import Chain
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-class Action(object):
+class Node(object):
     def __init__(self, node=None, **config):
         self.node = node
         self.config = config
@@ -17,12 +17,12 @@ class Action(object):
         raise NotImplementedError()
 
 
-class Info(Action):
+class NodeInfo(Node):
     def execute(self):
         return self.node.info()
 
 
-class Call(Action):
+class Call(Node):
     def __init__(self, node, **config):
         super(Call, self).__init__(node, **config)
         command = config.get('command')
