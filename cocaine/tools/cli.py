@@ -4,6 +4,7 @@ from cocaine.services import Service
 from time import time
 from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError, ChokeEvent
 from cocaine.tools.tools import *
+from cocaine.tools.actions.app import AppLocalUploadAction
 import json
 import msgpack
 import sys
@@ -191,10 +192,31 @@ RUNLIST_REMOVE_FAIL = 'Unable to remove runlist "{name}" - {error}'
 CRASHLOG_REMOVE_SUCCESS = 'Crashlog for app "{0}" have been removed'
 CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
+
+class AppUpload2CliAction(object):
+    def __init__(self, storage, **config):
+        self.action = AppLocalUploadAction(storage, **config)
+
+    def execute(self):
+        self.action.execute().then(self.processResult)
+
+    def processResult(self, chunk):
+        try:
+            result = chunk.get()
+            print(result)
+        except ChokeEvent:
+            pass
+        except Exception as err:
+            printError(err)
+        finally:
+            IOLoop.instance().stop()
+
+
 AVAILABLE_TOOLS_ACTIONS = {
     'app:list': AwaitJsonWrapper()(AppListAction),
     'app:view': AwaitJsonWrapper(unpack=True)(AppViewAction),
     'app:upload': AwaitDoneWrapper(APP_UPLOAD_SUCCESS, APP_UPLOAD_FAIL)(AppUploadAction),
+    'app:upload2': AppUpload2CliAction,
     'app:remove': AwaitDoneWrapper(APP_REMOVE_SUCCESS, APP_REMOVE_FAIL)(AppRemoveAction),
     'profile:list': AwaitJsonWrapper()(ProfileListAction),
     'profile:view': AwaitJsonWrapper(unpack=True)(ProfileViewAction),
@@ -232,7 +254,8 @@ class Executor(object):
         self.config = config
         self.loop = IOLoop.instance()
 
-        if config.get('debug'):
+        debugLevel = config.get('debug', 'disable')
+        if debugLevel != 'disable':
             ch = logging.StreamHandler()
             ch.setLevel(logging.DEBUG)
             formatter = logging.Formatter('%(name)s: %(levelname)-8s: %(message)s')
@@ -240,9 +263,11 @@ class Executor(object):
 
             logNames = [
                 __name__,
-                'cocaine.futures.chain',
-                'cocaine.testing.mocks',
+                'cocaine.tools.actions.app.AppLocalUploadAction'
             ]
+            if debugLevel == 'all':
+                logNames.append('cocaine.futures.chain')
+                logNames.append('cocaine.testing.mocks')
 
             for logName in logNames:
                 log = logging.getLogger(logName)

@@ -22,7 +22,7 @@ class Locator(object):
         ('p', 'port', DEFAULT_PORT, 'port'),
         ('', 'color', False, 'enable colored output'),
         ('', 'timeout', 1.0, 'timeout, s'),
-        ('', 'debug', False, 'enable debug mode')
+        ('', 'debug', ('disable', 'tools', 'all'), 'enable debug mode')
     ]
 
     def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, color=False, timeout=False, debug=False):
@@ -115,6 +115,16 @@ def app_upload(locator,
         'name': name,
         'manifest': manifest,
         'package': package
+    })
+
+
+@appDispatcher.command(name='upload2')
+def app_upload2(locator,
+                   path,
+                   name=None):
+    locator.storageExecutor.executeAction('app:upload2', **{
+        'path': path,
+        'name': name
     })
 
 

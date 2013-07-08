@@ -69,7 +69,9 @@ setup(
         "cocaine.services",
         "cocaine.futures",
         "cocaine.logging",
-        "cocaine.testing"
+        "cocaine.tools",
+        "cocaine.tools.actions",
+        "cocaine.testing",
     ] + tools_packages,
     install_requires=["msgpack_python", "tornado", "mockito"] + tools_requires,
     scripts=["scripts/cocaine-tool"] if not without_tools else []
