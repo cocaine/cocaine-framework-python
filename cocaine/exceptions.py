@@ -100,3 +100,19 @@ class AsyncConnectionError(ConnectionError):
 
 class ChokeEvent(Exception):
     pass
+
+
+class ToolsError(CocaineError):
+    pass
+
+
+class UploadError(ToolsError):
+    pass
+
+
+class ServiceCallError(ToolsError):
+    def __init__(self, serviceName, reason):
+        self.message = 'Error in service "{0}" - {1}'.format(serviceName, reason)
+
+    def __str__(self):
+        return self.message

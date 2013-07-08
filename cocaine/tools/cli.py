@@ -1,15 +1,17 @@
-import errno
-import socket
-from cocaine.services import Service
-from time import time
-from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError, ChokeEvent
-from cocaine.tools.tools import *
-from cocaine.tools.actions.app import AppLocalUploadAction
 import json
 import msgpack
 import sys
-from tornado.ioloop import IOLoop
+import errno
+import socket
 import logging
+from time import time
+
+from tornado.ioloop import IOLoop
+
+from cocaine.tools.actions import runlist, crashlog, app, profile, node
+from cocaine.services import Service
+from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError, ChokeEvent, ToolsError
+from cocaine.tools.actions.app import LocalUpload
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
@@ -82,7 +84,7 @@ def AwaitJsonWrapper(onErrorMessage=None, unpack=False):
     return Patch
 
 
-class ConsoleAddApplicationToRunlistAction(RunlistAddApplicationAction):
+class ConsoleAddApplicationToRunlistAction(runlist.AddApplication):
     def execute(self):
         super(ConsoleAddApplicationToRunlistAction, self).execute().then(self.printResult).run()
 
@@ -97,7 +99,7 @@ class ConsoleAddApplicationToRunlistAction(RunlistAddApplicationAction):
             IOLoop.instance().stop()
 
 
-class PrettyPrintableCrashlogListAction(CrashlogListAction):
+class PrettyPrintableCrashlogListAction(crashlog.List):
     def execute(self):
         chain = super(PrettyPrintableCrashlogListAction, self).execute()
         chain.then(self.handleResult).run()
@@ -105,7 +107,7 @@ class PrettyPrintableCrashlogListAction(CrashlogListAction):
     def handleResult(self, result):
         try:
             print('Currently available crashlogs for application \'%s\'' % self.name)
-            for item in parseCrashlogs(result.get()):
+            for item in crashlog.parseCrashlogs(result.get()):
                 print ' '.join(item)
         except Exception as err:
             print(repr(err))
@@ -114,7 +116,7 @@ class PrettyPrintableCrashlogListAction(CrashlogListAction):
             IOLoop.instance().stop()
 
 
-class PrettyPrintableCrashlogViewAction(CrashlogViewAction):
+class PrettyPrintableCrashlogViewAction(crashlog.View):
     def execute(self):
         super(PrettyPrintableCrashlogViewAction, self).execute().then(self.handleResult).run()
 
@@ -150,7 +152,7 @@ def makePrettyCrashlogRemove(cls, onDoneMessage=None):
 
 class CallActionCli(object):
     def __init__(self, node=None, **config):
-        self.action = CallAction(node, **config)
+        self.action = node.Call(node, **config)
         self.config = config
 
     def execute(self):
@@ -195,7 +197,7 @@ CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
 class AppUpload2CliAction(object):
     def __init__(self, storage, **config):
-        self.action = AppLocalUploadAction(storage, **config)
+        self.action = LocalUpload(storage, **config)
 
     def execute(self):
         self.action.execute().then(self.processResult)
@@ -213,34 +215,34 @@ class AppUpload2CliAction(object):
 
 
 AVAILABLE_TOOLS_ACTIONS = {
-    'app:list': AwaitJsonWrapper()(AppListAction),
-    'app:view': AwaitJsonWrapper(unpack=True)(AppViewAction),
-    'app:upload': AwaitDoneWrapper(APP_UPLOAD_SUCCESS, APP_UPLOAD_FAIL)(AppUploadAction),
+    'app:list': AwaitJsonWrapper()(app.List),
+    'app:view': AwaitJsonWrapper(unpack=True)(app.View),
+    'app:upload': AwaitDoneWrapper(APP_UPLOAD_SUCCESS, APP_UPLOAD_FAIL)(app.Upload),
     'app:upload2': AppUpload2CliAction,
-    'app:remove': AwaitDoneWrapper(APP_REMOVE_SUCCESS, APP_REMOVE_FAIL)(AppRemoveAction),
-    'profile:list': AwaitJsonWrapper()(ProfileListAction),
-    'profile:view': AwaitJsonWrapper(unpack=True)(ProfileViewAction),
-    'profile:upload': AwaitDoneWrapper(PROFILE_UPLOAD_SUCCESS, PROFILE_UPLOAD_FAIL)(ProfileUploadAction),
-    'profile:remove': AwaitDoneWrapper(PROFILE_REMOVE_SUCCESS, PROFILE_REMOVE_FAIL)(ProfileRemoveAction),
-    'runlist:list': AwaitJsonWrapper()(RunlistListAction),
-    'runlist:view': AwaitJsonWrapper(unpack=True)(RunlistViewAction),
-    'runlist:upload': AwaitDoneWrapper(RUNLIST_UPLOAD_SUCCESS, RUNLIST_UPLOAD_FAIL)(RunlistUploadAction),
-    'runlist:remove': AwaitDoneWrapper(RUNLIST_REMOVE_SUCCESS, RUNLIST_REMOVE_FAIL)(RunlistRemoveAction),
-    'runlist:add-app': AwaitJsonWrapper()(RunlistAddApplicationAction),
+    'app:remove': AwaitDoneWrapper(APP_REMOVE_SUCCESS, APP_REMOVE_FAIL)(app.Remove),
+    'profile:list': AwaitJsonWrapper()(profile.List),
+    'profile:view': AwaitJsonWrapper(unpack=True)(profile.View),
+    'profile:upload': AwaitDoneWrapper(PROFILE_UPLOAD_SUCCESS, PROFILE_UPLOAD_FAIL)(profile.Upload),
+    'profile:remove': AwaitDoneWrapper(PROFILE_REMOVE_SUCCESS, PROFILE_REMOVE_FAIL)(profile.Remove),
+    'runlist:list': AwaitJsonWrapper()(runlist.List),
+    'runlist:view': AwaitJsonWrapper(unpack=True)(runlist.View),
+    'runlist:upload': AwaitDoneWrapper(RUNLIST_UPLOAD_SUCCESS, RUNLIST_UPLOAD_FAIL)(runlist.Upload),
+    'runlist:remove': AwaitDoneWrapper(RUNLIST_REMOVE_SUCCESS, RUNLIST_REMOVE_FAIL)(runlist.Remove),
+    'runlist:add-app': AwaitJsonWrapper()(runlist.AddApplication),
     'crashlog:list': PrettyPrintableCrashlogListAction,
     'crashlog:view': PrettyPrintableCrashlogViewAction,
-    'crashlog:remove': makePrettyCrashlogRemove(CrashlogRemoveAction, CRASHLOG_REMOVE_SUCCESS),
-    'crashlog:removeall': makePrettyCrashlogRemove(CrashlogRemoveAllAction, CRASHLOGS_REMOVE_SUCCESS)
+    'crashlog:remove': makePrettyCrashlogRemove(crashlog.Remove, CRASHLOG_REMOVE_SUCCESS),
+    'crashlog:removeall': makePrettyCrashlogRemove(crashlog.RemoveAll, CRASHLOGS_REMOVE_SUCCESS)
 }
 
 AVAILABLE_NODE_ACTIONS = {
-    'info': AwaitJsonWrapper()(NodeInfoAction),
+    'info': AwaitJsonWrapper()(node.Info),
     'call': CallActionCli,
-    'app:start': AwaitJsonWrapper()(AppStartAction),
-    'app:pause': AwaitJsonWrapper()(AppPauseAction),
-    'app:stop': AwaitJsonWrapper()(AppPauseAction),
-    'app:restart': AwaitJsonWrapper()(AppRestartAction),
-    'app:check': AwaitJsonWrapper()(AppCheckAction)
+    'app:start': AwaitJsonWrapper()(app.Start),
+    'app:pause': AwaitJsonWrapper()(app.Stop),
+    'app:stop': AwaitJsonWrapper()(app.Stop),
+    'app:restart': AwaitJsonWrapper()(app.Restart),
+    'app:check': AwaitJsonWrapper()(app.Check)
 }
 
 
