@@ -197,8 +197,6 @@ def app_restart(locator,
         'profile': profile
     })
 
-#todo: add this command to bash completion
-
 
 @appDispatcher.command()
 def check(locator,

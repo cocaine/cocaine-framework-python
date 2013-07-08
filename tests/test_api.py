@@ -503,7 +503,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
         self.wait()
         self.assertTrue(len(expected) == 0)
 
-    def test_1(self):
+    def test_MultipleChunk_MultipleThen_SyncTransformation(self):
         expected = [
             lambda r: self.assertEqual({'app': 'info'}, r.get()),
             lambda r: self.assertRaises(ChokeEvent, r.get),
@@ -540,6 +540,27 @@ class SynchronousApiTestCase(AsyncTestCase):
         self.assertEqual(1, r1)
         self.assertEqual(2, r2)
         self.assertEqual(3, r3)
+
+    def test_GetSingleChunkMultipleTimes(self):
+        s = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop)
+        s.execute().get()
+        r2 = s.execute().get()
+        self.assertEqual(1, r2)
+
+    def test_GetMultipleChunksMultipleTimes(self):
+        s = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop)
+        f1 = s.execute()
+        f1.get()
+        f1.get()
+        f1.get()
+
+        f2 = s.execute()
+        r21 = f2.get()
+        r22 = f2.get()
+        r23 = f2.get()
+        self.assertEqual(1, r21)
+        self.assertEqual(2, r22)
+        self.assertEqual(3, r23)
 
     def test_GetSingleErrorChunk(self):
         f = ServiceMock(chunks=[Exception('Oops')], T=self.T, ioLoop=self.io_loop).execute()
