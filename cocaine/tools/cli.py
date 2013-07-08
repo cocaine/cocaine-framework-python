@@ -106,9 +106,12 @@ class PrettyPrintableCrashlogListAction(crashlog.List):
 
     def handleResult(self, result):
         try:
+            crashlogs = result.get()
             print('Currently available crashlogs for application \'%s\'' % self.name)
-            for item in crashlog.parseCrashlogs(result.get()):
+            for item in crashlog.parseCrashlogs(crashlogs):
                 print ' '.join(item)
+        except ChokeEvent:
+            pass
         except Exception as err:
             print(repr(err))
             printError(('' or 'Unable to view "{name}" - {error}').format(name=self.name, error=err))
