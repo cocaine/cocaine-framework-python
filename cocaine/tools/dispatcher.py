@@ -451,8 +451,12 @@ def profile_upload(locator,
 
 @runlistDispatcher.command(name='list')
 def runlist_list(locator):
-    """
-    Shows uploaded runlists
+    """Show uploaded runlists.
+
+    >>> cocaine-tool runlist list
+    [
+        "default"
+    ]
     """
     locator.storageExecutor.executeAction('runlist:list', **{})
 
@@ -460,8 +464,14 @@ def runlist_list(locator):
 @runlistDispatcher.command(name='view')
 def runlist_view(locator,
                  name=('n', '', 'name')):
-    """
-    Shows configuration context for runlist
+    """Show configuration context for runlist.
+
+    :param name: runlist name.
+
+    >>> ./cocaine-tool runlist view --name default
+    {
+        "Echo": "EchoProfile"
+    }
     """
     locator.storageExecutor.executeAction('runlist:view', **{
         'name': name
@@ -471,9 +481,14 @@ def runlist_view(locator,
 @runlistDispatcher.command(name='upload')
 def runlist_upload(locator,
                    name=('n', '', 'name'),
-                   runlist=('', '', 'runlist')):
-    """
-    Uploads runlist with context into storage
+                   runlist=('', '', 'path to the runlist configuration json file')):
+    """Upload runlist with context into the storage.
+
+    :param name: runlist name.
+    :param runlist: path to the runlist configuration json file.
+
+    >>> ./cocaine-tool runlist upload --name default --runlist ../examples/echo/runlsit.json
+    The runlist "default" has been successfully uploaded
     """
     locator.storageExecutor.executeAction('runlist:upload', **{
         'name': name,
@@ -484,8 +499,12 @@ def runlist_upload(locator,
 @runlistDispatcher.command(name='remove')
 def runlist_remove(locator,
                    name=('n', '', 'name')):
-    """
-    Removes runlist from storage
+    """Remove runlist from the storage.
+
+    :param name: runlist name.
+
+    >>> cocaine-tool runlist remove --name default
+    The runlist "default" has been successfully removed
     """
     locator.storageExecutor.executeAction('runlist:remove', **{
         'name': name
@@ -497,8 +516,23 @@ def runlist_add_app(locator,
                     name=('n', '', 'runlist name'),
                     app=('', '', 'application name'),
                     profile=('', '', 'suggested profile')):
-    """
-    Adds specified application with profile to runlist
+    """Add specified application with profile to the runlist.
+
+    Existence of application or profile is not checked.
+
+    :param name: runlist name.
+    :param app: application name.
+    :param profile: suggested profile name.
+
+    >>>cocaine-tool runlist add-app --name default --app Echo --profile EchoProfile
+    {
+        "status": "Success",
+        "added": {
+            "profile": "EchoProfile",
+            "app": "Echo"
+        },
+        "runlist": "default"
+    }
     """
     locator.storageExecutor.executeAction('runlist:add-app', **{
         'name': name,
