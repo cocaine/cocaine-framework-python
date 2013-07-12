@@ -41,3 +41,11 @@ Package cocaine.futures
 =======================
 .. automodule:: cocaine.futures.chain
    :members:
+
+
+Cocaine Tools
+=======================
+This is command line tools
+
+.. automodule:: cocaine.tools.dispatcher
+   :members:
