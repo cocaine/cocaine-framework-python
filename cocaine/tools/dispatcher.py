@@ -56,8 +56,7 @@ crashlogDispatcher = Dispatcher(globaloptions=Locator.options, middleware=middle
 
 @d.command()
 def info(locator):
-    """
-    Show information about cocaine runtime
+    """Show information about cocaine runtime
 
     Return json-like string with information about cocaine-runtime.
 
@@ -99,8 +98,7 @@ def info(locator):
 @d.command()
 def call(locator,
          service, method='', args=''):
-    """
-    Invoke specified method from service.
+    """Invoke specified method from service.
 
     Performs method invocation from specified service. Service name should be correct string and must be correctly
     located through locator. By default, locator endpoint is ```localhost, 10053```, but it can be changed by passing
@@ -141,8 +139,7 @@ def call(locator,
 
 @appDispatcher.command(name='list')
 def app_list(locator):
-    """
-    Show installed applications list
+    """Show installed applications list.
 
     >>> cocaine-tools app list
     [
@@ -156,21 +153,35 @@ def app_list(locator):
 @appDispatcher.command(usage='--name=NAME', name='view')
 def app_view(locator,
              name=('n', '', 'application name')):
-    """
-    Show manifest context for application
+    """Show manifest context for application.
+
+    If application is not uploaded, an error will be displayed.
+
+    :param name: application name.
+
+    >>> cocaine-tool app view --name Echo
+    {
+        "slave": "/home/satan/echo/echo.py"
+    }
     """
     locator.storageExecutor.executeAction('app:view', **{
         'name': name,
     })
 
 
-@appDispatcher.command(name='upload')
+@appDispatcher.command(usage='--name=NAME --manifest=MANIFEST --package=PACKAGE', name='upload')
 def app_upload(locator,
                name=('n', '', 'application name'),
                manifest=('', '', 'manifest file name'),
                package=('', '', 'location of the app source package')):
-    """
-    Uploads application into storage
+    """Upload application into the storage
+
+    :param name: application name.
+    :param manifest: path to application manifest json file.
+    :param package: path to application archive.
+
+    >>> cocaine-tool app upload --name echo --manifest ~/echo/manifest.json --package ~/echo/echo.tar.gz
+    Application echo has been successfully uploaded
     """
     locator.storageExecutor.executeAction('app:upload', **{
         'name': name,
@@ -183,11 +194,19 @@ def app_upload(locator,
 def app_upload2(locator,
                 path,
                 name=None):
-    """
-    Uploads application with its environment (directory) into storage.
+    """Upload application with its environment (directory) into the storage.
 
     Application directory must contain valid manifest file.
     You can specify application name. By default, directory name is treated as application name.
+
+    :param path: path to the application root.
+    :param name: application name. If it is not specified, application will be named as its directory name.
+
+    >>> cocaine-tool app upload2 ~/echo
+    Application echo has been successfully uploaded
+
+    >>> cocaine-tool app upload2 ~/echo TheEchoApp
+    Application TheEchoApp has been successfully uploaded
     """
     locator.storageExecutor.executeAction('app:upload2', **{
         'path': path,
@@ -198,8 +217,14 @@ def app_upload2(locator,
 @appDispatcher.command(name='remove')
 def app_remove(locator,
                name=('n', '', 'application name')):
-    """
-    Removes application from storage
+    """Remove application from storage.
+
+    No error messages will display if specified application is not uploaded.
+
+    :param name: application name.
+
+    >>> cocaine-tool app remove --name echo
+    The app "echo" has been successfully removed
     """
     locator.storageExecutor.executeAction('app:remove', **{
         'name': name
@@ -210,8 +235,24 @@ def app_remove(locator,
 def app_start(locator,
               name=('n', '', 'application name'),
               profile=('r', '', 'profile name')):
-    """
-    Starts application
+    """Start application with specified profile.
+
+    Does nothing if application is already running.
+
+    :param name: application name.
+    :param profile: desired profile.
+
+    >>> cocaine-tool app start --name Echo --profile EchoDefault
+    {
+        "Echo": "the app has been started"
+    }
+
+    *If application is already running*
+
+    >>> cocaine-tool app start --name Echo --profile EchoDefault
+    {
+        "Echo": "the app is already running"
+    }
     """
     locator.nodeExecutor.executeAction('app:start', **{
         'name': name,
@@ -222,10 +263,23 @@ def app_start(locator,
 @appDispatcher.command(name='pause')
 def app_pause(locator,
               name=('n', '', 'application name')):
-    """
-    Pauses application
+    """Stop application.
 
-    This command is alias for `cocaine-tool app stop`
+    This command is alias for ```cocaine-tool app stop```.
+
+    :param name: application name.
+
+    >>> cocaine app pause --name Echo
+    {
+        "Echo": "the app has been stopped"
+    }
+
+    *For non running application*
+
+    >>> cocaine app pause --name Echo
+    {
+        "Echo": "the app is not running"
+    }
     """
     locator.nodeExecutor.executeAction('app:pause', **{
         'name': name
@@ -235,8 +289,21 @@ def app_pause(locator,
 @appDispatcher.command(name='stop')
 def app_stop(locator,
              name=('n', '', 'application name')):
-    """
-    Stops application
+    """Stop application.
+
+    :param name: application name.
+
+    >>> cocaine app stop --name Echo
+    {
+        "Echo": "the app has been stopped"
+    }
+
+    *For non running application*
+
+    >>> cocaine app stop --name Echo
+    {
+        "Echo": "the app is not running"
+    }
     """
     locator.nodeExecutor.executeAction('app:stop', **{
         'name': name
@@ -247,11 +314,55 @@ def app_stop(locator,
 def app_restart(locator,
                 name=('n', '', 'application name'),
                 profile=('r', '', 'profile name')):
-    """
-    Restarts application
+    """Restart application.
 
-    Equivalent of `cocaine-tool app pause --name [NAME]; cocaine-tool app start --name [NAME] --profile [PROFILE]`.
-    If profile is not specified, application will be restarted with the current profile.
+    Executes ```cocaine-tool app pause``` and ```cocaine-tool app start``` sequentially.
+
+    It can be used to quickly change application profile.
+
+    :param name: application name.
+    :param profile: desired profile. If no profile specified, application will be restarted with the current profile.
+
+    *Normal case*
+
+    >>> cocaine-tool app restart --name Echo
+    [
+        {
+            "Echo": "the app has been stopped"
+        },
+        {
+            "Echo": "the app has been started"
+        }
+    ]
+
+    *If application was not run and no profile name provided*
+
+    >>> cocaine-tool app restart --name Echo
+    Error occurred: Application "Echo" is not running and profile not specified
+
+    *But if we specify profile name*
+
+    >>> cocaine-tool app restart --name Echo --profile EchoProfile
+    [
+        {
+            "Echo": "the app is not running"
+        },
+        {
+            "Echo": "the app has been started"
+        }
+    ]
+
+    *In case wrong profile just stops application*
+
+    >>> cocaine-tool app restart --name Echo --profile EchoProf
+    [
+        {
+            "Echo": "the app has been stopped"
+        },
+        {
+            "Echo": "object 'EchoProf' has not been found in 'profiles'"
+        }
+    ]
     """
     locator.nodeExecutor.executeAction('app:restart', **{
         'name': name,
