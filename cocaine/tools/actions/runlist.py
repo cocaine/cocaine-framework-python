@@ -43,6 +43,12 @@ class Upload(Specific):
         return self.storage.write('runlists', self.name, runlist, RUNLISTS_TAGS)
 
 
+class Create(Specific):
+    def execute(self):
+        runlist = msgpack.dumps({})
+        return self.storage.write('runlists', self.name, runlist, RUNLISTS_TAGS)
+
+
 class Remove(Specific):
     def execute(self):
         return self.storage.remove('runlists', self.name)

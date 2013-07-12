@@ -496,6 +496,21 @@ def runlist_upload(locator,
     })
 
 
+@runlistDispatcher.command(name='create')
+def runlist_create(locator,
+                   name=('n', '', 'name')):
+    """Create runlist and upload it into the storage.
+
+    :param name: runlist name.
+
+    >>> ./cocaine-tool runlist create --name default
+    The runlist "default" has been successfully created
+    """
+    locator.storageExecutor.executeAction('runlist:create', **{
+        'name': name
+    })
+
+
 @runlistDispatcher.command(name='remove')
 def runlist_remove(locator,
                    name=('n', '', 'name')):

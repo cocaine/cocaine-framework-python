@@ -191,6 +191,8 @@ PROFILE_REMOVE_FAIL = 'Unable to remove profile "{name}" - {error}'
 RUNLIST_LIST_SUCCESS = 'Currently uploaded runlists:'
 RUNLIST_UPLOAD_SUCCESS = 'The runlist "{name}" has been successfully uploaded'
 RUNLIST_UPLOAD_FAIL = 'Unable to upload runlist "{name}" - {error}'
+RUNLIST_CREATE_SUCCESS = 'The runlist "{name}" has been successfully created'
+RUNLIST_CREATE_FAIL = 'Unable to create runlist "{name}" - {error}'
 RUNLIST_REMOVE_SUCCESS = 'The runlist "{name}" has been successfully removed'
 RUNLIST_REMOVE_FAIL = 'Unable to remove runlist "{name}" - {error}'
 
@@ -230,6 +232,7 @@ AVAILABLE_TOOLS_ACTIONS = {
     'runlist:list': AwaitJsonWrapper()(runlist.List),
     'runlist:view': AwaitJsonWrapper(unpack=True)(runlist.View),
     'runlist:upload': AwaitDoneWrapper(RUNLIST_UPLOAD_SUCCESS, RUNLIST_UPLOAD_FAIL)(runlist.Upload),
+    'runlist:create': AwaitDoneWrapper(RUNLIST_CREATE_SUCCESS, RUNLIST_CREATE_FAIL)(runlist.Create),
     'runlist:remove': AwaitDoneWrapper(RUNLIST_REMOVE_SUCCESS, RUNLIST_REMOVE_FAIL)(runlist.Remove),
     'runlist:add-app': AwaitJsonWrapper()(runlist.AddApplication),
     'crashlog:list': PrettyPrintableCrashlogListAction,
