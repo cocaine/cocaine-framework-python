@@ -323,7 +323,7 @@ def app_restart(locator,
     :param name: application name.
     :param profile: desired profile. If no profile specified, application will be restarted with the current profile.
 
-    *Normal case*
+    *Usual case*
 
     >>> cocaine-tool app restart --name Echo
     [
@@ -373,8 +373,14 @@ def app_restart(locator,
 @appDispatcher.command()
 def check(locator,
           name=('n', '', 'application name')):
-    """
-    Checks application status
+    """Checks application status.
+
+    :param name: application name.
+
+    >>> cocaine-tool app check --name Echo
+    {
+        "Echo": "stopped or missing"
+    }
     """
     locator.nodeExecutor.executeAction('app:check', **{
         'name': name
@@ -383,8 +389,12 @@ def check(locator,
 
 @profileDispatcher.command(name='list')
 def profile_list(locator):
-    """
-    Shows installed profiles list
+    """Show installed profiles.
+
+    >>> cocaine-tool profile list
+    [
+        "EchoProfile"
+    ]
     """
     locator.storageExecutor.executeAction('profile:list', **{})
 
@@ -392,8 +402,14 @@ def profile_list(locator):
 @profileDispatcher.command(name='view')
 def profile_view(locator,
                  name=('n', '', 'profile name')):
-    """
-    Shows configuration context
+    """Show profile configuration context.
+
+    :param name: profile name
+
+    >>> cocaine-tool profile view --name EchoProfile
+    {
+        "pool-limit": 4
+    }
     """
     locator.storageExecutor.executeAction('profile:view', **{
         'name': name
@@ -404,8 +420,13 @@ def profile_view(locator,
 def profile_upload(locator,
                    name=('n', '', 'profile name'),
                    profile=('', '', 'path to profile file')):
-    """
-    Uploads profile into storage
+    """Upload profile into the storage.
+
+    :param name: profile name.
+    :param profile: path to the profile json file.
+
+    >>> cocaine-tool profile upload --name EchoProfile --profile ../examples/echo/profile.json
+    The profile "EchoProfile" has been successfully uploaded
     """
     locator.storageExecutor.executeAction('profile:upload', **{
         'name': name,
@@ -416,8 +437,12 @@ def profile_upload(locator,
 @profileDispatcher.command(name='remove')
 def profile_upload(locator,
                    name=('n', '', 'profile name')):
-    """
-    Removes profile from storage
+    """Remove profile from the storage.
+
+    :param name: profile name.
+
+    >>> cocaine-tool profile remove --name EchoProfile
+    The profile "EchoProfile" has been successfully removed
     """
     locator.storageExecutor.executeAction('profile:remove', **{
         'name': name
