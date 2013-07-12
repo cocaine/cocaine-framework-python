@@ -104,7 +104,7 @@ class ChainFactory():
         return self
 
     def run(self):
-        warnings.warn('This method is deprecated. Method "then" starts chain automatically', DeprecationWarning)
+        pass
 
     def get(self, timeout=None):
         """
