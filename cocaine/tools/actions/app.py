@@ -204,16 +204,20 @@ class LocalUpload(actions.Storage):
             raise ToolsError('No manifest file found in "{0}" or subdirectories'.format(os.path.abspath(self.path)))
 
         manifest, priority = manifests[0]
-        manifestPath = os.path.abspath(os.path.join(self.path, manifest))
+        manifestPath = os.path.abspath(manifest)
 
         # Pack all
         repositoryPath = tempfile.mkdtemp()
-        shutil.copytree(self.path, os.path.join(repositoryPath, 'repo'))
+        repositoryPath = os.path.join(repositoryPath, 'repo')
+        shutil.copytree(self.path, repositoryPath)
         packagePath = os.path.join(repositoryPath, 'package.tar.gz')
         with tarfile.open(packagePath, mode='w:gz') as tar:
             tar.add(repositoryPath, arcname='')
 
         # Upload
+        self._log.debug('Repository path: {0}'.format(repositoryPath))
+        self._log.debug('Manifest path: {0}'.format(manifestPath))
+        self._log.debug('Package path: {0}'.format(packagePath))
         yield Upload(self.storage, **{
             'name': self.name,
             'manifest': manifestPath,

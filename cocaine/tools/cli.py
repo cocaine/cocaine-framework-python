@@ -271,7 +271,7 @@ class Executor(object):
 
             logNames = [
                 __name__,
-                'cocaine.tools.actions.app.AppLocalUploadAction'
+                'cocaine.tools.actions.app.LocalUpload'
             ]
             if debugLevel == 'all':
                 logNames.append('cocaine.futures.chain')
