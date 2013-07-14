@@ -1,3 +1,9 @@
+cocaine-framework-python (0.10.5-4) unstable; urgency=low
+
+  * fix deprecated warning message
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 12 Jul 2013 18:10:47 +0400
+
 cocaine-framework-python (0.10.5-3) unstable; urgency=low
 
   * A lot of asynchronous staff added.
