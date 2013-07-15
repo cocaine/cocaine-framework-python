@@ -4,6 +4,7 @@ import shutil
 import tarfile
 import tempfile
 import logging
+import msgpack
 
 from cocaine.exceptions import ToolsError
 from cocaine.futures import chain
@@ -42,12 +43,14 @@ class Upload(actions.Storage):
         super(Upload, self).__init__(storage, **config)
         self.name = config.get('name')
         self.manifest = config.get('manifest')
+        self.manifestRaw = config.get('manifest-raw')
         self.package = config.get('package')
         self.jsonEncoder = JsonEncoder()
         self.packageEncoder = PackageEncoder()
+
         if not self.name:
             raise ValueError('Please specify name of the app')
-        if not self.manifest:
+        if not any([self.manifest, self.manifestRaw]):
             raise ValueError('Please specify manifest of the app')
         if not self.package:
             raise ValueError('Please specify package of the app')
@@ -59,7 +62,10 @@ class Upload(actions.Storage):
         return Chain().then(self.do)
 
     def do(self):
-        manifest = self.jsonEncoder.encode(self.manifest)
+        if self.manifest:
+            manifest = self.jsonEncoder.encode(self.manifest)
+        else:
+            manifest = msgpack.dumps(self.manifestRaw)
         package = self.packageEncoder.encode(self.package)
         yield self.storage.write('manifests', self.name, manifest, APPS_TAGS)
         yield self.storage.write('apps', self.name, package, APPS_TAGS)

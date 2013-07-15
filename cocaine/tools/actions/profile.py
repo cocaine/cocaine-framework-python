@@ -1,3 +1,4 @@
+import msgpack
 from cocaine.tools.encoders import JsonEncoder
 from cocaine.tools.tags import PROFILES_TAGS
 from cocaine.tools import actions
@@ -27,12 +28,16 @@ class Upload(Specific):
     def __init__(self, storage, **config):
         super(Upload, self).__init__(storage, **config)
         self.profile = config.get('manifest')
+        self.profileRaw = config.get('profile-raw')
         self.jsonEncoder = JsonEncoder()
-        if not self.profile:
+        if not any([self.profile, self.profileRaw]):
             raise ValueError('Please specify profile file path')
 
     def execute(self):
-        profile = self.jsonEncoder.encode(self.profile)
+        if self.profile:
+            profile = self.jsonEncoder.encode(self.profile)
+        else:
+            profile = msgpack.dumps(self.profileRaw)
         return self.storage.write('profiles', self.name, profile, PROFILES_TAGS)
 
 
