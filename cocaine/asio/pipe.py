@@ -29,9 +29,9 @@ from functools import partial
 from cocaine.asio.ev import Loop
 from cocaine.exceptions import AsyncConnectionError
 from cocaine.exceptions import AsyncConnectionTimeoutError
-from cocaine.utils import weakmethod
 
 __all__ = ["Pipe"]
+
 
 class Pipe(object):
 
@@ -43,7 +43,7 @@ class Pipe(object):
         else:
             raise Exception("Invalid connection path type")
         self._connected = False
-        self._connection_failed = False # Implement states for this
+        self._connection_failed = False  # Implement states for this
         self.path = path
         assert(on_disconnect_clb is None or callable(on_disconnect_clb))
         self._on_disconnect = on_disconnect_clb or (lambda : None)
@@ -70,7 +70,6 @@ class Pipe(object):
                 break
         self.connected = True
 
-    #@weakmethod
     def _on_socket_event(self, ioloop, on_connect_callback, istimeout=False, *args):
         if istimeout: 
             # Called with timeout event.
@@ -109,18 +108,19 @@ class Pipe(object):
         self.sock.connect_ex(self.path)
 
         event_handler = partial(self._on_socket_event,
-                            ioloop,
-                            on_connect_callback)
+                                ioloop,
+                                on_connect_callback)
 
-        ioloop.add_handler(self.sock.fileno(), 
-                            partial(event_handler, False),
-                            ioloop.WRITE)
+        ioloop.add_handler(self.sock.fileno(),
+                           partial(event_handler, False),
+                           ioloop.WRITE)
 
         if timeout is not None:
             ioloop.add_timeout(time.time() + timeout,
-                                partial(event_handler, True))
+                               partial(event_handler, True))
 
-    def read(self, buff, size):
+    def read(self,
+             buff, size):
         try:
             return self.sock.recv_into(buff, size)
         except socket.error as e:
@@ -157,7 +157,7 @@ class Pipe(object):
     @connected.setter
     def connected(self, value):
         self._connected = value
-        if False == value:
+        if not value:
             self._on_disconnect()
 
     # Next methods are used only perform_sync
@@ -205,6 +205,7 @@ class UNIX(object):
         fcntl.fcntl(sock.fileno(), fcntl.F_SETFD, fcntl.FD_CLOEXEC)
 
 # TODO: merge all async results
+
 
 class ConnectionResult(object):
 

@@ -57,9 +57,7 @@ class BaseService(object):
         if '--locator' in init_args:
             try:
                 port = int(init_args[init_args.index('--locator') + 1])
-            except ValueError as err:
-                port = 10053
-            except IndexError as err:
+            except (ValueError, IndexError):
                 port = 10053
         
         self._try_reconnect = kwargs.get("reconnect_once", True)
@@ -71,7 +69,7 @@ class BaseService(object):
         self._locator_port = port
         self.servicename = name
 
-        self._init_endpoint() # initialize pipe
+        self._init_endpoint()  # initialize pipe
 
         self.decoder = Decoder()
         self.decoder.bind(self._on_message)
@@ -166,7 +164,6 @@ class BaseService(object):
             self.pipe.writeall(packb([number, self._counter, args]))
             self._counter += 1
             u = Unpacker()
-            msg = None
 
             # If we receive rpc::error, put ServiceError here, 
             # and raise this error instead of StopIteration on rpc::choke,
@@ -199,8 +196,8 @@ class BaseService(object):
         else:
             return False
 
-class AsyncReconnectionResult(object):
 
+class AsyncReconnectionResult(object):
     def set_error(self, err):
         def res():
             raise err

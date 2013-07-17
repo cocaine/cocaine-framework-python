@@ -26,7 +26,7 @@ import msgpack
 
 from cocaine.utils import weakmethod
 
-START_CHUNK_SIZE = 10240 # Buffer size for ReadableStream
+START_CHUNK_SIZE = 10240
 
 
 def encode_dec(f):
