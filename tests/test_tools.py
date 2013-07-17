@@ -1,13 +1,17 @@
 # coding=utf-8
 from __future__ import absolute_import
+
 import unittest
-from cocaine.tools.tags import APPS_TAGS, PROFILES_TAGS, RUNLISTS_TAGS
-from cocaine.tools.actions import common, app, profile, runlist, crashlog
+
 import msgpack
+from tornado.testing import AsyncTestCase
 from mockito import mock, when, verify, any, unstub
+
 from cocaine.testing.mocks import CallableMock
 from cocaine.futures.chain import Chain
 from cocaine.exceptions import ServiceError, ToolsError, ServiceCallError
+from cocaine.tools.tags import APPS_TAGS, PROFILES_TAGS, RUNLISTS_TAGS
+from cocaine.tools.actions import common, app, profile, runlist, crashlog
 
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
@@ -32,7 +36,7 @@ def verifyInit(patchedClassName, expected):
     return decorator
 
 
-class AppTestCase(unittest.TestCase):
+class AppTestCase(AsyncTestCase):
     def tearDown(self):
         unstub()
 
@@ -167,8 +171,8 @@ class AppTestCase(unittest.TestCase):
         self.assertRaises(ValueError, app.Restart, node, **{})
         self.assertRaises(ValueError, app.Restart, node, **{'name': ''})
 
-    @verifyInit('AppPauseAction', {'host': '', 'port': '', 'name': 'AppName'})
-    @verifyInit('AppStartAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'ProfileName'})
+    @verifyInit('app.Stop', {'host': '', 'port': '', 'name': 'AppName'})
+    @verifyInit('app.Start', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'ProfileName'})
     def test_AppRestartActionAppIsRunningProfileIsNotSpecified(self):
         node = mock()
         action = app.Restart(node, **{'name': 'AppName', 'host': '', 'port': ''})
@@ -189,8 +193,8 @@ class AppTestCase(unittest.TestCase):
         verify(app.Stop).execute()
         verify(app.Start).execute()
 
-    @verifyInit('AppPauseAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
-    @verifyInit('AppStartAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('app.Stop', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('app.Start', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
     def test_AppRestartActionAppIsRunningProfileIsSpecified(self):
         node = mock()
         action = app.Restart(node, **{'name': 'AppName', 'profile': 'NewProfile', 'host': '', 'port': ''})
@@ -211,8 +215,8 @@ class AppTestCase(unittest.TestCase):
         verify(app.Stop).execute()
         verify(app.Start).execute()
 
-    @verifyInit('AppPauseAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
-    @verifyInit('AppStartAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('app.Stop', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('app.Start', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
     def test_AppRestartActionAppIsNotRunningProfileIsSpecified(self):
         node = mock()
         action = app.Restart(node, **{'name': 'AppName', 'profile': 'NewProfile', 'host': '', 'port': ''})
@@ -228,8 +232,8 @@ class AppTestCase(unittest.TestCase):
         verify(app.Stop).execute()
         verify(app.Start).execute()
 
-    @verifyInit('AppPauseAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
-    @verifyInit('AppStartAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('app.Stop', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('app.Start', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
     def test_AppRestartActionAppIsNotRunningProfileIsNotSpecified(self):
         node = mock()
         action = app.Restart(node, **{'name': 'AppName', 'host': '', 'port': ''})
