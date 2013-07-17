@@ -6,8 +6,8 @@
 #    This file is part of Cocaine.
 #
 #    Cocaine is free software; you can redistribute it and/or modify
-#    it under the terms of the GNU Lesser General Public License as published by
-#    the Free Software Foundation; either version 3 of the License, or
+#    it under the terms of the GNU Lesser General Public License as published
+#    by the Free Software Foundation; either version 3 of the License, or
 #    (at your option) any later version.
 #
 #    Cocaine is distributed in the hope that it will be useful,
@@ -16,7 +16,7 @@
 #    GNU Lesser General Public License for more details.
 #
 #    You should have received a copy of the GNU Lesser General Public License
-#    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+#    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
 __all__ = ["proxy_factory"]
@@ -25,14 +25,14 @@ from abc import ABCMeta, abstractmethod
 import compiler
 import traceback
 
-from cocaine.logging import Logger
+from cocaine.logging.log import core_log
 
 
 class _Proxy(object):
 
     __metaclass__ = ABCMeta
     _wrapped = True
-    _logger = Logger()
+    _logger = core_log
 
     @abstractmethod
     def __init__(self, func):

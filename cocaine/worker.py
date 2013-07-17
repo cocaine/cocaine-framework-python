@@ -6,8 +6,8 @@
 #    This file is part of Cocaine.
 #
 #    Cocaine is free software; you can redistribute it and/or modify
-#    it under the terms of the GNU Lesser General Public License as published by
-#    the Free Software Foundation; either version 3 of the License, or
+#    it under the terms of the GNU Lesser General Public License as published
+#    by the Free Software Foundation; either version 3 of the License, or
 #    (at your option) any later version.
 #
 #    Cocaine is distributed in the hope that it will be useful,
@@ -21,29 +21,28 @@
 
 import sys
 import traceback
-from functools import partial
 
-from asio import ev
-from asio.pipe import Pipe
-from asio.stream import ReadableStream
-from asio.stream import WritableStream
-from asio.stream import Decoder
-from asio import message
-from asio.message import Message
+from cocaine.asio import ev
+from cocaine.asio.pipe import Pipe
+from cocaine.asio.stream import ReadableStream
+from cocaine.asio.stream import WritableStream
+from cocaine.asio.stream import Decoder
+from cocaine.asio import message
+from cocaine.asio.message import Message
 
 from cocaine.sessioncontext import Sandbox
 from cocaine.sessioncontext import Stream
 from cocaine.sessioncontext import Request
 
-from cocaine.logging import Logger
+from cocaine.logging.log import core_log
 from cocaine.exceptions import RequestError
 
 
 class Worker(object):
 
-    def __init__(self, init_args=sys.argv, disown_timeout=2, heartbeat_timeout=20):
-        self._logger = Logger()
-        self._init_endpoint(init_args)
+    def __init__(self, init_args=None, disown_timeout=2, heartbeat_timeout=20):
+        self._logger = core_log
+        self._init_endpoint(init_args or sys.argv)
 
         self.sessions = dict()
         self.sandbox = Sandbox()
@@ -51,7 +50,9 @@ class Worker(object):
         self.loop = ev.Loop()
 
         self.disown_timer = ev.Timer(self.on_disown, disown_timeout, self.loop)
-        self.heartbeat_timer = ev.Timer(self.on_heartbeat, heartbeat_timeout, self.loop)
+        self.heartbeat_timer = ev.Timer(self.on_heartbeat,
+                                        heartbeat_timeout,
+                                        self.loop)
         self.disown_timer.start()
         self.heartbeat_timer.start()
 
@@ -66,18 +67,18 @@ class Worker(object):
         self.r_stream = ReadableStream(self.loop, self.pipe)
         self.r_stream.bind(self.decoder.decode)
 
-        self.loop.register_read_event(self.r_stream._on_event, self.pipe.fileno())
+        self.loop.register_read_event(self.r_stream._on_event,
+                                      self.pipe.fileno())
         self._logger.debug("Worker with %s send handshake" % self.id)
         # Send both messages - to run timers properly. This messages will be sent
         # only after all initialization, so they have same purpose.
         self._send_handshake()
         self._send_heartbeat()
 
-
     def _init_endpoint(self, init_args):
         try:
             self.id = init_args[init_args.index("--uuid") + 1]
-            app_name = init_args[init_args.index("--app") + 1]
+            # app_name = init_args[init_args.index("--app") + 1]
             self.endpoint = init_args[init_args.index("--endpoint") + 1]
         except Exception as err:
             self._logger.error("Wrong cmdline arguments: %s " % err)
@@ -91,7 +92,8 @@ class Worker(object):
         self.loop.run()
 
     def terminate(self, reason, msg):
-        self.w_stream.write(Message(message.RPC_TERMINATE, 0, reason, msg).pack())
+        self.w_stream.write(Message(message.RPC_TERMINATE,
+                                    0, reason, msg).pack())
         self.loop.stop()
         exit(1)
 
@@ -144,7 +146,7 @@ class Worker(object):
             self.disown_timer.stop()
 
         elif msg.id == message.RPC_TERMINATE:
-            self._logger.debug("Receive terminate. Reason: %s, message: %s " % (msg.reason, msg.message))
+            self._logger.debug("Receive terminate. %s, %s" % (msg.reason, msg.message))
             self.terminate(msg.reason, msg.message)
 
         elif msg.id == message.RPC_ERROR:
