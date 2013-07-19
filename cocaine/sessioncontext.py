@@ -23,9 +23,9 @@ import traceback
 
 import msgpack
 
-from decorators import default
+from cocaine.decorators import default
 from cocaine.exceptions import *
-from cocaine.logging import Logger
+from cocaine.logging.log import core_log
 from cocaine.futures import Future
 from cocaine.futures import chain
 
@@ -34,7 +34,7 @@ class Sandbox(object):
 
     def __init__(self):
         self._events = dict()
-        self._logger = Logger()
+        self._logger = core_log
 
     def invoke(self, event_name, request, stream):
         """ Connect worker and decorator """
@@ -97,7 +97,7 @@ class Stream(object):
 class Request(Future):
 
     def __init__(self):
-        self._logger = Logger()
+        self._logger = core_log
         self.cache = list()
         self._clbk = None   # Callback - on chunk
         self._errbk = None  # Errorback - translate error to handler
