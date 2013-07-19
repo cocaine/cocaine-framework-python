@@ -10,8 +10,8 @@ log = Logger()
 
 
 def chunker(request, response):
-    chunks = 100 * 1024
-    leData = [1024 * str(i) for i in xrange(chunks)]
+    chunks = 1024 * 100
+    leData = ['{0:-<1024}'.format(i) for i in xrange(chunks)]
     for num in xrange(chunks):
         response.write(msgpack.dumps(leData[num]))
     response.write(msgpack.dumps('Done'))

@@ -13,7 +13,7 @@ if __name__ == '__main__':
         chunk = yield service.enqueue('chunkMe', '1')
         leData += msgpack.loads(chunk)
         size = len(chunk)
-        counter = 1
+        counter = 0
         while True:
             ch = yield
             chunk = msgpack.loads(ch)
@@ -24,8 +24,8 @@ if __name__ == '__main__':
                 break
             leData += chunk
 
-        print(len(leData))
+        #print(len(leData))
 
     service = Service('Chunker')
-    c = Factory([fetchAll])
-    c.get(timeout=60.0)
+    c = Chain([fetchAll])
+    c.get()
