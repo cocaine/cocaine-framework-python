@@ -276,5 +276,5 @@ class UploadRemote(actions.Storage):
 
     @chain.concurrent
     def createPackage(self, repositoryPath, packagePath):
-        with tarfile.open(packagePath, mode='w:gz') as tar:
-            tar.add(repositoryPath, arcname='')
+        tar = tarfile.open(packagePath, mode='w:gz')
+        tar.add(repositoryPath, arcname='')
