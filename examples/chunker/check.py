@@ -10,7 +10,7 @@ __author__ = 'EvgenySafronov <division494@gmail.com>'
 if __name__ == '__main__':
     def fetchAll():
         leData = []
-        chunk = yield service.enqueue('chunkMe', '1')
+        chunk = yield service.enqueue('chunkMe', str(1024 * 100))
         leData += msgpack.loads(chunk)
         size = len(chunk)
         counter = 0
@@ -19,7 +19,7 @@ if __name__ == '__main__':
             chunk = msgpack.loads(ch)
             size += len(chunk)
             counter += 1
-            print(counter, len(chunk), size)#, chunk)
+            print(counter, len(chunk), size)
             if chunk == 'Done':
                 break
             leData += chunk
