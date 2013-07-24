@@ -1,3 +1,4 @@
+import collections
 from threading import Thread
 import time
 import types
@@ -129,7 +130,7 @@ class GeneratorFutureMock(Future):
         self.coroutine = coroutine
         self.ioLoop = ioLoop or IOLoop.instance()
         self._currentFuture = None
-        self._results = []
+        self._results = collections.deque(maxlen=1)
 
     def bind(self, callback, errorback=None, on_done=None):
         self.callback = callback
@@ -162,7 +163,7 @@ class GeneratorFutureMock(Future):
 
     def _next(self, value):
         if isinstance(value, ChokeEvent):
-            if self._results and self._results[-1] is None:
+            if self._results and self._results.pop() is None:
                 result = self.coroutine.throw(ChokeEvent())
             else:
                 result = self.coroutine.send(None)
@@ -358,6 +359,7 @@ class Chain(object):
         if timeout:
             self.ioLoop.add_timeout(time.time() + timeout, lambda: self.ioLoop.stop())
         self.ioLoop.start()
+        self._removeTrackingLastResult()
 
     def __iter__(self):
         """
