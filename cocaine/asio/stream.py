@@ -124,21 +124,11 @@ class WritableStream(object):
 
         # Empty the buffer
         while self._buffer:
-            try:
-                num_bytes = self.pipe.sock.send(self._buffer[0])
-                if num_bytes == 0:
-                    break
-                merge_prefix(self._buffer, num_bytes)
-                self._buffer.popleft()
-            except (socket.error, IOError, OSError) as err:
-                if err.args[0] in (errno.EWOULDBLOCK, errno.EAGAIN):
-                    break
-                else:
-                    if err.args[0] not in (errno.ECONNRESET, errno.ECONNABORTED, errno.EPIPE):
-                        # Connection reset. Something terrible happened
-                        pass
-                    self.pipe.close()
-                    return
+            num_bytes = self.pipe.write(self._buffer[0])
+            if num_bytes == 0:
+                break
+            merge_prefix(self._buffer, num_bytes)
+            self._buffer.popleft()
 
 
     @encode_dec

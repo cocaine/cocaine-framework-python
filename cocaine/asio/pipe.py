@@ -135,15 +135,17 @@ class Pipe(object):
         try:
             return self.sock.send(buff)
         except socket.error as e:
-            if e.errno == errno.EPIPE:
-                self.connected = False
-                return 0
-            elif e.errno in (errno.EWOULDBLOCK, errno.EAGAIN):
+            if e.errno in (errno.EWOULDBLOCK, errno.EAGAIN):
                 return 0
             else:
+                if e.errno in (errno.ECONNRESET, errno.ECONNABORTED, errno.EPIPE):
+                    # log it
+                    pass
+                self.close()
                 return 0
 
     def close(self):
+        self.connected = False
         self.sock.close()
 
     def fileno(self):
