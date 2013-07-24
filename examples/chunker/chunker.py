@@ -15,9 +15,9 @@ def chunker(request, response):
         chunks = int(msgpack.loads(chunks))
     except ValueError:
         chunks = int(chunks)
-    leData = ['{0:-<1024}'.format(i) for i in xrange(chunks)]
+
     for num in xrange(chunks):
-        response.write(msgpack.dumps(leData[num]))
+        response.write(msgpack.dumps('{0:-<1024}'.format(num)))
     response.write(msgpack.dumps('Done'))
     response.close()
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 import msgpack
+import sys
 from cocaine.futures.chain import Chain
 from cocaine.services import Service
 
@@ -9,9 +10,8 @@ __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 if __name__ == '__main__':
     def fetchAll():
-        leData = []
-        chunk = yield service.enqueue('chunkMe', str(1024 * 100))
-        leData += msgpack.loads(chunk)
+        chunk = yield service.enqueue('chunkMe', str(sys.argv[1]))
+        chunk = msgpack.loads(chunk)
         size = len(chunk)
         counter = 0
         while True:
@@ -22,9 +22,6 @@ if __name__ == '__main__':
             print(counter, len(chunk), size)
             if chunk == 'Done':
                 break
-            leData += chunk
-
-        #print(len(leData))
 
     service = Service('Chunker')
     c = Chain([fetchAll])
