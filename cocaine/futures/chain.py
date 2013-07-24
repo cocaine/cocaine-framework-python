@@ -129,7 +129,6 @@ class GeneratorFutureMock(Future):
         self.coroutine = coroutine
         self.ioLoop = ioLoop or IOLoop.instance()
         self._currentFuture = None
-        self._chunks = []
         self._results = []
 
     def bind(self, callback, errorback=None, on_done=None):
@@ -139,7 +138,6 @@ class GeneratorFutureMock(Future):
 
     def advance(self, value=None):
         try:
-            self._chunks.append(value)
             result = self._next(value)
             future = self._wrapFuture(result)
 
@@ -161,8 +159,6 @@ class GeneratorFutureMock(Future):
             if self._currentFuture and self._currentFuture.isBound():
                 self._currentFuture.unbind()
             self.errorback(err)
-        finally:
-            log.debug('Just for fun! Chunks - {0}. Current future - {1}'.format(self._chunks, self._currentFuture))
 
     def _next(self, value):
         if isinstance(value, ChokeEvent):
