@@ -21,9 +21,7 @@
 
 import array
 import collections
-import socket
 from threading import Lock
-import errno
 
 import msgpack
 
@@ -85,7 +83,7 @@ class ReadableStream(object):
             length = self.pipe.read(self.tmp_buff, self.tmp_buff.buffer_info()[1])
 
             if length <= 0:
-                if length == 0: # Remote side has closed connection
+                if length == 0:  # Remote side has closed connection
                     self.pipe.connected = False
                     self.loop.stop_listening(self.pipe.fileno())
                 return
@@ -111,15 +109,12 @@ class WritableStream(object):
 
         self._buffer = collections.deque()
 
-
     @weakmethod
     def _on_event(self):
         # All data was sent - so unbind writable event
         if not self._buffer:
-            assert self.is_attached
-            if self.is_attached:
-                self.loop.unregister_write_event(self.pipe.fileno())
-                self.is_attached = False
+            self.loop.unregister_write_event(self.pipe.fileno())
+            self.is_attached = False
             return
 
         # Empty the buffer
