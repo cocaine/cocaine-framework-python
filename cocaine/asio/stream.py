@@ -106,47 +106,37 @@ class WritableStream(object):
         self.pipe = pipe
         self.is_attached = False
 
-        self.mutex = Lock()
-
         self._buffer = list()
         self.tx_offset = 0
 
     @weakmethod
     def _on_event(self):
-        with self.mutex:
-            # All data was sent - so unbind writable event
-            if len(self._buffer) == 0:
-                if self.is_attached:
-                    self.loop.unregister_write_event(self.pipe.fileno())
-                    self.is_attached = False
-                return
+        # All data was sent - so unbind writable event
+        if len(self._buffer) == 0:
+            if self.is_attached:
+                self.loop.unregister_write_event(self.pipe.fileno())
+                self.is_attached = False
+            return
 
-            current = self._buffer[0]
-            sent = self.pipe.write(buffer(current, self.tx_offset))
+        current = self._buffer[0]
+        sent = self.pipe.write(buffer(current, self.tx_offset))
 
-            if sent > 0: # else EPIPE
-                self.tx_offset += sent
+        if sent > 0:  # else EPIPE
+            self.tx_offset += sent
 
-            # Current object is sent completely - pop it from buffer
-            if self.tx_offset == len(current):
-                self._buffer.pop(0)
-                self.tx_offset = 0
+        # Current object is sent completely - pop it from buffer
+        if self.tx_offset == len(current):
+            self._buffer.pop(0)
+            self.tx_offset = 0
 
     @encode_dec
     def write(self, data, size):
-        with self.mutex:
-            if len(self._buffer) == 0:
-                sent = self.pipe.write(data)
-                if sent >= len(data):
-                    return
+        self._buffer.append(data)
+        self._on_event()
 
-                self.tx_offset = sent
-
-            self._buffer.append(data)
-
-            if not self.is_attached and self.pipe.connected:
-                self.loop.register_write_event(self._on_event, self.pipe.fileno())
-                self.is_attached = True
+        if not self.is_attached and self.pipe.connected:
+            self.loop.register_write_event(self._on_event, self.pipe.fileno())
+            self.is_attached = True
 
     def reconnect(self, pipe):
         self.pipe = pipe
