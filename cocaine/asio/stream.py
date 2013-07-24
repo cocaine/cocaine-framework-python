@@ -20,7 +20,10 @@
 #
 
 import array
+import collections
+import socket
 from threading import Lock
+import errno
 
 import msgpack
 
@@ -106,28 +109,37 @@ class WritableStream(object):
         self.pipe = pipe
         self.is_attached = False
 
-        self._buffer = list()
-        self.tx_offset = 0
+        self._buffer = collections.deque()
+
 
     @weakmethod
     def _on_event(self):
         # All data was sent - so unbind writable event
-        if len(self._buffer) == 0:
+        if not self._buffer:
+            assert self.is_attached
             if self.is_attached:
                 self.loop.unregister_write_event(self.pipe.fileno())
                 self.is_attached = False
             return
 
-        current = self._buffer[0]
-        sent = self.pipe.write(buffer(current, self.tx_offset))
+        # Empty the buffer
+        while self._buffer:
+            try:
+                num_bytes = self.pipe.sock.send(self._buffer[0])
+                if num_bytes == 0:
+                    break
+                merge_prefix(self._buffer, num_bytes)
+                self._buffer.popleft()
+            except (socket.error, IOError, OSError) as err:
+                if err.args[0] in (errno.EWOULDBLOCK, errno.EAGAIN):
+                    break
+                else:
+                    if err.args[0] not in (errno.ECONNRESET, errno.ECONNABORTED, errno.EPIPE):
+                        # Connection reset. Something terrible happened
+                        pass
+                    self.pipe.close()
+                    return
 
-        if sent > 0:  # else EPIPE
-            self.tx_offset += sent
-
-        # Current object is sent completely - pop it from buffer
-        if self.tx_offset == len(current):
-            self._buffer.pop(0)
-            self.tx_offset = 0
 
     @encode_dec
     def write(self, data, size):
@@ -143,3 +155,22 @@ class WritableStream(object):
         self.loop.register_write_event(self._on_event, self.pipe.fileno())
         self.is_attached = True
         self.tx_offset = 0
+
+
+def merge_prefix(deque, size):
+    if len(deque) == 1 and len(deque[0]) <= size:
+        return
+    prefix = []
+    remaining = size
+    while deque and remaining > 0:
+        chunk = deque.popleft()
+        if len(chunk) > remaining:
+            deque.appendleft(chunk[remaining:])
+            chunk = chunk[:remaining]
+        prefix.append(chunk)
+        remaining -= len(chunk)
+
+    if prefix:
+        deque.appendleft(type(prefix[0])().join(prefix))
+    if not deque:
+        deque.appendleft(b'')
