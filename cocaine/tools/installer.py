@@ -29,10 +29,26 @@ VENV_CREATE_ERROR = 'Module virtualenv is not installed, so a new environment ca
 COCAINE_PYTHON_FRAMEWORK_URL = 'git@github.com:cocaine/cocaine-framework-python.git'
 COCAINE_DOWNLOAD_START = 'Downloading cocaine-framework-python from "{0}" to "{1}"...'
 
+COCAINE_INSTALL_START = 'Installing cocaine-framework-python ...'
+COCAINE_INSTALL_FINISH = 'Cocaine-framework-python has been successfully installed'
+COCAINE_INSTALL_ERROR = 'cocaine-framework-python install error'
+
+BOOTSTRAP_FILENAME = 'bootstrap.sh'
 BOOTSTRAP_TEMPLATE = '''#!/bin/sh
 source ${virtualEnvironmentPath}/bin/activate
 python ${slave} $$@
 '''
+BOOTSTRAP_CREATE_START = 'Creating bootstrap script ...'
+BOOTSTRAP_CREATE_ERROR = 'bootstrap create error - {0}'
+
+MANIFEST_FILENAME = 'manifest.json'
+MANIFEST_SLAVE_PARSE_ERROR = 'manifest read error - slave is not specified'
+MANIFEST_READ_ERROR = 'manifest read error - {0}'
+MANIFEST_LOCATE_ERROR = 'locate manifest error - {0}'
+
+REQUIREMENTS_FILENAME = 'requirements.txt'
+REQUIREMENTS_INSTALL_START = 'Installing requirements ...'
+REQUIREMENTS_INSTALL_FINISH = 'All requirements has been successfully installed'
 
 
 class ModuleInstaller(object):
@@ -77,24 +93,24 @@ class PythonModuleInstaller(ModuleInstaller):
             raise ModuleInstallError(VENV_CREATE_ERROR)
 
     def prepareModule(self):
-        log.debug('Creating bootstrap script ...')
+        log.debug(BOOTSTRAP_CREATE_START)
         manifest = self._readManifest(self.path)
-        self._createBootstrap(os.path.join(self.outputPath, 'bootstrap.sh'), manifest)
-        self._copyManifest(os.path.join(self.outputPath, 'manifest.json'), manifest)
+        self._createBootstrap(os.path.join(self.outputPath, BOOTSTRAP_FILENAME), manifest)
+        self._copyManifest(os.path.join(self.outputPath, MANIFEST_FILENAME), manifest)
 
     def _readManifest(self, path):
         try:
-            manifestPath = _locateFile(path, 'manifest.json')
+            manifestPath = _locateFile(path, MANIFEST_FILENAME)
             with open(manifestPath) as fh:
                 try:
                     manifest = json.loads(fh.read())
                     if 'slave' not in manifest:
-                        raise ModuleInstallError('manifest read error - slave is not specified')
+                        raise ModuleInstallError(MANIFEST_SLAVE_PARSE_ERROR)
                     return manifest
                 except (IOError, ValueError) as err:
-                    raise ModuleInstallError('manifest read error - {0}'.format(err))
+                    raise ModuleInstallError(MANIFEST_READ_ERROR.format(err))
         except IOError as err:
-            raise ModuleInstallError('locate manifest error - {0}'.format(err))
+            raise ModuleInstallError(MANIFEST_LOCATE_ERROR.format(err))
 
     def _createBootstrap(self, path, manifest):
         try:
@@ -105,15 +121,15 @@ class PythonModuleInstaller(ModuleInstaller):
                 }))
             os.chmod(path, 0755)
         except IOError as err:
-            raise ModuleInstallError('bootstrap create error - {0}'.format(err))
+            raise ModuleInstallError(BOOTSTRAP_CREATE_ERROR.format(err))
 
     def _copyManifest(self, path, manifest):
         try:
             with open(path, 'w') as fh:
-                manifest['slave'] = 'bootstrap.sh'
+                manifest['slave'] = BOOTSTRAP_FILENAME
                 fh.write(json.dumps(manifest))
         except IOError as err:
-            raise ModuleInstallError('bootstrap create error - {0}'.format(err))
+            raise ModuleInstallError(BOOTSTRAP_CREATE_ERROR.format(err))
 
     def installCocaineFramework(self):
         path = tempfile.mkdtemp()
@@ -124,7 +140,7 @@ class PythonModuleInstaller(ModuleInstaller):
         except RepositoryDownloadError as err:
             raise ModuleInstallError(err.message)
 
-        log.debug('Installing cocaine-framework-python ...')
+        log.debug(COCAINE_INSTALL_START)
         python = os.path.join(self.virtualEnvironmentPath, 'bin', 'python')
         process = subprocess.Popen([python, 'setup.py', 'install', '--without-tools'],
                                    cwd=path,
@@ -132,16 +148,16 @@ class PythonModuleInstaller(ModuleInstaller):
                                    stderr=self.stream)
         process.wait()
         if process.returncode != 0:
-            raise ModuleInstallError('cocaine-framework-python install error')
-        log.debug('Cocaine-framework-python has been successfully installed')
+            raise ModuleInstallError(COCAINE_INSTALL_ERROR)
+        log.debug(COCAINE_INSTALL_FINISH)
 
     def installRequirements(self):
         try:
-            requirementsPath = _locateFile(self.path, 'requirements.txt')
+            requirementsPath = _locateFile(self.path, REQUIREMENTS_FILENAME)
         except IOError:
             requirementsPath = ''
 
-        log.debug('Installing requirements ...')
+        log.debug(REQUIREMENTS_INSTALL_START)
         _pip = os.path.join(self.virtualEnvironmentPath, 'bin', 'pip')
         process = subprocess.Popen([_pip, 'install', '-r', requirementsPath],
                                    stdout=self.stream,
@@ -149,7 +165,7 @@ class PythonModuleInstaller(ModuleInstaller):
         process.wait()
         if process.returncode != 0:
             raise ModuleInstallError()
-        log.debug('All requirements has been successfully installed')
+        log.debug(REQUIREMENTS_INSTALL_FINISH)
 
 
 def _locateFile(path, filenameLocate):
