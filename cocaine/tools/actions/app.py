@@ -178,6 +178,12 @@ class LocalUpload(actions.Storage):
         self.name = config.get('name')
         self.venvType = config.get('venv')
 
+        self.venvFactory = {
+            'P': PythonModuleInstaller,
+            'R': None,
+            'J': None
+        }
+
     def execute(self):
         return Chain([self._doMagic])
 
@@ -193,6 +199,7 @@ class LocalUpload(actions.Storage):
         # Create virtual environment if needed
         if self.venvType:
             log.debug('Creating virtual environment "{0}"'.format(self.venvType))
+            pass
 
         # Pack all
         repositoryPath = tempfile.mkdtemp()
