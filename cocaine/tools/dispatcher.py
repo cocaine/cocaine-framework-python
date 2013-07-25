@@ -1,3 +1,4 @@
+import logging
 from opster import Dispatcher
 from cocaine.tools.cli import NodeExecutor, StorageExecutor, coloredOutput
 
@@ -29,6 +30,27 @@ class Locator(object):
         self.storageExecutor = StorageExecutor(**config)
         if not color:
             coloredOutput.disable()
+
+        debugLevel = config['debug']
+        if debugLevel != 'disable':
+            ch = logging.StreamHandler()
+            ch.setLevel(logging.DEBUG)
+            formatter = logging.Formatter('%(name)s: %(levelname)-8s: %(message)s')
+            ch.setFormatter(formatter)
+
+            logNames = [
+                __name__,
+                'cocaine.tools'
+            ]
+            if debugLevel == 'all':
+                logNames.append('cocaine.futures.chain')
+                logNames.append('cocaine.testing.mocks')
+
+            for logName in logNames:
+                log = logging.getLogger(logName)
+                log.setLevel(logging.DEBUG)
+                log.propagate = False
+                log.addHandler(ch)
 
 
 def middleware(func):
@@ -114,7 +136,8 @@ def app_upload(locator,
 @appDispatcher.command(name='upload2', usage='PATH [NAME] [--venv=VIRTUAL_ENVIRONMENT]')
 def app_upload2(locator,
                 path,
-                name=None):
+                name=None,
+                venv=('', ('N', 'P', 'R', 'J'), 'virtual environment type')):
     """Upload application with its environment (directory) into the storage.
 
     Application directory must contain valid manifest file.
@@ -122,7 +145,8 @@ def app_upload2(locator,
     """
     locator.storageExecutor.executeAction('app:upload2', **{
         'path': path,
-        'name': name
+        'name': name,
+        'venv': venv
     })
 
 

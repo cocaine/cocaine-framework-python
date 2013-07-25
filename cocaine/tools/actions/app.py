@@ -3,13 +3,12 @@ import re
 import shutil
 import tarfile
 import tempfile
-import logging
 import msgpack
 
 from cocaine.exceptions import ToolsError
 from cocaine.futures import chain
 from cocaine.futures.chain import Chain
-from cocaine.tools import actions
+from cocaine.tools import actions, log
 from cocaine.tools.actions import common
 from cocaine.tools.installer import PythonModuleInstaller, ModuleInstallError
 from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
@@ -177,7 +176,7 @@ class LocalUpload(actions.Storage):
         super(LocalUpload, self).__init__(storage, **config)
         self.path = config.get('path', '.')
         self.name = config.get('name')
-        self._log = logging.getLogger(self.__module__ + '.' + self.__class__.__name__)
+        self.venvType = config.get('venv')
 
     def execute(self):
         return Chain([self._doMagic])
@@ -191,6 +190,10 @@ class LocalUpload(actions.Storage):
 
         manifestPath = self._locateManifest()
 
+        # Create virtual environment if needed
+        if self.venvType:
+            log.debug('Creating virtual environment "{0}"'.format(self.venvType))
+
         # Pack all
         repositoryPath = tempfile.mkdtemp()
         repositoryPath = os.path.join(repositoryPath, 'repo')
@@ -201,9 +204,9 @@ class LocalUpload(actions.Storage):
         tar.close()
 
         # Upload
-        self._log.debug('Repository path: {0}'.format(repositoryPath))
-        self._log.debug('Manifest path: {0}'.format(manifestPath))
-        self._log.debug('Package path: {0}'.format(packagePath))
+        log.debug('Repository path: {0}'.format(repositoryPath))
+        log.debug('Manifest path: {0}'.format(manifestPath))
+        log.debug('Package path: {0}'.format(packagePath))
         yield Upload(self.storage, **{
             'name': self.name,
             'manifest': manifestPath,
@@ -223,7 +226,7 @@ class LocalUpload(actions.Storage):
                         priority += 10
                     manifests.append((os.path.join(root, fileName), priority))
         manifests = sorted(manifests, key=lambda manifest: manifest[1], reverse=True)
-        self._log.debug('Manifests found: {0}'.format(manifests))
+        log.debug('Manifests found: {0}'.format(manifests))
         if not manifests:
             raise ToolsError('No manifest file found in "{0}" or subdirectories'.format(os.path.abspath(self.path)))
 

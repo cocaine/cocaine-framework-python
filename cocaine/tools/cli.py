@@ -262,26 +262,6 @@ class Executor(object):
         self.config = config
         self.loop = IOLoop.instance()
 
-        debugLevel = config.get('debug', 'disable')
-        if debugLevel != 'disable':
-            ch = logging.StreamHandler()
-            ch.setLevel(logging.DEBUG)
-            formatter = logging.Formatter('%(name)s: %(levelname)-8s: %(message)s')
-            ch.setFormatter(formatter)
-
-            logNames = [
-                __name__,
-                'cocaine.tools.actions.app.LocalUpload'
-            ]
-            if debugLevel == 'all':
-                logNames.append('cocaine.futures.chain')
-                logNames.append('cocaine.testing.mocks')
-
-            for logName in logNames:
-                log = logging.getLogger(logName)
-                log.setLevel(logging.DEBUG)
-                log.propagate = False
-                log.addHandler(ch)
 
     def executeAction(self, actionName, **options):
         """
