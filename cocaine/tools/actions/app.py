@@ -59,7 +59,7 @@ class Upload(actions.Storage):
         """
         Encodes manifest and package files and (if successful) uploads them into storage
         """
-        return Chain().then(self.do)
+        return Chain([self.do])
 
     def do(self):
         if self.manifest:
@@ -180,7 +180,7 @@ class LocalUpload(actions.Storage):
         self._log = logging.getLogger(self.__module__ + '.' + self.__class__.__name__)
 
     def execute(self):
-        return Chain().then(self._doMagic)
+        return Chain([self._doMagic])
 
     def _doMagic(self):
         if self.name is None:
@@ -217,8 +217,9 @@ class LocalUpload(actions.Storage):
         repositoryPath = os.path.join(repositoryPath, 'repo')
         shutil.copytree(self.path, repositoryPath)
         packagePath = os.path.join(repositoryPath, 'package.tar.gz')
-        with tarfile.open(packagePath, mode='w:gz') as tar:
-            tar.add(repositoryPath, arcname='')
+        tar = tarfile.open(packagePath, mode='w:gz')
+        tar.add(repositoryPath, arcname='')
+        tar.close()
 
         # Upload
         self._log.debug('Repository path: {0}'.format(repositoryPath))
