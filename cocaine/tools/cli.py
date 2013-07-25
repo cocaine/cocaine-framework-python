@@ -3,7 +3,6 @@ import msgpack
 import sys
 import errno
 import socket
-import logging
 from time import time
 
 from tornado.ioloop import IOLoop
@@ -261,7 +260,6 @@ class Executor(object):
         self.availableActions = availableActions
         self.config = config
         self.loop = IOLoop.instance()
-
 
     def executeAction(self, actionName, **options):
         """
