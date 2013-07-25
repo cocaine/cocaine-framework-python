@@ -189,28 +189,7 @@ class LocalUpload(actions.Storage):
         if not self.name:
             raise ToolsError('Application has not valid name: "{0}"'.format(self.name))
 
-        # Locate manifests. Priority:
-        # root+json     - 111
-        # root          - 101
-        # other+json    - 11
-        # other         - 1
-        manifests = []
-        for root, dirNames, fileNames in os.walk(self.path):
-            for fileName in fileNames:
-                if fileName.startswith('manifest'):
-                    priority = 1
-                    if root == self.path:
-                        priority += 100
-                    if fileName == 'manifest.json':
-                        priority += 10
-                    manifests.append((os.path.join(root, fileName), priority))
-        manifests = sorted(manifests, key=lambda manifest: manifest[1], reverse=True)
-        self._log.debug('Manifests found: {0}'.format(manifests))
-        if not manifests:
-            raise ToolsError('No manifest file found in "{0}" or subdirectories'.format(os.path.abspath(self.path)))
-
-        manifest, priority = manifests[0]
-        manifestPath = os.path.abspath(manifest)
+        manifestPath = self._locateManifest()
 
         # Pack all
         repositoryPath = tempfile.mkdtemp()
@@ -231,6 +210,26 @@ class LocalUpload(actions.Storage):
             'package': packagePath
         }).execute()
         yield 'Application {0} has been successfully uploaded'.format(self.name)
+
+    def _locateManifest(self):
+        manifests = []
+        for root, dirNames, fileNames in os.walk(self.path):
+            for fileName in fileNames:
+                if fileName.startswith('manifest'):
+                    priority = 1
+                    if root == self.path:
+                        priority += 100
+                    if fileName == 'manifest.json':
+                        priority += 10
+                    manifests.append((os.path.join(root, fileName), priority))
+        manifests = sorted(manifests, key=lambda manifest: manifest[1], reverse=True)
+        self._log.debug('Manifests found: {0}'.format(manifests))
+        if not manifests:
+            raise ToolsError('No manifest file found in "{0}" or subdirectories'.format(os.path.abspath(self.path)))
+
+        manifest, priority = manifests[0]
+        manifestPath = os.path.abspath(manifest)
+        return manifestPath
 
 
 class UploadRemote(actions.Storage):

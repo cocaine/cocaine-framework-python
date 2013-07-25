@@ -111,7 +111,7 @@ def app_upload(locator,
     })
 
 
-@appDispatcher.command(name='upload2')
+@appDispatcher.command(name='upload2', usage='PATH [NAME] [--venv=VIRTUAL_ENVIRONMENT]')
 def app_upload2(locator,
                 path,
                 name=None):
