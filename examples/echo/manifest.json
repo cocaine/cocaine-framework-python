@@ -1,3 +1,3 @@
 {
-    "slave" : "/Users/esafronov/sandbox/cocaine-framework-python/examples/echo/echo.py"
+    "slave": "echo.py"
 }

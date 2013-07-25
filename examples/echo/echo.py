@@ -17,14 +17,7 @@ def echo(request, response):
     response.close()
 
 
-@http
-def echo2(request, response):
-    message = yield request.read()
-    log.debug('Message received: \'{0}\'. Sending it back ...'.format(message))
-    response.write_head(200, [('Content-type', 'text/plain')])
-    response.write('Ok')
-    # response.write(msgpack.dumps(message))
-    response.close()
-
 W = Worker()
-W.run({'doIt': echo, 'doIt2': echo2})
+W.run({
+    'doIt': echo,
+})
