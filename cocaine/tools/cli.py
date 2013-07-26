@@ -195,7 +195,7 @@ RUNLIST_CREATE_FAIL = 'Unable to create runlist "{name}" - {error}'
 RUNLIST_REMOVE_SUCCESS = 'The runlist "{name}" has been successfully removed'
 RUNLIST_REMOVE_FAIL = 'Unable to remove runlist "{name}" - {error}'
 
-CRASHLOG_REMOVE_SUCCESS = 'Crashlog for app "{0}" have been removed'
+CRASHLOG_REMOVE_SUCCESS = 'Crashlog for app "{0}" has been removed'
 CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
 
