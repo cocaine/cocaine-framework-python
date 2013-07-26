@@ -144,6 +144,9 @@ def app_upload2(locator,
     Application directory must contain valid manifest file.
     You can specify application name. By default, directory name is treated as application name.
     """
+    if venv != 'N':
+        print('You specified building virtual environment')
+        print('It may take a long time and can cause timeout. Increase it by specifying `--timeout` option if needed')
     locator.storageExecutor.executeAction('app:upload2', **{
         'path': path,
         'name': name,
