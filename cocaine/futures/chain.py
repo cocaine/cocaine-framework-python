@@ -100,11 +100,11 @@ class FutureCallableMock(Future):
 
 
 class ConcurrentWorker(object):
-    def __init__(self, func, ioLoop=None, *args, **kwargs):
+    def __init__(self, func, ioLoop=None, args=(), kwargs=None):
         self.func = func
         self.ioLoop = ioLoop or IOLoop.instance()
         self.args = args
-        self.kwargs = kwargs
+        self.kwargs = kwargs or {}
 
         self.worker = Thread(target=self._run)
         self.worker.setDaemon(True)
@@ -422,6 +422,6 @@ def concurrent(func):
     function in separate thread.
     """
     def wrapper(*args, **kwargs):
-        mock = ConcurrentWorker(func, *args, **kwargs)
+        mock = ConcurrentWorker(func, ioLoop=None, args=args, kwargs=kwargs)
         return mock
     return wrapper
