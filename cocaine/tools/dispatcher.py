@@ -1,6 +1,6 @@
 import logging
 from opster import Dispatcher
-from cocaine.tools.cli import NodeExecutor, StorageExecutor, coloredOutput
+from cocaine.tools.cli import NodeExecutor, StorageExecutor, coloredOutput, Executor
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -26,8 +26,9 @@ class Locator(object):
             'timeout': timeout,
             'debug': debug
         }
-        self.nodeExecutor = NodeExecutor(**config)
-        self.storageExecutor = StorageExecutor(**config)
+        self.executor = lambda: Executor(**config)
+        self.nodeExecutor = lambda: NodeExecutor(**config)
+        self.storageExecutor = lambda: StorageExecutor(**config)
         if not color:
             coloredOutput.disable()
 
@@ -83,30 +84,30 @@ def info(locator):
 
     Return json-like string with information about cocaine-runtime.
     """
-    locator.nodeExecutor.executeAction('info', **{})
+    locator.nodeExecutor().executeAction('info', **{})
 
 
-@d.command()
+@d.command(usage='SERVICE [METHOD ["ARGS"]]')
 def call(locator,
          service, method='', args=''):
     """Invoke specified method from service.
 
     Performs method invocation from specified service. Service name should be correct string and must be correctly
-    located through locator. By default, locator endpoint is ```localhost, 10053```, but it can be changed by passing
+    located through locator. By default, locator endpoint is `localhost, 10053`, but it can be changed by passing
     global `--host` and `--port` arguments.
 
     Method arguments should be passed in double quotes as they would be written in Python.
     If no method provided, service API will be printed.
     """
     command = service + '.' + method + '(' + args + ')'
-    locator.nodeExecutor.executeAction('call', **{
+    locator.executor().executeAction('call', **{
         'command': command,
     })
 
 @appDispatcher.command(name='list')
 def app_list(locator):
     """Show installed applications list."""
-    locator.storageExecutor.executeAction('app:list', **{})
+    locator.storageExecutor().executeAction('app:list', **{})
 
 
 @appDispatcher.command(usage='--name=NAME', name='view')
@@ -116,7 +117,7 @@ def app_view(locator,
 
     If application is not uploaded, an error will be displayed.
     """
-    locator.storageExecutor.executeAction('app:view', **{
+    locator.storageExecutor().executeAction('app:view', **{
         'name': name,
     })
 
@@ -127,7 +128,7 @@ def app_upload(locator,
                manifest=('', '', 'manifest file name'),
                package=('', '', 'location of the app source package')):
     """Upload application into the storage"""
-    locator.storageExecutor.executeAction('app:upload', **{
+    locator.storageExecutor().executeAction('app:upload', **{
         'name': name,
         'manifest': manifest,
         'package': package
@@ -159,7 +160,7 @@ def app_upload2(locator,
     if venv != 'N':
         print('You specified building virtual environment')
         print('It may take a long time and can cause timeout. Increase it by specifying `--timeout` option if needed')
-    locator.storageExecutor.executeAction('app:upload2', **{
+    locator.storageExecutor().executeAction('app:upload2', **{
         'path': path,
         'name': name,
         'venv': venv
@@ -173,7 +174,7 @@ def app_remove(locator,
 
     No error messages will display if specified application is not uploaded.
     """
-    locator.storageExecutor.executeAction('app:remove', **{
+    locator.storageExecutor().executeAction('app:remove', **{
         'name': name
     })
 
@@ -186,7 +187,7 @@ def app_start(locator,
 
     Does nothing if application is already running.
     """
-    locator.nodeExecutor.executeAction('app:start', **{
+    locator.nodeExecutor().executeAction('app:start', **{
         'name': name,
         'profile': profile
     })
@@ -199,7 +200,7 @@ def app_pause(locator,
 
     This command is alias for ```cocaine-tool app stop```.
     """
-    locator.nodeExecutor.executeAction('app:pause', **{
+    locator.nodeExecutor().executeAction('app:pause', **{
         'name': name
     })
 
@@ -208,7 +209,7 @@ def app_pause(locator,
 def app_stop(locator,
              name=('n', '', 'application name')):
     """Stop application."""
-    locator.nodeExecutor.executeAction('app:stop', **{
+    locator.nodeExecutor().executeAction('app:stop', **{
         'name': name
     })
 
@@ -223,7 +224,7 @@ def app_restart(locator,
 
     It can be used to quickly change application profile.
     """
-    locator.nodeExecutor.executeAction('app:restart', **{
+    locator.nodeExecutor().executeAction('app:restart', **{
         'name': name,
         'profile': profile
     })
@@ -233,7 +234,7 @@ def app_restart(locator,
 def check(locator,
           name=('n', '', 'application name')):
     """Checks application status."""
-    locator.nodeExecutor.executeAction('app:check', **{
+    locator.nodeExecutor().executeAction('app:check', **{
         'name': name
     })
 
@@ -241,14 +242,14 @@ def check(locator,
 @profileDispatcher.command(name='list')
 def profile_list(locator):
     """Show installed profiles."""
-    locator.storageExecutor.executeAction('profile:list', **{})
+    locator.storageExecutor().executeAction('profile:list', **{})
 
 
 @profileDispatcher.command(name='view')
 def profile_view(locator,
                  name=('n', '', 'profile name')):
     """Show profile configuration context."""
-    locator.storageExecutor.executeAction('profile:view', **{
+    locator.storageExecutor().executeAction('profile:view', **{
         'name': name
     })
 
@@ -258,7 +259,7 @@ def profile_upload(locator,
                    name=('n', '', 'profile name'),
                    profile=('', '', 'path to profile file')):
     """Upload profile into the storage."""
-    locator.storageExecutor.executeAction('profile:upload', **{
+    locator.storageExecutor().executeAction('profile:upload', **{
         'name': name,
         'manifest': profile
     })
@@ -268,7 +269,7 @@ def profile_upload(locator,
 def profile_remove(locator,
                    name=('n', '', 'profile name')):
     """Remove profile from the storage."""
-    locator.storageExecutor.executeAction('profile:remove', **{
+    locator.storageExecutor().executeAction('profile:remove', **{
         'name': name
     })
 
@@ -276,14 +277,14 @@ def profile_remove(locator,
 @runlistDispatcher.command(name='list')
 def runlist_list(locator):
     """Show uploaded runlists."""
-    locator.storageExecutor.executeAction('runlist:list', **{})
+    locator.storageExecutor().executeAction('runlist:list', **{})
 
 
 @runlistDispatcher.command(name='view')
 def runlist_view(locator,
                  name=('n', '', 'name')):
     """Show configuration context for runlist."""
-    locator.storageExecutor.executeAction('runlist:view', **{
+    locator.storageExecutor().executeAction('runlist:view', **{
         'name': name
     })
 
@@ -293,7 +294,7 @@ def runlist_upload(locator,
                    name=('n', '', 'name'),
                    runlist=('', '', 'path to the runlist configuration json file')):
     """Upload runlist with context into the storage."""
-    locator.storageExecutor.executeAction('runlist:upload', **{
+    locator.storageExecutor().executeAction('runlist:upload', **{
         'name': name,
         'manifest': runlist
     })
@@ -303,7 +304,7 @@ def runlist_upload(locator,
 def runlist_create(locator,
                    name=('n', '', 'name')):
     """Create runlist and upload it into the storage."""
-    locator.storageExecutor.executeAction('runlist:create', **{
+    locator.storageExecutor().executeAction('runlist:create', **{
         'name': name
     })
 
@@ -312,7 +313,7 @@ def runlist_create(locator,
 def runlist_remove(locator,
                    name=('n', '', 'name')):
     """Remove runlist from the storage."""
-    locator.storageExecutor.executeAction('runlist:remove', **{
+    locator.storageExecutor().executeAction('runlist:remove', **{
         'name': name
     })
 
@@ -326,7 +327,7 @@ def runlist_add_app(locator,
 
     Existence of application or profile is not checked.
     """
-    locator.storageExecutor.executeAction('runlist:add-app', **{
+    locator.storageExecutor().executeAction('runlist:add-app', **{
         'name': name,
         'app': app,
         'profile': profile
@@ -340,7 +341,7 @@ def crashlog_list(locator,
 
     Prints crashlog list in timestamp - uuid format.
     """
-    locator.storageExecutor.executeAction('crashlog:list', **{
+    locator.storageExecutor().executeAction('crashlog:list', **{
         'name': name
     })
 
@@ -350,7 +351,7 @@ def crashlog_view(locator,
                   name=('n', '', 'name'),
                   timestamp=('t', '', 'timestamp')):
     """Show crashlog for application with specified timestamp."""
-    locator.storageExecutor.executeAction('crashlog:view', **{
+    locator.storageExecutor().executeAction('crashlog:view', **{
         'name': name,
         'manifest': timestamp
     })
@@ -361,7 +362,7 @@ def crashlog_remove(locator,
                     name=('n', '', 'name'),
                     timestamp=('t', '', 'timestamp')):
     """Remove crashlog for application with specified timestamp from the storage."""
-    locator.storageExecutor.executeAction('crashlog:remove', **{
+    locator.storageExecutor().executeAction('crashlog:remove', **{
         'name': name,
         'manifest': timestamp
     })
@@ -371,7 +372,7 @@ def crashlog_remove(locator,
 def crashlog_removeall(locator,
                        name=('n', '', 'name')):
     """Remove all crashlogs for application from the storage."""
-    locator.storageExecutor.executeAction('crashlog:removeall', **{
+    locator.storageExecutor().executeAction('crashlog:removeall', **{
         'name': name,
         'manifest': None
     })

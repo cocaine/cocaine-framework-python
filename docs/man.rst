@@ -435,7 +435,7 @@ Remove crashlog for application with specified timestamp from the storage.
     :timestamp: desired timestamp - time_t format.
 
     >>> cocaine-tool crashlog remove --name Echo --timestamp 1372165800114964
-    Crashlog for app "Echo" have been removed
+    Crashlog for app "Echo" has been removed
 
 cocaine-tool crashlog removeall
 ''''''''''''''''''''''''''''''''''''

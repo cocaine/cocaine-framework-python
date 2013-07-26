@@ -22,9 +22,8 @@ class NodeInfo(Node):
         return self.node.info()
 
 
-class Call(Node):
-    def __init__(self, node, **config):
-        super(Call, self).__init__(node, **config)
+class Call(object):
+    def __init__(self, serviceStub=None, **config):
         command = config.get('command')
         if not command:
             raise ValueError('Please specify service name for getting API or full command to invoke')
