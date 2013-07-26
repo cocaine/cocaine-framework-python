@@ -34,6 +34,7 @@ class Locator(object):
         debugLevel = config['debug']
         if debugLevel != 'disable':
             ch = logging.StreamHandler()
+            ch.fileno = ch.stream.fileno
             ch.setLevel(logging.DEBUG)
             formatter = logging.Formatter('%(name)s: %(levelname)-8s: %(message)s')
             ch.setFormatter(formatter)
