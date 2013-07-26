@@ -76,10 +76,11 @@ class Pipe(object):
             # Called with timeout event.
             # Check connection state and connection_failed state
             if not self._connected and not self._connection_failed:
-                # remove fd from event polling
-                ioloop.stop_listening(self.sock.fileno())
-                # we can't reuse socket - close it
-                self.sock.close()
+                if self.is_valid_fd:
+                    # remove fd from event polling
+                    ioloop.stop_listening(self.sock.fileno())
+                    # we can't reuse socket - close it
+                    self.sock.close()
                 # send timeout error as result
                 on_connect_callback(ConnectionResult(AsyncConnectionTimeoutError(self.path)))
             return
@@ -94,9 +95,10 @@ class Pipe(object):
             on_connect_callback(ConnectionResult())
         elif err not in (errno.EINPROGRESS, errno.EAGAIN, errno.EALREADY):
             # remove fd from event polling
-            ioloop.stop_listening(self.sock.fileno())           
-            # we can't reuse socket - close it
-            self.sock.close()
+            if self.is_valid_fd:
+                ioloop.stop_listening(self.sock.fileno())
+                # we can't reuse socket - close it
+                self.sock.close()
             self._connection_failed = True
             # send error as result
             on_connect_callback(ConnectionResult(AsyncConnectionError(self.path, errno.errorcode[err])))
@@ -138,19 +140,21 @@ class Pipe(object):
             else:
                 if e.errno in (errno.ECONNRESET, errno.ECONNABORTED, errno.EPIPE):
                     # log it
-                    pass
+                    self.connected = False
                 self.close()
                 return 0
 
     def close(self):
-        self.connected = False
         self.sock.close()
+        #self._connected = False
 
     def fileno(self):
         return self.sock.fileno()
 
     @property
     def is_valid_fd(self):
+        if self.sock is None:
+            return False
         try:
             self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
         except socket.error as e:
