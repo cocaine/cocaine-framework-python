@@ -42,7 +42,7 @@ if "--without-tools" in sys.argv:
     without_tools = True
 else:
     without_tools = False
-    os.system("python {0}/generate_man.py > {0}/manpages/cocaine-tool.5".format(BASE_DIR))
+    #os.system("python {0}/generate_man.py > {0}/manpages/cocaine-tool.5".format(BASE_DIR))
     tools_requires = ['opster >= 4.0']
     tools_packages = ["cocaine.tools", "cocaine.tools.helpers"]
     if 'DEB_BUILD_GNU_TYPE' in os.environ:
