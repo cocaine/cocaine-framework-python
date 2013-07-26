@@ -138,11 +138,23 @@ def app_upload(locator,
 def app_upload2(locator,
                 path,
                 name=None,
-                venv=('', ('N', 'P', 'R', 'J'), 'virtual environment type')):
+                venv=('', ('N', 'P', 'R', 'J'), 'virtual environment type (N, P, R, J).')):
     """Upload application with its environment (directory) into the storage.
 
-    Application directory must contain valid manifest file.
-    You can specify application name. By default, directory name is treated as application name.
+    Application directory or its subdirectories must contain valid manifest file named `manifest.json` or `manifest`.
+    You can specify application name. By default, leaf directory name is treated as application name.
+    If you specify option `--venv`, then virtual environment will be created for application.
+    Possible values:
+        N - do not create virtual environment (default)
+        P - python virtual environment using virtualenv package
+        R - ruby virtual environment using Bundler (not yet implemented)
+        J - jar archive will be created (not yet implemented)
+
+    You can control process of creating and uploading application by specifying `--debug=tools` option. This is helpful
+    when some errors occurred.
+
+    Warning: creating virtual environment may take a long time and can cause timeout. You can increase timeout by
+    specifying `--timeout` option.
     """
     if venv != 'N':
         print('You specified building virtual environment')
