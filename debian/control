@@ -21,7 +21,7 @@ Description: Cocaine - Python Framework
 
 Package: cocaine-tools
 Architecture: any
-Depends: ${misc:Depends}, ${python:Depends}, cocaine-framework-python (>= 0.10.4-4), python-opster (>= 3.8)
+Depends: ${misc:Depends}, ${python:Depends}, cocaine-framework-python (>= 0.10.4-4), python-opster (>= 4.0)
 XB-Python-Version: >= 2.6
 Description: Cocaine - Toolset
  Various tools to query and manipulate running Cocaine instances.
