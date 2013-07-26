@@ -177,17 +177,57 @@ cocaine-tool app upload2
 ''''''''''''''''''''''''''''''''''''
 Upload application with its environment (directory) into the storage.
 
-    Application directory must contain valid manifest file.
-    You can specify application name. By default, directory name is treated as application name.
+    Application directory or its subdirectories must contain valid manifest file named `manifest.json` or `manifest`.
+    You can specify application name. By default, leaf directory name is treated as application name.
+
+    If you specify option `--venv`, then virtual environment will be created for application.
+
+    Possible values:
+        * N - do not create virtual environment (default)
+        * P - python virtual environment using virtualenv package
+        * R - ruby virtual environment using Bundler (not yet implemented)
+        * J - jar archive will be created (not yet implemented)
+
+    Algorithm of creating and configuring **python virtual environment** contains following steps:
+        * locating `virtualenv` module. It must be installed.
+        * creating clear virtual environment via `virtualenv` module.
+        * locating `manifest.json` or `manifest` file somewhere in the target directory or its subdirectories.
+        * creating `bootstrap.sh` scrips for correct starting application via virtual environment.
+        * cloning and installing cocaine-framework-python through git.
+        * locating `requirements.txt` or `requirements` file somewhere in the target directory or its subdirectories.
+        * installing all requirements specified in the file above (if it has been found)
+
+    You can control process of creating and uploading application by specifying `--debug=tools` option. This is helpful
+    when some errors occurred.
+
+    Warning: creating virtual environment may take a long time and can cause timeout. You can increase timeout by
+    specifying `--timeout` option.
 
     :path: path to the application root.
     :name: application name. If it is not specified, application will be named as its directory name.
+    :venv: virtual environment type. This is optional parameter and does nothing if not specified. Otherwise virtual
+           environment will be created and configured.
 
     >>> cocaine-tool app upload2 ~/echo
     Application echo has been successfully uploaded
 
     >>> cocaine-tool app upload2 ~/echo TheEchoApp
     Application TheEchoApp has been successfully uploaded
+
+    *Let's create python virtual environment and see detail log*
+
+    >>> cocaine-tool app upload2 ~/echo --venv P --timeout 60 --debug tools
+    You specified building virtual environment
+    It may take a long time and can cause timeout. Increase it by specifying `--timeout` option if needed
+    cocaine.tools.installer: DEBUG   : Filenames found: [('../examples/echo/manifest.json', 111)]
+    cocaine.tools: DEBUG   : Repository temporary path - "/var/folders/dx/sww3lm4j7x73x7x3njzv770jqq7lhf/T/tmpSO_cva/repo"
+    cocaine.tools: DEBUG   : Creating virtual environment "P" ...
+    cocaine.tools.installer: DEBUG   : Start installing python module
+    ...
+    cocaine.tools.installer: DEBUG   : All requirements has been successfully installed
+    cocaine.tools.installer: DEBUG   : Python module has been successfully installed
+    cocaine.tools: DEBUG   : Creating package
+    Application echo has been successfully uploaded
 
 cocaine-tool app remove
 ''''''''''''''''''''''''''''''''''''
