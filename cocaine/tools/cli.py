@@ -242,7 +242,6 @@ AVAILABLE_TOOLS_ACTIONS = {
 
 AVAILABLE_NODE_ACTIONS = {
     'info': AwaitJsonWrapper()(common.NodeInfo),
-    'call': CallActionCli,
     'app:start': AwaitJsonWrapper()(app.Start),
     'app:pause': AwaitJsonWrapper()(app.Stop),
     'app:stop': AwaitJsonWrapper()(app.Stop),
@@ -250,12 +249,16 @@ AVAILABLE_NODE_ACTIONS = {
     'app:check': AwaitJsonWrapper()(app.Check)
 }
 
+AVAILABLE_DEFAULT_ACTIONS = {
+    'call': CallActionCli
+}
+
 
 class Executor(object):
     """
     This class represents abstract action executor for specified service 'serviceName' and actions pool
     """
-    def __init__(self, serviceName, availableActions, **config):
+    def __init__(self, serviceName=None, availableActions=AVAILABLE_DEFAULT_ACTIONS, **config):
         self.serviceName = serviceName
         self.availableActions = availableActions
         self.config = config
@@ -287,6 +290,9 @@ class Executor(object):
             raise ToolsError('Unknown error occurred - {0}'.format(err))
 
     def createService(self, host, port):
+        if not self.serviceName:
+            return None
+
         try:
             service = Service(self.serviceName, host, port)
             return service
