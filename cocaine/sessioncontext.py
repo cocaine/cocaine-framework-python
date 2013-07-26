@@ -63,10 +63,11 @@ class Sandbox(object):
 
 class Stream(object):
 
-    def __init__(self, session, worker):
+    def __init__(self, session, worker, event_name=""):
         self._m_state = 1
         self.worker = worker
         self.session = session
+        self.event = event_name
 
     def write(self, chunk):
         chunk = msgpack.packb(chunk)

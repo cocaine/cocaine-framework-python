@@ -113,7 +113,7 @@ class Worker(object):
         elif msg.id == message.RPC_INVOKE:
             try:
                 _request = Request()
-                _stream = Stream(msg.session, self)
+                _stream = Stream(msg.session, self, msg.event)
                 self.sandbox.invoke(msg.event, _request, _stream)
                 self.sessions[msg.session] = _request
             except (ImportError, SyntaxError) as err:
