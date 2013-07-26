@@ -87,13 +87,13 @@ def info(locator):
     locator.nodeExecutor().executeAction('info', **{})
 
 
-@d.command()
+@d.command(usage='SERVICE [METHOD ["ARGS"]]')
 def call(locator,
          service, method='', args=''):
     """Invoke specified method from service.
 
     Performs method invocation from specified service. Service name should be correct string and must be correctly
-    located through locator. By default, locator endpoint is ```localhost, 10053```, but it can be changed by passing
+    located through locator. By default, locator endpoint is `localhost, 10053`, but it can be changed by passing
     global `--host` and `--port` arguments.
 
     Method arguments should be passed in double quotes as they would be written in Python.
