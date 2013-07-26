@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import shutil
@@ -10,12 +11,21 @@ from cocaine.futures import chain
 from cocaine.futures.chain import Chain
 from cocaine.tools import actions, log
 from cocaine.tools.actions import common
-from cocaine.tools.installer import PythonModuleInstaller, ModuleInstallError
+from cocaine.tools.installer import PythonModuleInstaller, ModuleInstallError, _locateFile
 from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
 from cocaine.tools.encoders import JsonEncoder, PackageEncoder
 from cocaine.tools.tags import APPS_TAGS
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
+
+WRONG_APPLICATION_NAME = 'Application "{0}" is not valid application'
+
+venvFactory = {
+    'N': None,
+    'P': PythonModuleInstaller,
+    'R': None,
+    'J': None
+}
 
 
 class List(actions.List):
@@ -38,6 +48,7 @@ class Upload(actions.Storage):
     """
     Storage action class that tries to upload application into storage asynchronously
     """
+
     def __init__(self, storage, **config):
         super(Upload, self).__init__(storage, **config)
         self.name = config.get('name')
@@ -75,6 +86,7 @@ class Remove(actions.Storage):
     """
     Storage action class that removes application 'name' from storage
     """
+
     def __init__(self, storage, **config):
         super(Remove, self).__init__(storage, **config)
         self.name = config.get('name')
@@ -176,70 +188,59 @@ class LocalUpload(actions.Storage):
         super(LocalUpload, self).__init__(storage, **config)
         self.path = config.get('path', '.')
         self.name = config.get('name')
-        self.venvType = config.get('venv')
-
-        self.venvFactory = {
-            'P': PythonModuleInstaller,
-            'R': None,
-            'J': None
-        }
-
-    def execute(self):
-        return Chain([self._doMagic])
-
-    def _doMagic(self):
+        self.virtualEnvironmentType = config.get('venv')
         if self.name is None:
             self.name = os.path.basename(os.path.abspath(self.path))
-
         if not self.name:
-            raise ToolsError('Application has not valid name: "{0}"'.format(self.name))
+            raise ValueError(WRONG_APPLICATION_NAME.format(self.name))
 
-        manifestPath = self._locateManifest()
+    def execute(self):
+        return Chain([self.doWork])
 
-        # Create virtual environment if needed
-        if self.venvType:
-            log.debug('Creating virtual environment "{0}"'.format(self.venvType))
-            pass
+    def doWork(self):
+        try:
+            manifestPath = _locateFile(self.path, 'manifest.json')
+            repositoryPath = self._createRepository()
+            Installer = venvFactory[self.virtualEnvironmentType]
+            if Installer:
+                yield self._createVirtualEnvironment(repositoryPath, Installer)
+                manifestPath = os.path.join(repositoryPath, 'manifest.json')
 
-        # Pack all
+            packagePath = self._createPackage(repositoryPath)
+            yield Upload(self.storage, **{
+                'name': self.name,
+                'manifest': manifestPath,
+                'package': packagePath
+            }).execute()
+            yield 'Application {0} has been successfully uploaded'.format(self.name)
+        except (RepositoryDownloadError, ModuleInstallError) as err:
+            print(err)
+
+    def _createRepository(self):
         repositoryPath = tempfile.mkdtemp()
         repositoryPath = os.path.join(repositoryPath, 'repo')
+        log.debug('Repository temporary path - "{0}"'.format(repositoryPath))
         shutil.copytree(self.path, repositoryPath)
+        return repositoryPath
+
+    @chain.concurrent
+    def _createVirtualEnvironment(self, repositoryPath, Installer):
+        log.debug('Creating virtual environment "{0}" ...'.format(self.virtualEnvironmentType))
+        stream = None
+        for handler in log.handlers:
+            if isinstance(handler, logging.StreamHandler) and hasattr(handler, 'fileno'):
+                stream = handler.stream
+                break
+        installer = Installer(path=repositoryPath, outputPath=repositoryPath, stream=stream)
+        installer.install()
+
+    def _createPackage(self, repositoryPath):
+        log.debug('Creating package')
         packagePath = os.path.join(repositoryPath, 'package.tar.gz')
         tar = tarfile.open(packagePath, mode='w:gz')
         tar.add(repositoryPath, arcname='')
         tar.close()
-
-        # Upload
-        log.debug('Repository path: {0}'.format(repositoryPath))
-        log.debug('Manifest path: {0}'.format(manifestPath))
-        log.debug('Package path: {0}'.format(packagePath))
-        yield Upload(self.storage, **{
-            'name': self.name,
-            'manifest': manifestPath,
-            'package': packagePath
-        }).execute()
-        yield 'Application {0} has been successfully uploaded'.format(self.name)
-
-    def _locateManifest(self):
-        manifests = []
-        for root, dirNames, fileNames in os.walk(self.path):
-            for fileName in fileNames:
-                if fileName.startswith('manifest'):
-                    priority = 1
-                    if root == self.path:
-                        priority += 100
-                    if fileName == 'manifest.json':
-                        priority += 10
-                    manifests.append((os.path.join(root, fileName), priority))
-        manifests = sorted(manifests, key=lambda manifest: manifest[1], reverse=True)
-        log.debug('Manifests found: {0}'.format(manifests))
-        if not manifests:
-            raise ToolsError('No manifest file found in "{0}" or subdirectories'.format(os.path.abspath(self.path)))
-
-        manifest, priority = manifests[0]
-        manifestPath = os.path.abspath(manifest)
-        return manifestPath
+        return packagePath
 
 
 class UploadRemote(actions.Storage):
