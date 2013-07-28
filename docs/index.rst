@@ -164,21 +164,16 @@ Show manifest context for application.
 
 cocaine-tool app upload
 ''''''''''''''''''''''''''''''''''''
-Upload application into the storage
-
-    :name: application name.
-    :manifest: path to application manifest json file.
-    :package: path to application archive.
-
-    >>> cocaine-tool app upload --name echo --manifest ~/echo/manifest.json --package ~/echo/echo.tar.gz
-    Application echo has been successfully uploaded
-
-cocaine-tool app upload2
-''''''''''''''''''''''''''''''''''''
 Upload application with its environment (directory) into the storage.
 
-    Application directory or its subdirectories must contain valid manifest file named `manifest.json` or `manifest`.
+    Application directory or its subdirectories must contain valid manifest file named `manifest.json` or `manifest`
+    otherwise you must specify it explicitly by setting `--manifest` option.
+
     You can specify application name. By default, leaf directory name is treated as application name.
+
+    If you have already prepared application archive (\*.tar.gz), you can explicitly specify path to it by setting
+    `--package` option. Note, that PATH and --package options are mutual exclusive as well as --package and --venv
+    options.
 
     If you specify option `--venv`, then virtual environment will be created for application.
 
@@ -205,18 +200,25 @@ Upload application with its environment (directory) into the storage.
 
     :path: path to the application root.
     :name: application name. If it is not specified, application will be named as its directory name.
+    :manifest: path to application manifest json file.
+    :package: path to application archive.
     :venv: virtual environment type. This is optional parameter and does nothing if not specified. Otherwise virtual
            environment will be created and configured.
 
-    >>> cocaine-tool app upload2 ~/echo
+    >>> cocaine-tool app upload ~/echo
     Application echo has been successfully uploaded
 
-    >>> cocaine-tool app upload2 ~/echo TheEchoApp
+    >>> cocaine-tool app upload ~/echo --name TheEchoApp
     Application TheEchoApp has been successfully uploaded
+
+    *If you want to explicitly specify application archive*
+
+    >>> cocaine-tool app upload --name echo --manifest ~/echo/manifest.json --package ~/echo/echo.tar.gz
+    Application echo has been successfully uploaded
 
     *Let's create python virtual environment and see detail log*
 
-    >>> cocaine-tool app upload2 ~/echo --venv P --timeout 60 --debug tools
+    >>> cocaine-tool app upload ~/echo --venv P --timeout 60 --debug tools
     You specified building virtual environment
     It may take a long time and can cause timeout. Increase it by specifying `--timeout` option if needed
     cocaine.tools.installer: DEBUG   : Filenames found: [('../examples/echo/manifest.json', 111)]
