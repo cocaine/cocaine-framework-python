@@ -42,11 +42,13 @@ BOOTSTRAP_CREATE_START = 'Creating bootstrap script ...'
 BOOTSTRAP_CREATE_ERROR = 'bootstrap create error - {0}'
 
 MANIFEST_FILENAME = 'manifest.json'
+MANIFEST_READ_OK = 'Reading manifest file: "{0}"'
 MANIFEST_SLAVE_PARSE_ERROR = 'manifest read error - slave is not specified'
 MANIFEST_READ_ERROR = 'manifest read error - {0}'
 MANIFEST_LOCATE_ERROR = 'locate manifest error - {0}'
 
 REQUIREMENTS_FILENAME = 'requirements.txt'
+REQUIREMENTS_NO_FILES_FOUND = 'No requirements found. Skipping this step ...'
 REQUIREMENTS_INSTALL_START = 'Installing requirements ...'
 REQUIREMENTS_INSTALL_FINISH = 'All requirements has been successfully installed'
 
@@ -59,9 +61,10 @@ class ModuleInstaller(object):
 class PythonModuleInstaller(ModuleInstaller):
     virtualEnvGlobalLock = Lock()
 
-    def __init__(self, path, outputPath, virtualEnvironmentName='venv', stream=None):
+    def __init__(self, path, outputPath, manifestPath=None, virtualEnvironmentName='venv', stream=None):
         self.path = path
         self.outputPath = outputPath
+        self.manifestPath = manifestPath
         self.virtualEnvironmentPath = os.path.join(self.outputPath, virtualEnvironmentName)
         self.stream = stream or open(os.devnull, 'w')
 
@@ -100,8 +103,11 @@ class PythonModuleInstaller(ModuleInstaller):
 
     def _readManifest(self, path):
         try:
-            manifestPath = _locateFile(path, MANIFEST_FILENAME)
-            with open(manifestPath) as fh:
+            if not self.manifestPath:
+                self.manifestPath = _locateFile(path, MANIFEST_FILENAME)
+
+            with open(self.manifestPath) as fh:
+                log.debug(MANIFEST_READ_OK.format(self.manifestPath))
                 try:
                     manifest = json.loads(fh.read())
                     if 'slave' not in manifest:
@@ -156,6 +162,10 @@ class PythonModuleInstaller(ModuleInstaller):
             requirementsPath = _locateFile(self.path, REQUIREMENTS_FILENAME)
         except IOError:
             requirementsPath = ''
+
+        if not requirementsPath:
+            log.debug(REQUIREMENTS_NO_FILES_FOUND)
+            return
 
         log.debug(REQUIREMENTS_INSTALL_START)
         _pip = os.path.join(self.virtualEnvironmentPath, 'bin', 'pip')

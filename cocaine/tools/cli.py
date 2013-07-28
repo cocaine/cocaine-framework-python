@@ -199,7 +199,7 @@ CRASHLOG_REMOVE_SUCCESS = 'Crashlog for app "{0}" has been removed'
 CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
 
-class AppUpload2CliAction(object):
+class AppUploadCliAction(object):
     def __init__(self, storage, **config):
         self.action = LocalUpload(storage, **config)
 
@@ -221,8 +221,8 @@ class AppUpload2CliAction(object):
 AVAILABLE_TOOLS_ACTIONS = {
     'app:list': AwaitJsonWrapper()(app.List),
     'app:view': AwaitJsonWrapper(unpack=True)(app.View),
-    'app:upload': AwaitDoneWrapper(APP_UPLOAD_SUCCESS, APP_UPLOAD_FAIL)(app.Upload),
-    'app:upload2': AppUpload2CliAction,
+    'app:upload-manual': AwaitDoneWrapper(APP_UPLOAD_SUCCESS, APP_UPLOAD_FAIL)(app.Upload),
+    'app:upload': AppUploadCliAction,
     'app:remove': AwaitDoneWrapper(APP_REMOVE_SUCCESS, APP_REMOVE_FAIL)(app.Remove),
     'profile:list': AwaitJsonWrapper()(profile.List),
     'profile:view': AwaitJsonWrapper(unpack=True)(profile.View),

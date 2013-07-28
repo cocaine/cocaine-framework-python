@@ -1,4 +1,5 @@
 import logging
+import os
 from opster import Dispatcher
 from cocaine.tools.cli import NodeExecutor, StorageExecutor, coloredOutput, Executor
 
@@ -122,28 +123,24 @@ def app_view(locator,
     })
 
 
-@appDispatcher.command(usage='--name=NAME --manifest=MANIFEST --package=PACKAGE', name='upload')
+@appDispatcher.command(name='upload', usage='[PATH] [--name=NAME] [--manifest=MANIFEST] [--package=PACKAGE]')
 def app_upload(locator,
+               path=None,
                name=('n', '', 'application name'),
                manifest=('', '', 'manifest file name'),
-               package=('', '', 'location of the app source package')):
-    """Upload application into the storage"""
-    locator.storageExecutor().executeAction('app:upload', **{
-        'name': name,
-        'manifest': manifest,
-        'package': package
-    })
-
-
-@appDispatcher.command(name='upload2', usage='PATH [NAME] [--venv=VIRTUAL_ENVIRONMENT]')
-def app_upload2(locator,
-                path,
-                name=None,
-                venv=('', ('N', 'P', 'R', 'J'), 'virtual environment type (N, P, R, J).')):
+               package=('', '', 'path to the application archive'),
+               venv=('', ('None', 'P', 'R', 'J'), 'virtual environment type (None, P, R, J).')):
     """Upload application with its environment (directory) into the storage.
 
-    Application directory or its subdirectories must contain valid manifest file named `manifest.json` or `manifest`.
+    Application directory or its subdirectories must contain valid manifest file named `manifest.json` or `manifest`
+    otherwise you must specify it explicitly by setting `--manifest` option.
+
     You can specify application name. By default, leaf directory name is treated as application name.
+
+    If you have already prepared application archive (*.tar.gz), you can explicitly specify path to it by setting
+    `--package` option. Note, that PATH and --package options are mutual exclusive as well as --package and --venv
+    options.
+
     If you specify option `--venv`, then virtual environment will be created for application.
     Possible values:
         N - do not create virtual environment (default)
@@ -157,14 +154,31 @@ def app_upload2(locator,
     Warning: creating virtual environment may take a long time and can cause timeout. You can increase timeout by
     specifying `--timeout` option.
     """
-    if venv != 'N':
-        print('You specified building virtual environment')
-        print('It may take a long time and can cause timeout. Increase it by specifying `--timeout` option if needed')
-    locator.storageExecutor().executeAction('app:upload2', **{
-        'path': path,
-        'name': name,
-        'venv': venv
-    })
+    if path and package:
+        print('Wrong usage: option PATH and --package are mutual exclusive, you can only force one')
+        exit(os.EX_USAGE)
+
+    if venv != 'None' and package:
+        print('Wrong usage: option --package and --venv are mutual exclusive, you can only force one')
+        exit(os.EX_USAGE)
+
+    if package:
+        locator.storageExecutor().executeAction('app:upload-manual', **{
+            'name': name,
+            'manifest': manifest,
+            'package': package
+        })
+    else:
+        if venv != 'None':
+            print('You specified building virtual environment')
+            print('It may take a long time and can cause timeout. Increase it by specifying `--timeout` option if'
+                  ' needed')
+        locator.storageExecutor().executeAction('app:upload', **{
+            'path': path,
+            'name': name,
+            'manifest': manifest,
+            'venv': venv
+        })
 
 
 @appDispatcher.command(name='remove')

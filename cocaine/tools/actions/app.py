@@ -21,7 +21,7 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 WRONG_APPLICATION_NAME = 'Application "{0}" is not valid application'
 
 venvFactory = {
-    'N': None,
+    'None': None,
     'P': PythonModuleInstaller,
     'R': None,
     'J': None
@@ -186,10 +186,11 @@ class Check(common.Node):
 class LocalUpload(actions.Storage):
     def __init__(self, storage, **config):
         super(LocalUpload, self).__init__(storage, **config)
-        self.path = config.get('path', '.')
+        self.path = config.get('path') or os.path.curdir
         self.name = config.get('name')
+        self.manifest = config.get('manifest')
         self.virtualEnvironmentType = config.get('venv')
-        if self.name is None:
+        if not self.name:
             self.name = os.path.basename(os.path.abspath(self.path))
         if not self.name:
             raise ValueError(WRONG_APPLICATION_NAME.format(self.name))
@@ -199,12 +200,14 @@ class LocalUpload(actions.Storage):
 
     def doWork(self):
         try:
-            manifestPath = _locateFile(self.path, 'manifest.json')
             repositoryPath = self._createRepository()
+            manifestPath = self.manifest or _locateFile(self.path, 'manifest.json')
             Installer = venvFactory[self.virtualEnvironmentType]
             if Installer:
-                yield self._createVirtualEnvironment(repositoryPath, Installer)
+                yield self._createVirtualEnvironment(repositoryPath, manifestPath, Installer)
                 manifestPath = os.path.join(repositoryPath, 'manifest.json')
+            else:
+                pass
 
             packagePath = self._createPackage(repositoryPath)
             yield Upload(self.storage, **{
@@ -224,14 +227,14 @@ class LocalUpload(actions.Storage):
         return repositoryPath
 
     @chain.concurrent
-    def _createVirtualEnvironment(self, repositoryPath, Installer):
+    def _createVirtualEnvironment(self, repositoryPath, manifestPath, Installer):
         log.debug('Creating virtual environment "{0}" ...'.format(self.virtualEnvironmentType))
         stream = None
         for handler in log.handlers:
             if isinstance(handler, logging.StreamHandler) and hasattr(handler, 'fileno'):
                 stream = handler.stream
                 break
-        installer = Installer(path=repositoryPath, outputPath=repositoryPath, stream=stream)
+        installer = Installer(path=repositoryPath, outputPath=repositoryPath, manifestPath=manifestPath, stream=stream)
         installer.install()
 
     def _createPackage(self, repositoryPath):
