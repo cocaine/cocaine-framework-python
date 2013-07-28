@@ -98,7 +98,8 @@ class BaseService(object):
         self.loop.bind_on_fd(self.pipe.fileno())
         
     def reconnect(self):
-        self.loop.stop_listening(self.pipe.fileno())
+        if self.pipe.is_valid_fd:
+            self.loop.stop_listening(self.pipe.fileno())
         try:
             self._init_endpoint()
         except LocatorResolveError:
@@ -212,7 +213,7 @@ class BaseService(object):
             return False
 
     def __del__(self):
-        if self.pipe.is_valid_fd:
+        if self.pipe is not None and self.pipe.is_valid_fd:
             self.loop.stop_listening(self.pipe.fileno())
             self.pipe.close()
 
