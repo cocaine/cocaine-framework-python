@@ -205,8 +205,18 @@ Upload application with its environment (directory) into the storage.
     :venv: virtual environment type. This is optional parameter and does nothing if not specified. Otherwise virtual
            environment will be created and configured.
 
+    *The simplest usage*
+
+    >>> cd /home/user/your_app
+    >>> cocaine tool app upload
+    Application your_app has been successfully uploaded
+
+    *But you can specify path directly as first positional argument like this*
+
     >>> cocaine-tool app upload ~/echo
     Application echo has been successfully uploaded
+
+    *Explicitly set application name*
 
     >>> cocaine-tool app upload ~/echo --name TheEchoApp
     Application TheEchoApp has been successfully uploaded
