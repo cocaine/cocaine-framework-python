@@ -425,3 +425,9 @@ def concurrent(func):
         mock = ConcurrentWorker(func, ioLoop=None, args=args, kwargs=kwargs)
         return mock
     return wrapper
+
+
+def source(func):
+    def wrapper(*args, **kwargs):
+        return Chain([lambda: func(*args, **kwargs)])
+    return wrapper
