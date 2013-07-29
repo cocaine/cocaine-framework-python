@@ -1,6 +1,6 @@
 import msgpack
-from cocaine.futures import chain
 
+from cocaine.futures import chain
 from cocaine.tools.actions import CocaineConfigReader
 from cocaine.tools.tags import RUNLISTS_TAGS
 from cocaine.tools import actions, log

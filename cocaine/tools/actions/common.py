@@ -1,8 +1,8 @@
 import ast
-from itertools import chain
 import re
 
 from cocaine.exceptions import ServiceCallError, ServiceError
+from cocaine.futures import chain
 from cocaine.services import Service
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
