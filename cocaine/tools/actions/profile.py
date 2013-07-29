@@ -1,8 +1,6 @@
-import json
-import msgpack
-from cocaine.tools.actions import isJsonValid
+from cocaine.tools.actions import CocaineConfigReader
 from cocaine.tools.tags import PROFILES_TAGS
-from cocaine.tools import actions, log
+from cocaine.tools import actions
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -33,15 +31,8 @@ class Upload(Specific):
             raise ValueError('Please specify profile file path')
 
     def execute(self):
-        if isJsonValid(self.profile):
-            log.debug('Profile specified directly')
-            profile = self.profile
-        else:
-            log.debug('Loading profile from file ...')
-            with open(self.profile, 'rb') as fh:
-                profile = fh.read()
-        encodedProfile = msgpack.dumps(json.loads(profile))
-        return self.storage.write('profiles', self.name, encodedProfile, PROFILES_TAGS)
+        profile = CocaineConfigReader.load(self.profile)
+        return self.storage.write('profiles', self.name, profile, PROFILES_TAGS)
 
 
 class Remove(Specific):
