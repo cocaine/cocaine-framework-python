@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import re
@@ -13,7 +14,7 @@ from cocaine.tools import actions, log
 from cocaine.tools.actions import common
 from cocaine.tools.installer import PythonModuleInstaller, ModuleInstallError, _locateFile
 from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
-from cocaine.tools.encoders import JsonEncoder, PackageEncoder
+from cocaine.tools.encoders import JsonEncoder, PackageEncoder, isJsonValid, readArchive
 from cocaine.tools.tags import APPS_TAGS
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -53,14 +54,11 @@ class Upload(actions.Storage):
         super(Upload, self).__init__(storage, **config)
         self.name = config.get('name')
         self.manifest = config.get('manifest')
-        self.manifestRaw = config.get('manifest-raw')
         self.package = config.get('package')
-        self.jsonEncoder = JsonEncoder()
-        self.packageEncoder = PackageEncoder()
 
         if not self.name:
             raise ValueError('Please specify name of the app')
-        if not any([self.manifest, self.manifestRaw]):
+        if not self.manifest:
             raise ValueError('Please specify manifest of the app')
         if not self.package:
             raise ValueError('Please specify package of the app')
@@ -72,14 +70,16 @@ class Upload(actions.Storage):
         return Chain([self.do])
 
     def do(self):
-        if self.manifest:
-            manifest = self.jsonEncoder.encode(self.manifest)
+        if isJsonValid(self.manifest):
+            manifest = self.manifest
         else:
-            manifest = msgpack.dumps(self.manifestRaw)
-        package = self.packageEncoder.encode(self.package)
-        yield self.storage.write('manifests', self.name, manifest, APPS_TAGS)
-        yield self.storage.write('apps', self.name, package, APPS_TAGS)
-        yield 'Done'
+            with open(self.manifest, 'rb') as fh:
+                manifest = json.loads(fh.read())
+        encodedManifest = msgpack.dumps(manifest)
+        encodedPackage = msgpack.dumps(readArchive(self.package))
+        yield self.storage.write('manifests', self.name, encodedManifest, APPS_TAGS)
+        yield self.storage.write('apps', self.name, encodedPackage, APPS_TAGS)
+        yield 'The application "{name}" has been successfully uploaded'.format(name=self.name)
 
 
 class Remove(actions.Storage):

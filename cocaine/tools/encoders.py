@@ -7,6 +7,14 @@ from cocaine.exceptions import CocaineError
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
+def isJsonValid(text):
+    try:
+        json.loads(text)
+        return True
+    except ValueError:
+        return False
+
+
 class JsonEncoder(object):
     def encode(self, filename):
         """
@@ -38,3 +46,11 @@ class PackageEncoder(object):
                 return package
         except IOError as err:
             raise CocaineError('Error occurred while reading archive file "{0}" - {1}'.format(filename, err))
+
+
+def readArchive(filename):
+    if not tarfile.is_tarfile(filename):
+        raise tarfile.TarError('File "{0}" is not tar file'.format(filename))
+    with open(filename, 'rb') as archive:
+        package = msgpack.packb(archive.read())
+        return package
