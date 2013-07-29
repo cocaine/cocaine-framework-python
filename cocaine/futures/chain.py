@@ -428,6 +428,11 @@ def concurrent(func):
 
 
 def source(func):
+    """Marks function or method as source of chain context.
+
+    It means, that the decorated function becomes the first function in the chain pipeline. As a result, there
+    shouldn't be any parameter passed to that function (except `self` or `cls` for class methods).
+    """
     def wrapper(*args, **kwargs):
         return Chain([lambda: func(*args, **kwargs)])
     return wrapper
