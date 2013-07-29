@@ -23,8 +23,7 @@ def readArchive(filename):
     if not tarfile.is_tarfile(filename):
         raise tarfile.TarError('File "{0}" is not tar file'.format(filename))
     with open(filename, 'rb') as archive:
-        package = msgpack.packb(archive.read())
-        return package
+        return archive.read()
 
 
 class CocaineConfigReader:
