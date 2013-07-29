@@ -30,8 +30,12 @@ def readArchive(filename):
 class CocaineConfigReader:
     @classmethod
     def load(cls, context):
+        if isinstance(context, dict):
+            log.debug('Content specified directly by dict')
+            return msgpack.dumps(context)
+
         if isJsonValid(context):
-            log.debug('Content specified directly')
+            log.debug('Content specified directly by string')
             content = context
         else:
             log.debug('Loading content from file ...')
