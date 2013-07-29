@@ -27,7 +27,7 @@ class _Specific(actions.Storage):
     def __init__(self, storage, **config):
         super(_Specific, self).__init__(storage, **config)
         self.name = config.get('name')
-        self.timestamp = config.get('manifest')
+        self.timestamp = config.get('timestamp')
         if not self.name:
             raise ValueError('Please specify name')
 
@@ -68,5 +68,5 @@ class Remove(_Specific):
 
 class RemoveAll(Remove):
     def __init__(self, storage, **config):
-        config['manifest'] = None
+        config['timestamp'] = None
         super(RemoveAll, self).__init__(storage, **config)

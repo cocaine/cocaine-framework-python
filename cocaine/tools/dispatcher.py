@@ -275,7 +275,7 @@ def profile_upload(locator,
     """Upload profile into the storage."""
     locator.storageExecutor().executeAction('profile:upload', **{
         'name': name,
-        'manifest': profile
+        'profile': profile
     })
 
 
@@ -310,7 +310,7 @@ def runlist_upload(locator,
     """Upload runlist with context into the storage."""
     locator.storageExecutor().executeAction('runlist:upload', **{
         'name': name,
-        'manifest': runlist
+        'runlist': runlist
     })
 
 
@@ -367,7 +367,7 @@ def crashlog_view(locator,
     """Show crashlog for application with specified timestamp."""
     locator.storageExecutor().executeAction('crashlog:view', **{
         'name': name,
-        'manifest': timestamp
+        'timestamp': timestamp
     })
 
 
@@ -378,7 +378,7 @@ def crashlog_remove(locator,
     """Remove crashlog for application with specified timestamp from the storage."""
     locator.storageExecutor().executeAction('crashlog:remove', **{
         'name': name,
-        'manifest': timestamp
+        'timestamp': timestamp
     })
 
 
@@ -388,7 +388,7 @@ def crashlog_removeall(locator,
     """Remove all crashlogs for application from the storage."""
     locator.storageExecutor().executeAction('crashlog:removeall', **{
         'name': name,
-        'manifest': None
+        'timestamp': None
     })
 
 

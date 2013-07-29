@@ -26,7 +26,7 @@ class View(Specific):
 class Upload(Specific):
     def __init__(self, storage, **config):
         super(Upload, self).__init__(storage, **config)
-        self.profile = config.get('manifest')
+        self.profile = config.get('profile')
         if not self.profile:
             raise ValueError('Please specify profile file path')
 

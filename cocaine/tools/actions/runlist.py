@@ -3,7 +3,7 @@ import msgpack
 from cocaine.futures.chain import Chain
 from cocaine.tools.actions import CocaineConfigReader
 from cocaine.tools.tags import RUNLISTS_TAGS
-from cocaine.tools import actions
+from cocaine.tools import actions, log
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -29,7 +29,7 @@ class View(Specific):
 class Upload(Specific):
     def __init__(self, storage, **config):
         super(Upload, self).__init__(storage, **config)
-        self.runlist = config.get('manifest')
+        self.runlist = config.get('runlist')
         if not self.runlist:
             raise ValueError('Please specify runlist file path')
 
@@ -65,10 +65,11 @@ class AddApplication(Specific):
     def do(self):
         runlistInfo = yield View(self.storage, **{'name': self.name}).execute()
         runlist = msgpack.loads(runlistInfo)
+        log.debug('Found runlist: {0}'.format(runlist))
         runlist[self.app] = self.profile
         runlistUploadAction = Upload(self.storage, **{
             'name': self.name,
-            'runlist-raw': runlist
+            'runlist': runlist
         })
         yield runlistUploadAction.execute()
         result = {
