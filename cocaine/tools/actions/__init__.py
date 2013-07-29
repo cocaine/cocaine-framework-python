@@ -1,10 +1,43 @@
+import json
 import socket
 import errno
+import tarfile
+import msgpack
 
 from cocaine.exceptions import ConnectionRefusedError, ConnectionError
 from cocaine.services import Service
+from cocaine.tools import log
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
+
+
+def isJsonValid(text):
+    try:
+        json.loads(text)
+        return True
+    except ValueError:
+        return False
+
+
+def readArchive(filename):
+    if not tarfile.is_tarfile(filename):
+        raise tarfile.TarError('File "{0}" is not tar file'.format(filename))
+    with open(filename, 'rb') as archive:
+        package = msgpack.packb(archive.read())
+        return package
+
+
+class CocaineConfigReader:
+    @classmethod
+    def load(cls, context):
+        if isJsonValid(context):
+            log.debug('Content specified directly')
+            content = context
+        else:
+            log.debug('Loading content from file ...')
+            with open(context, 'rb') as fh:
+                content = fh.read()
+        return msgpack.dumps(json.loads(content))
 
 
 class Storage(object):

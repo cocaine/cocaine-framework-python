@@ -11,10 +11,9 @@ from cocaine.exceptions import ToolsError
 from cocaine.futures import chain
 from cocaine.futures.chain import Chain
 from cocaine.tools import actions, log
-from cocaine.tools.actions import common
+from cocaine.tools.actions import common, isJsonValid, readArchive
 from cocaine.tools.installer import PythonModuleInstaller, ModuleInstallError, _locateFile
 from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
-from cocaine.tools.encoders import JsonEncoder, PackageEncoder, isJsonValid, readArchive
 from cocaine.tools.tags import APPS_TAGS
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -71,11 +70,13 @@ class Upload(actions.Storage):
 
     def do(self):
         if isJsonValid(self.manifest):
+            log.debug('Manifest specified directly')
             manifest = self.manifest
         else:
+            log.debug('Loading manifest from file ...')
             with open(self.manifest, 'rb') as fh:
-                manifest = json.loads(fh.read())
-        encodedManifest = msgpack.dumps(manifest)
+                manifest = fh.read()
+        encodedManifest = msgpack.dumps(json.loads(manifest))
         encodedPackage = msgpack.dumps(readArchive(self.package))
         yield self.storage.write('manifests', self.name, encodedManifest, APPS_TAGS)
         yield self.storage.write('apps', self.name, encodedPackage, APPS_TAGS)

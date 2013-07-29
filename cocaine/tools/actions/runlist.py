@@ -1,9 +1,10 @@
+import json
 import msgpack
 
 from cocaine.futures.chain import Chain
-from cocaine.tools.encoders import JsonEncoder
+from cocaine.tools.actions import isJsonValid
 from cocaine.tools.tags import RUNLISTS_TAGS
-from cocaine.tools import actions
+from cocaine.tools import actions, log
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -30,17 +31,19 @@ class Upload(Specific):
     def __init__(self, storage, **config):
         super(Upload, self).__init__(storage, **config)
         self.runlist = config.get('manifest')
-        self.runlist_raw = config.get('runlist-raw')
-        self.jsonEncoder = JsonEncoder()
-        if not any([self.runlist, self.runlist_raw]):
+        if not self.runlist:
             raise ValueError('Please specify runlist file path')
 
     def execute(self):
-        if self.runlist:
-            runlist = self.jsonEncoder.encode(self.runlist)
+        if isJsonValid(self.runlist):
+            log.debug('Runlist specified directly')
+            runlist = self.runlist
         else:
-            runlist = msgpack.dumps(self.runlist_raw)
-        return self.storage.write('runlists', self.name, runlist, RUNLISTS_TAGS)
+            log.debug('Loading runlist from file ...')
+            with open(self.runlist, 'rb') as fh:
+                runlist = fh.read()
+        encodedRunlist = msgpack.dumps(json.loads(runlist))
+        return self.storage.write('runlists', self.name, encodedRunlist, RUNLISTS_TAGS)
 
 
 class Create(Specific):
