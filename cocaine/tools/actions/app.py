@@ -61,13 +61,11 @@ class Upload(actions.Storage):
         if not self.package:
             raise ValueError('Please specify package of the app')
 
+    @chain.source
     def execute(self):
         """
         Encodes manifest and package files and (if successful) uploads them into storage
         """
-        return Chain([self.do])
-
-    def do(self):
         manifest = CocaineConfigReader.load(self.manifest)
         package = msgpack.dumps(readArchive(self.package))
         yield self.storage.write('manifests', self.name, manifest, APPS_TAGS)
@@ -86,10 +84,8 @@ class Remove(actions.Storage):
         if not self.name:
             raise ValueError('Empty application name')
 
+    @chain.source
     def execute(self):
-        return Chain([self.do])
-
-    def do(self):
         yield self.storage.remove('manifests', self.name)
         yield self.storage.remove('apps', self.name)
         yield 'Done'
@@ -120,8 +116,7 @@ class Stop(common.Node):
             raise ValueError('Please specify application name')
 
     def execute(self):
-        future = self.node.pause_app([self.name])
-        return future
+        return self.node.pause_app([self.name])
 
 
 class Restart(common.Node):
@@ -132,10 +127,8 @@ class Restart(common.Node):
         if not self.name:
             raise ValueError('Please specify application name')
 
+    @chain.source
     def execute(self):
-        return Chain([self.doAction])
-
-    def doAction(self):
         try:
             info = yield common.NodeInfo(self.node, **self.config).execute()
             profile = self.profile or info['apps'][self.name]['profile']
@@ -161,10 +154,8 @@ class Check(common.Node):
         if not self.name:
             raise ValueError('Please specify application name')
 
+    @chain.source
     def execute(self):
-        return Chain([self.do])
-
-    def do(self):
         state = 'stopped or missing'
         try:
             info = yield self.node.info()
@@ -188,10 +179,8 @@ class LocalUpload(actions.Storage):
         if not self.name:
             raise ValueError(WRONG_APPLICATION_NAME.format(self.name))
 
+    @chain.source
     def execute(self):
-        return Chain([self.doWork])
-
-    def doWork(self):
         try:
             repositoryPath = self._createRepository()
             manifestPath = self.manifest or _locateFile(self.path, 'manifest.json')
@@ -251,10 +240,8 @@ class UploadRemote(actions.Storage):
             match = rx.match(self.url)
             self.name = match.group('name')
 
+    @chain.source
     def execute(self):
-        return Chain([self.doWork])
-
-    def doWork(self):
         repositoryPath = tempfile.mkdtemp()
         manifestPath = os.path.join(repositoryPath, 'manifest-start.json')
         packagePath = os.path.join(repositoryPath, 'package.tar.gz')
