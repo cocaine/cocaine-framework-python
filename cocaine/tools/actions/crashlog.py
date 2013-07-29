@@ -1,6 +1,5 @@
 import time
-
-from cocaine.futures.chain import Chain
+from cocaine.futures import chain
 from cocaine.tools import actions
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -36,10 +35,8 @@ class View(_Specific):
     def __init__(self, storage, **config):
         super(View, self).__init__(storage, **config)
 
+    @chain.source
     def execute(self):
-        return Chain([self.do])
-
-    def do(self):
         crashlogs = yield self.storage.find('crashlogs', (self.name,))
         parsedCrashlogs = parseCrashlogs(crashlogs, timestamp=self.timestamp)
         contents = []
@@ -54,10 +51,8 @@ class Remove(_Specific):
     def __init__(self, storage, **config):
         super(Remove, self).__init__(storage, **config)
 
+    @chain.source
     def execute(self):
-        return Chain([self.do])
-
-    def do(self):
         crashlogs = yield self.storage.find('crashlogs', (self.name,))
         parsedCrashlogs = parseCrashlogs(crashlogs, timestamp=self.timestamp)
         for crashlog in parsedCrashlogs:

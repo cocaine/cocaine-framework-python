@@ -8,7 +8,6 @@ import msgpack
 
 from cocaine.exceptions import ToolsError
 from cocaine.futures import chain
-from cocaine.futures.chain import Chain
 from cocaine.tools import actions, log
 from cocaine.tools.actions import common, readArchive, CocaineConfigReader
 from cocaine.tools.installer import PythonModuleInstaller, ModuleInstallError, _locateFile

@@ -1,9 +1,9 @@
 import ast
+from itertools import chain
 import re
 
 from cocaine.exceptions import ServiceCallError, ServiceError
 from cocaine.services import Service
-from cocaine.futures.chain import Chain
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -36,10 +36,8 @@ class Call(object):
         else:
             self.methodName = methodWithArguments
 
+    @chain.source
     def execute(self):
-        return Chain([self.callService])
-
-    def callService(self):
         service = self.getService()
         response = {
             'service': self.serviceName,

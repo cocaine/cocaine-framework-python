@@ -1,6 +1,6 @@
 import msgpack
+from cocaine.futures import chain
 
-from cocaine.futures.chain import Chain
 from cocaine.tools.actions import CocaineConfigReader
 from cocaine.tools.tags import RUNLISTS_TAGS
 from cocaine.tools import actions, log
@@ -59,10 +59,8 @@ class AddApplication(Specific):
         if not self.profile:
             raise ValueError('Please specify profile')
 
+    @chain.source
     def execute(self):
-        return Chain([self.do])
-
-    def do(self):
         runlistInfo = yield View(self.storage, **{'name': self.name}).execute()
         runlist = msgpack.loads(runlistInfo)
         log.debug('Found runlist: {0}'.format(runlist))
