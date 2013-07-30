@@ -1,3 +1,15 @@
+cocaine-framework-python (0.10.5.6) unstable; urgency=low
+
+  * Improve support of chain idiom
+  * Improve cocaine-tools functionality
+  * Slightly improved performance of IO
+  * Add a lot of documentation stuff (autodoc generation via sphinx)
+  * Prolongate errors to client from event handlers
+  * Some bugfixes in tools and framework
+  * Some refactoring
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 30 Jul 2013 15:10:24 +0400
+
 cocaine-framework-python (0.10.5.5) unstable; urgency=low
   
   * reduce memory consumption
