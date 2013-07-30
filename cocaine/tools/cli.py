@@ -153,8 +153,8 @@ def makePrettyCrashlogRemove(cls, onDoneMessage=None):
 
 
 class CallActionCli(object):
-    def __init__(self, node=None, **config):
-        self.action = common.Call(node, **config)
+    def __init__(self, **config):
+        self.action = common.Call(**config)
         self.config = config
 
     def execute(self):
@@ -264,7 +264,7 @@ class Executor(object):
         self.host = config['host']
         self.port = config['port']
         self.timeout = config['timeout']
-        self.loop = IOLoop.instance()
+        self.loop = IOLoop.current()
 
     def executeAction(self, actionName, **options):
         """
@@ -275,30 +275,32 @@ class Executor(object):
         :param options: various action configuration
         """
         try:
-            service = self.createService(self.host, self.port)
+            self.createService(self.host, self.port, options)
 
             Action = self.availableActions[actionName]
-            action = Action(service, **options)
+            action = Action(**options)
             action.execute()
             self.loop.add_timeout(time() + self.timeout, self.timeoutErrorback)
-            IOLoop.instance().start()
+            self.loop.start()
         except CocaineError as err:
             raise ToolsError(err)
         except ValueError as err:
             raise ToolsError(err)
         except KeyError as err:
             raise ToolsError('Action {0} is not available'.format(err))
-        # todo: keyboard interruption
+        except KeyboardInterrupt:
+            printError('Terminated by user')
+            self.loop.stop()
         except Exception as err:
             raise ToolsError('Unknown error occurred - {0}'.format(err))
 
-    def createService(self, host, port):
+    def createService(self, host, port, options):
         if not self.serviceName:
-            return None
+            return
 
         try:
             service = Service(self.serviceName, host, port)
-            return service
+            options[self.serviceName] = service
         except socket.error as err:
             if err.errno == errno.ECONNREFUSED:
                 raise ConnectionRefusedError(host, port)

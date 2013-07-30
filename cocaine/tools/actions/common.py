@@ -22,7 +22,7 @@ class NodeInfo(Node):
 
 
 class Call(object):
-    def __init__(self, serviceStub, command, host, port):
+    def __init__(self, command, host, port):
         if not command:
             raise ValueError('Please specify service name for getting API or full command to invoke')
         self.host = host
