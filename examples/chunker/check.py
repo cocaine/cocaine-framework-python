@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
+import os
 import msgpack
 import sys
 from cocaine.futures.chain import Chain
@@ -9,6 +10,10 @@ __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
 if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print('Usage: chunker.py NUMBER_OF_CHUNKS')
+        exit(os.EX_USAGE)
+
     def fetchAll():
         chunk = yield service.enqueue('chunkMe', str(sys.argv[1]))
         chunk = msgpack.loads(chunk)
