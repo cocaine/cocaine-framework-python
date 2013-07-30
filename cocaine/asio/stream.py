@@ -121,7 +121,6 @@ class WritableStream(object):
 
         can_write = True
         while can_write and self._buffer:
-            print(len(self._buffer))
             current = self._buffer[0]
             sent = self.pipe.write(buffer(current, self.tx_offset))
 
