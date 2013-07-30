@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 import sys
+import os
+
+print os.getcwd()
+
 sys.path.insert(0, '..')
+
 
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest']
 
