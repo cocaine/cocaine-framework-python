@@ -87,7 +87,7 @@ class _Coroutine(_Proxy):
             self._logger.error(repr(err))
             traceback.print_stack()
             if not self._response.closed:
-                self._response.error(1, "Error in event %s handler %s" %
+                self._response.error(1, "Error in event '%s' handler %s" %
                                      (self._response.event,
                                      str(err)))
 

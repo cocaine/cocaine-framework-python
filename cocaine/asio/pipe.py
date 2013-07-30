@@ -123,8 +123,8 @@ class Pipe(object):
         try:
             return self.sock.recv_into(buff, size)
         except socket.error as e:
-            if e.errno == errno.ECONNRESET:
-                self.connection = False
+            if e.errno in (errno.ECONNRESET, errno.ECONNABORTED, errno.EPIPE):
+                self.connected = False
                 return 0
             elif e.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
                 return 0
@@ -138,7 +138,9 @@ class Pipe(object):
             if e.errno in (errno.EWOULDBLOCK, errno.EAGAIN):
                 return 0
             else:
-                if e.errno in (errno.ECONNRESET, errno.ECONNABORTED, errno.EPIPE):
+                if e.errno in (errno.ECONNRESET,
+                               errno.ECONNABORTED,
+                               errno.EPIPE):
                     # log it
                     self.connected = False
                 self.close()

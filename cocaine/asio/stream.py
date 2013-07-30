@@ -107,24 +107,32 @@ class WritableStream(object):
         self.pipe = pipe
         self.is_attached = False
 
-        self._buffer = collections.deque()
+        self._buffer = list()
+        self.tx_offset = 0
 
     @weakmethod
     def _on_event(self):
         # All data was sent - so unbind writable event
         if not self._buffer:
-            self.loop.unregister_write_event(self.pipe.fileno())
-            self.is_attached = False
+            if self.is_attached:
+                self.loop.unregister_write_event(self.pipe.fileno())
+                self.is_attached = False
             return
 
-        # Empty the buffer
-        while self._buffer:
-            num_bytes = self.pipe.write(self._buffer[0])
-            if num_bytes == 0:
-                break
-            merge_prefix(self._buffer, num_bytes)
-            self._buffer.popleft()
+        can_write = True
+        while can_write and self._buffer:
+            current = self._buffer[0]
+            sent = self.pipe.write(buffer(current, self.tx_offset))
 
+            if sent > 0:
+                self.tx_offset += sent
+            else:
+                can_write = False
+
+            # Current object is sent completely - pop it from buffer
+            if self.tx_offset == len(current):
+                self._buffer.pop(0)
+                self.tx_offset = 0
 
     @encode_dec
     def write(self, data, size):
@@ -140,22 +148,3 @@ class WritableStream(object):
         self.loop.register_write_event(self._on_event, self.pipe.fileno())
         self.is_attached = True
         self.tx_offset = 0
-
-
-def merge_prefix(deque, size):
-    if len(deque) == 1 and len(deque[0]) <= size:
-        return
-    prefix = []
-    remaining = size
-    while deque and remaining > 0:
-        chunk = deque.popleft()
-        if len(chunk) > remaining:
-            deque.appendleft(chunk[remaining:])
-            chunk = chunk[:remaining]
-        prefix.append(chunk)
-        remaining -= len(chunk)
-
-    if prefix:
-        deque.appendleft(type(prefix[0])().join(prefix))
-    if not deque:
-        deque.appendleft(b'')
