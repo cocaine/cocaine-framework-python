@@ -47,7 +47,7 @@ class Service(BaseService):
                 if not self.connected:
                     raise ServiceError(self.servicename, "Service is disconnected", -200)
                 future = Future()
-                c = chain.ChainFactory().then(lambda : future)
+                c = chain.Chain([lambda: future])
                 with self.lock:
                     self._counter += 1
                     self.w_stream.write([number, self._counter, args])
@@ -73,3 +73,4 @@ class Service(BaseService):
                 self._subscribers[msg.session].error(ServiceError(self.servicename, msg.message, msg.code))
         except Exception as err:
             print "Exception in _on_message: %s" % str(err)
+            raise err

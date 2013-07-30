@@ -23,9 +23,9 @@ import traceback
 
 import msgpack
 
-from decorators import default
+from cocaine.decorators import default
 from cocaine.exceptions import *
-from cocaine.logging import Logger
+from cocaine.logging.log import core_log
 from cocaine.futures import Future
 from cocaine.futures import chain
 
@@ -34,7 +34,7 @@ class Sandbox(object):
 
     def __init__(self):
         self._events = dict()
-        self._logger = Logger()
+        self._logger = core_log
 
     def invoke(self, event_name, request, stream):
         """ Connect worker and decorator """
@@ -63,10 +63,11 @@ class Sandbox(object):
 
 class Stream(object):
 
-    def __init__(self, session, worker):
+    def __init__(self, session, worker, event_name=""):
         self._m_state = 1
         self.worker = worker
         self.session = session
+        self.event = event_name
 
     def write(self, chunk):
         chunk = msgpack.packb(chunk)
@@ -97,7 +98,7 @@ class Stream(object):
 class Request(Future):
 
     def __init__(self):
-        self._logger = Logger()
+        self._logger = core_log
         self.cache = list()
         self._clbk = None   # Callback - on chunk
         self._errbk = None  # Errorback - translate error to handler
@@ -135,7 +136,7 @@ class Request(Future):
                 self._logger.error("No errorback. Can't throw error")
 
     def read(self):
-        return chain.ChainFactory().then(lambda : self)
+        return chain.Chain([lambda: self])
 
     def default_errorback(self, err):
         self._logger.error("No errorback.\

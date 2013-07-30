@@ -5,8 +5,8 @@
 #    This file is part of Cocaine.
 #
 #    Cocaine is free software; you can redistribute it and/or modify
-#    it under the terms of the GNU Lesser General Public License as published by
-#    the Free Software Foundation; either version 3 of the License, or
+#    it under the terms of the GNU Lesser General Public License as published
+#    by the Free Software Foundation; either version 3 of the License, or
 #    (at your option) any later version.
 #
 #    Cocaine is distributed in the hope that it will be useful,
@@ -37,28 +37,29 @@ from locator import Locator
 
 
 class BaseService(object):
-    """ Implements basic functional for services:
+    """
+    Implements basic functional for services.
+
     * all asio stuff
     * perform_sync method for synchronous operations
+
+    It:
+    * goes to Locator and get service api (put into self._service_api)
+    * initializes event loop and all asio elements (write/read streams)
+    * initializes session counter
+    * registers callback on epoll READ event
+    and binds callback to decoder (_on_message)
+
     You should reimplement _on_message function - this is callback for decoder,
-    so this function is called with every incoming decoded message
+    so this function is called with every
+    incoming decoded message.
     """
 
     def __init__(self, name, endpoint="127.0.0.1", port=10053, init_args=sys.argv, **kwargs):
-        """
-        It:
-        * goes to Locator and get service api (put into self._service_api)
-        * initializes event loop and all asio elements (write/read streams)
-        * initializes session counter
-        * registers callback on epoll READ event and\
-        binds callback to decoder (_on_message)
-        """
         if '--locator' in init_args:
             try:
                 port = int(init_args[init_args.index('--locator') + 1])
-            except ValueError as err:
-                port = 10053
-            except IndexError as err:
+            except (ValueError, IndexError):
                 port = 10053
         
         self._try_reconnect = kwargs.get("reconnect_once", True)
@@ -69,8 +70,9 @@ class BaseService(object):
         self._locator_host = endpoint
         self._locator_port = port
         self.servicename = name
+        self._service_api = None
 
-        self._init_endpoint() # initialize pipe
+        self._init_endpoint()  # initialize pipe
 
         self.decoder = Decoder()
         self.decoder.bind(self._on_message)
@@ -85,18 +87,22 @@ class BaseService(object):
 
     def _init_endpoint(self):
         locator = Locator()
-        self.service_endpoint, _, service_api = locator.resolve(self.servicename, self._locator_host, self._locator_port)
+        self.service_endpoint, _, service_api = locator.resolve(self.servicename,
+                                                                self._locator_host,
+                                                                self._locator_port)
         self._service_api = service_api
         # msgpack convert in list or tuple depend on version - make it tuple
-        self.pipe = Pipe(tuple(self.service_endpoint), self.reconnect if self._try_reconnect else None)
+        self.pipe = Pipe(tuple(self.service_endpoint),
+                         self.reconnect if self._try_reconnect else None)
         self.pipe.connect()
         self.loop.bind_on_fd(self.pipe.fileno())
         
     def reconnect(self):
-        self.loop.stop_listening(self.pipe.fileno())
+        if self.pipe.is_valid_fd:
+            self.loop.stop_listening(self.pipe.fileno())
         try:
             self._init_endpoint()
-        except LocatorResolveError as err:
+        except LocatorResolveError:
             pass
         else:
             self.w_stream.reconnect(self.pipe)
@@ -110,7 +116,9 @@ class BaseService(object):
             return
 
         limit = time.time() + timeout
-        self.loop.stop_listening(self.pipe.fileno())
+        if self.pipe.is_valid_fd:
+            self.loop.stop_listening(self.pipe.fileno())
+            self.pipe.close()
         self._reconnecting = True
 
         def on_locator_resolve(res):
@@ -138,16 +146,17 @@ class BaseService(object):
                 self.pipe = Pipe(tuple(self.service_endpoint), None)
                 self.pipe.async_connect(on_connect, limit - time.time())
 
-
-
         locator = Locator()
         locator.async_resolve(self.servicename,
-                                 self._locator_host, 
-                                 self._locator_port, on_locator_resolve, timeout)
-
+                              self._locator_host,
+                              self._locator_port, on_locator_resolve, timeout)
 
     def perform_sync(self, method, *args, **kwargs):
-        """ Do not use the service synchronously after treatment to him asynchronously!
+        """
+        Performs synchronous chunk retrieving
+
+        Warning: Do not use the service synchronously after treatment to him
+        asynchronously!
         Use for these purposes the other instance of the service!
         """
 
@@ -155,8 +164,9 @@ class BaseService(object):
 
         # Get number of current method
         try:
-            number = (_num for _num, _name in self._service_api.iteritems() if _name == method).next()
-        except StopIteration as err:
+            number = (_num for _num, _name in self._service_api.iteritems()
+                      if _name == method).next()
+        except StopIteration:
             raise ServiceError(self.servicename, "method %s is not available" % method, -100)
 
         try:
@@ -165,9 +175,8 @@ class BaseService(object):
             self.pipe.writeall(packb([number, self._counter, args]))
             self._counter += 1
             u = Unpacker()
-            msg = None
 
-            # If we receive rpc::error, put ServiceError here, 
+            # If we receive rpc::error, put ServiceError here,
             # and raise this error instead of StopIteration on rpc::choke,
             # because after rpc::error we always receive choke.
             _error = None
@@ -184,7 +193,9 @@ class BaseService(object):
                     elif msg.id == message.RPC_CHOKE:
                         raise _error or StopIteration
                     elif msg.id == message.RPC_ERROR:
-                        _error = ServiceError(self.servicename, msg.message, msg.code)
+                        _error = ServiceError(self.servicename,
+                                              msg.message,
+                                              msg.code)
         finally:
             self.pipe.settimeout(0)  # return to non-blocking mode
 
@@ -193,13 +204,21 @@ class BaseService(object):
 
     @property
     def connected(self):
+        if not self.pipe.is_valid_fd:
+            return False
+
         if self.pipe is not None:
             return self.pipe.connected
         else:
             return False
 
-class AsyncReconnectionResult(object):
+    def __del__(self):
+        if self.pipe is not None and self.pipe.is_valid_fd:
+            self.loop.stop_listening(self.pipe.fileno())
+            self.pipe.close()
 
+
+class AsyncReconnectionResult(object):
     def set_error(self, err):
         def res():
             raise err

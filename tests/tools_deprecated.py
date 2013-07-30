@@ -464,5 +464,5 @@ class InvalidArgumentsTestCase(FunctionalTests):
         expected = 'Please specify crashlog name\n'
         self.runBadlyAndCheckResult(['crashlog', 'list'], expected, 1)
 
-if __name__ == '__main__':
-    unittest.main()
+# if __name__ == '__main__':
+#     unittest.main()

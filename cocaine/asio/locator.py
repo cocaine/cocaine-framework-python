@@ -22,7 +22,6 @@ import socket
 import time
 import heapq
 from threading import Lock
-from functools import partial
 
 import msgpack
 
@@ -34,8 +33,6 @@ from cocaine.asio.ev import Loop
 from cocaine.asio import message
 from cocaine.exceptions import LocatorResolveError
 from cocaine.exceptions import ServiceError
-
-#todo: Need asynchronous locator (without loooooong tcp blocking timeout), plz plz plz
 
 
 class Cache(object):
@@ -135,6 +132,7 @@ class Locator(object):
                 wr.write([0, 1, [name]])
 
         sock.async_connect(closure, timeout, ioloop)
+
 
 class AsyncLocatorResult(object):
 

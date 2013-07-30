@@ -10,10 +10,14 @@ log = Logger()
 
 
 def chunker(request, response):
-    chunks = 100 * 1024
-    leData = [1024 * str(i) for i in xrange(chunks)]
+    chunks = yield request.read()
+    try:
+        chunks = int(msgpack.loads(chunks))
+    except ValueError:
+        chunks = int(chunks)
+
     for num in xrange(chunks):
-        response.write(msgpack.dumps(leData[num]))
+        response.write(msgpack.dumps('{0:-<1024}'.format(num)))
     response.write(msgpack.dumps('Done'))
     response.close()
 

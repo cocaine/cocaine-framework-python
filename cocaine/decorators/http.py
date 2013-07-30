@@ -30,6 +30,7 @@ class _HTTPResponse(object):
 
     def __init__(self, stream):
         self._stream = stream
+        self.event = self._stream.event
 
     def write(self, body):
         self._stream.write(body)
@@ -39,6 +40,9 @@ class _HTTPResponse(object):
 
     def close(self):
         self._stream.close()
+
+    def error(self, *args, **kwargs):
+        return self._stream.error(*args, **kwargs)
 
     @property
     def closed(self):

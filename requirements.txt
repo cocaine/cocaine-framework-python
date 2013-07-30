@@ -1,0 +1,4 @@
+msgpack_python
+tornado
+mockito
+opster >= 4.0

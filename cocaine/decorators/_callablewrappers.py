@@ -6,8 +6,8 @@
 #    This file is part of Cocaine.
 #
 #    Cocaine is free software; you can redistribute it and/or modify
-#    it under the terms of the GNU Lesser General Public License as published by
-#    the Free Software Foundation; either version 3 of the License, or
+#    it under the terms of the GNU Lesser General Public License as published
+#    by the Free Software Foundation; either version 3 of the License, or
 #    (at your option) any later version.
 #
 #    Cocaine is distributed in the hope that it will be useful,
@@ -16,7 +16,7 @@
 #    GNU Lesser General Public License for more details.
 #
 #    You should have received a copy of the GNU Lesser General Public License
-#    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+#    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
 __all__ = ["proxy_factory"]
@@ -25,21 +25,19 @@ from abc import ABCMeta, abstractmethod
 import compiler
 import traceback
 
-from cocaine.logging import Logger
+from cocaine.logging.log import core_log
+from cocaine.futures.chain import Chain
+from cocaine.exceptions import ChokeEvent
 
 
 class _Proxy(object):
 
     __metaclass__ = ABCMeta
     _wrapped = True
-    _logger = Logger()
+    _logger = core_log
 
     @abstractmethod
-    def __init__(self, func):
-        pass
-
-    @abstractmethod
-    def invoke(self, stream):
+    def invoke(self, request, stream):
         pass
 
     @property
@@ -54,8 +52,10 @@ def exception_trap(func):
         except StopIteration:
             pass
         except Exception as err:
-            self._logger.error("Caught exception: %s" % str(err))
+            self._logger.error("Caught exception: %s" % repr(err))
             traceback.print_stack()
+            if not self._response.closed:
+                self._response.error(1, "Unexpectd error %s" % str(err))
     return wrapper
 
 
@@ -65,46 +65,31 @@ class _Coroutine(_Proxy):
     def __init__(self, func):
         self._response = None
         self._obj = func
-        self._func = None
         self._state = None
         self._current_future_object = None
-
-    @exception_trap
-    def push(self, chunk=None):
-        self._logger.debug("Push chunk")
-        self._current_future_object = self._func.send(chunk)
-        while self._current_future_object is None:
-            self._current_future_object = self._func.next()
-        self._current_future_object.then(self.chain_chunk)
-        self._current_future_object.run()
-
-    @exception_trap
-    def error(self, error):
-        self._logger.debug("Error: %s" % str(error))
-        self._current_future_object = self._func.throw(error)
-        while self._current_future_object is None:
-            self._current_future_object = self._func.next()
-        self._current_future_object.then(self.chain_chunk)
-        self._current_future_object.run()
-
-    @exception_trap
-    def chain_chunk(self, chunk):
-        try:
-            data = chunk.get()
-        except Exception as err:
-            self.error(err)
-        else:
-            self.push(data)
 
     @exception_trap
     def invoke(self, request, stream):
         self._state = 1
         self._response = stream  # attach response stream
-        self._func = self._obj(request, self._response)  # prepare generator
-        self._current_future_object = self._func.next()
-        self._current_future_object.then(self.chain_chunk)
-        self._current_future_object.run()
+        Chain([lambda: self._obj(request, self._response), self.on_error])
 
+    def on_error(self, res):
+        try:
+            res.get()
+        except ChokeEvent:
+            if not self._response.closed:
+                self._logger.error("Handler for %s didn't close response stream" % self._response.event)
+        except StopIteration:
+            if not self._response.closed:
+                self._logger.error("Handler for %s didn't close response stream" % self._response.event)
+        except Exception as err:
+            self._logger.error(repr(err))
+            traceback.print_stack()
+            if not self._response.closed:
+                self._response.error(1, "Error in event '%s' handler %s" %
+                                     (self._response.event,
+                                     str(err)))
 
     def close(self):
         self._state = None
@@ -128,6 +113,7 @@ class _Function(_Proxy):
         except Exception as err:
             self._logger.error("Caught exception in invoke(): %s" % str(err))
             traceback.print_stack()
+            raise
 
     def push(self, chunk):
         try:
@@ -135,6 +121,7 @@ class _Function(_Proxy):
         except Exception as err:
             self._logger.error("Caught exception in push(): %s" % str(err))
             traceback.print_stack()
+            raise
 
     def close(self):
         self._state = None

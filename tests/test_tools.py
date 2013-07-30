@@ -1,24 +1,23 @@
 # coding=utf-8
+from __future__ import absolute_import
+
 import unittest
+
 import msgpack
+from tornado.testing import AsyncTestCase
 from mockito import mock, when, verify, any, unstub
-from cocaine.tools.tools import *
-from cocaine.futures.chain import ChainFactory
-from cocaine.exceptions import ServiceError
+
+from cocaine.testing.mocks import CallableMock
+from cocaine.futures.chain import Chain
+from cocaine.exceptions import ServiceError, ToolsError, ServiceCallError
+from cocaine.tools.tags import APPS_TAGS, PROFILES_TAGS, RUNLISTS_TAGS
+from cocaine.tools.actions import common, app, profile, runlist, crashlog
 
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
-class CallableMock(object):
-    def __init__(self, mock):
-        self.mock = mock
-
-    def __call__(self, *args, **kwargs):
-        return self.mock.__call__(*args, **kwargs)
-
-    def __getattr__(self, methodName):
-        return self.mock.__getattr__(methodName)
+#todo: doc. merge. test & profit
 
 
 def verifyInit(patchedClassName, expected):
@@ -37,7 +36,7 @@ def verifyInit(patchedClassName, expected):
     return decorator
 
 
-class AppTestCase(unittest.TestCase):
+class AppTestCase(AsyncTestCase):
     def tearDown(self):
         unstub()
 
@@ -47,35 +46,35 @@ class AppTestCase(unittest.TestCase):
         specified arguments
         """
         storage = mock()
-        action = AppListAction(storage, **{})
+        action = app.List(storage, **{})
         action.execute()
         verify(storage).find('manifests', APPS_TAGS)
 
     def test_AppViewActionValueErrors(self):
         storage = mock()
-        self.assertRaises(ValueError, AppViewAction, storage, **{})
-        self.assertRaises(ValueError, AppViewAction, storage, **{'name': None})
-        self.assertRaises(ValueError, AppViewAction, storage, **{'name': ''})
+        self.assertRaises(ValueError, app.View, storage, **{})
+        self.assertRaises(ValueError, app.View, storage, **{'name': None})
+        self.assertRaises(ValueError, app.View, storage, **{'name': ''})
 
     def test_AppViewAction(self):
         storage = mock()
-        action = AppViewAction(storage, **{'name': 'AppName'})
+        action = app.View(storage, **{'name': 'AppName'})
         action.execute()
         verify(storage).read('manifests', 'AppName')
 
     def test_AppUploadValueErrors(self):
         storage = mock()
-        self.assertRaises(ValueError, AppUploadAction, storage, **{})
-        self.assertRaises(ValueError, AppUploadAction, storage, **{'name': '', 'manifest': '', 'package': ''})
-        self.assertRaises(ValueError, AppUploadAction, storage, **{'name': '', 'manifest': 'M', 'package': 'P'})
-        self.assertRaises(ValueError, AppUploadAction, storage, **{'name': 'A', 'manifest': '', 'package': 'P'})
-        self.assertRaises(ValueError, AppUploadAction, storage, **{'name': 'A', 'manifest': 'M', 'package': ''})
+        self.assertRaises(ValueError, app.Upload, storage, **{})
+        self.assertRaises(ValueError, app.Upload, storage, **{'name': '', 'manifest': '', 'package': ''})
+        self.assertRaises(ValueError, app.Upload, storage, **{'name': '', 'manifest': 'M', 'package': 'P'})
+        self.assertRaises(ValueError, app.Upload, storage, **{'name': 'A', 'manifest': '', 'package': 'P'})
+        self.assertRaises(ValueError, app.Upload, storage, **{'name': 'A', 'manifest': 'M', 'package': ''})
 
     def test_AppUploadAction(self):
         storage = mock()
         jsonEncoder = mock()
         packageEncoder = mock()
-        action = AppUploadAction(storage, **{'name': 'AppName', 'manifest': 'm.json', 'package': 'p.tar.gz'})
+        action = app.Upload(storage, **{'name': 'AppName', 'manifest': 'm.json', 'package': 'p.tar.gz'})
         action.jsonEncoder = jsonEncoder
         action.packageEncoder = packageEncoder
 
@@ -90,12 +89,12 @@ class AppTestCase(unittest.TestCase):
 
     def test_AppRemoveActionValueErrors(self):
         storage = mock()
-        self.assertRaises(ValueError, AppRemoveAction, storage, **{})
-        self.assertRaises(ValueError, AppRemoveAction, storage, **{'name': ''})
+        self.assertRaises(ValueError, app.Remove, storage, **{})
+        self.assertRaises(ValueError, app.Remove, storage, **{'name': ''})
 
     def test_AppRemove(self):
         storage = mock()
-        action = AppRemoveAction(storage, **{'name': 'AppName'})
+        action = app.Remove(storage, **{'name': 'AppName'})
         when(storage).remove('manifests', any(str)).thenReturn('Ok')
         when(storage).remove('apps', any(str)).thenReturn('Ok')
         action.execute().get(timeout=0.1)
@@ -105,37 +104,37 @@ class AppTestCase(unittest.TestCase):
 
     def test_AppStartActionValueErrors(self):
         node = mock()
-        self.assertRaises(ValueError, AppStartAction, node, **{})
-        self.assertRaises(ValueError, AppStartAction, node, **{'name': '', 'profile': 'P'})
-        self.assertRaises(ValueError, AppStartAction, node, **{'name': 'N', 'profile': ''})
+        self.assertRaises(ValueError, app.Start, node, **{})
+        self.assertRaises(ValueError, app.Start, node, **{'name': '', 'profile': 'P'})
+        self.assertRaises(ValueError, app.Start, node, **{'name': 'N', 'profile': ''})
 
     def test_AppStartAction(self):
         node = mock()
-        action = AppStartAction(node, **{'name': 'AppName', 'profile': 'ProfileName'})
+        action = app.Start(node, **{'name': 'AppName', 'profile': 'ProfileName'})
         action.execute()
 
         verify(node).start_app({'AppName': 'ProfileName'})
 
     def test_AppPauseActionValueErrors(self):
         node = mock()
-        self.assertRaises(ValueError, AppPauseAction, node, **{})
-        self.assertRaises(ValueError, AppPauseAction, node, **{'name': ''})
+        self.assertRaises(ValueError, app.Stop, node, **{})
+        self.assertRaises(ValueError, app.Stop, node, **{'name': ''})
 
     def test_AppPauseAction(self):
         node = mock()
-        action = AppPauseAction(node, **{'name': 'AppName'})
+        action = app.Stop(node, **{'name': 'AppName'})
         action.execute()
 
         verify(node).pause_app(['AppName'])
 
     def test_AppCheckActionValueErrors(self):
         node = mock()
-        self.assertRaises(ValueError, AppCheckAction, node, **{})
-        self.assertRaises(ValueError, AppCheckAction, node, **{'name': ''})
+        self.assertRaises(ValueError, app.Check, node, **{})
+        self.assertRaises(ValueError, app.Check, node, **{'name': ''})
 
     def test_AppCheckAction(self):
         node = mock()
-        action = AppCheckAction(node, **{'name': 'AppName'})
+        action = app.Check(node, **{'name': 'AppName'})
         mockInfo = {
             'apps': {
                 'AppName': {
@@ -148,7 +147,7 @@ class AppTestCase(unittest.TestCase):
                 }
             }
         }
-        when(node).info().thenReturn(ChainFactory([lambda: mockInfo]))
+        when(node).info().thenReturn(Chain([lambda: mockInfo]))
         actual = action.execute().get(timeout=0.1)
 
         verify(node).info()
@@ -156,12 +155,12 @@ class AppTestCase(unittest.TestCase):
 
     def test_AppCheckActionReturnsStoppedOrMissingWhenApplicationIsNotFound(self):
         node = mock()
-        action = AppCheckAction(node, **{'name': 'AppName'})
+        action = app.Check(node, **{'name': 'AppName'})
         mockInfo = {
             'apps': {
             }
         }
-        when(node).info().thenReturn(ChainFactory([lambda: mockInfo]))
+        when(node).info().thenReturn(Chain([lambda: mockInfo]))
         actual = action.execute().get(timeout=0.1)
 
         verify(node).info()
@@ -169,15 +168,15 @@ class AppTestCase(unittest.TestCase):
 
     def test_AppRestartActionValueErrors(self):
         node = mock()
-        self.assertRaises(ValueError, AppRestartAction, node, **{})
-        self.assertRaises(ValueError, AppRestartAction, node, **{'name': ''})
+        self.assertRaises(ValueError, app.Restart, node, **{})
+        self.assertRaises(ValueError, app.Restart, node, **{'name': ''})
 
-    @verifyInit('AppPauseAction', {'host': '', 'port': '', 'name': 'AppName'})
-    @verifyInit('AppStartAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'ProfileName'})
+    @verifyInit('app.Stop', {'host': '', 'port': '', 'name': 'AppName'})
+    @verifyInit('app.Start', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'ProfileName'})
     def test_AppRestartActionAppIsRunningProfileIsNotSpecified(self):
         node = mock()
-        action = AppRestartAction(node, **{'name': 'AppName', 'host': '', 'port': ''})
-        when(NodeInfoAction).execute().thenReturn(ChainFactory([lambda: {
+        action = app.Restart(node, **{'name': 'AppName', 'host': '', 'port': ''})
+        when(common.NodeInfo).execute().thenReturn(Chain([lambda: {
             'apps': {
                 'AppName': {
                     'profile': 'ProfileName',
@@ -186,20 +185,20 @@ class AppTestCase(unittest.TestCase):
             }
         }]))
 
-        when(AppPauseAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Stopped'}]))
-        when(AppStartAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Started'}]))
+        when(app.Stop).execute().thenReturn(Chain([lambda: {'AppName': 'Stopped'}]))
+        when(app.Start).execute().thenReturn(Chain([lambda: {'AppName': 'Started'}]))
         action.execute().get()
 
-        verify(NodeInfoAction).execute()
-        verify(AppPauseAction).execute()
-        verify(AppStartAction).execute()
+        verify(common.NodeInfo).execute()
+        verify(app.Stop).execute()
+        verify(app.Start).execute()
 
-    @verifyInit('AppPauseAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
-    @verifyInit('AppStartAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('app.Stop', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('app.Start', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
     def test_AppRestartActionAppIsRunningProfileIsSpecified(self):
         node = mock()
-        action = AppRestartAction(node, **{'name': 'AppName', 'profile': 'NewProfile', 'host': '', 'port': ''})
-        when(NodeInfoAction).execute().thenReturn(ChainFactory([lambda: {
+        action = app.Restart(node, **{'name': 'AppName', 'profile': 'NewProfile', 'host': '', 'port': ''})
+        when(common.NodeInfo).execute().thenReturn(Chain([lambda: {
             'apps': {
                 'AppName': {
                     'profile': 'ProfileName',
@@ -208,45 +207,45 @@ class AppTestCase(unittest.TestCase):
             }
         }]))
 
-        when(AppPauseAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Stopped'}]))
-        when(AppStartAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Started'}]))
+        when(app.Stop).execute().thenReturn(Chain([lambda: {'AppName': 'Stopped'}]))
+        when(app.Start).execute().thenReturn(Chain([lambda: {'AppName': 'Started'}]))
         action.execute().get()
 
-        verify(NodeInfoAction).execute()
-        verify(AppPauseAction).execute()
-        verify(AppStartAction).execute()
+        verify(common.NodeInfo).execute()
+        verify(app.Stop).execute()
+        verify(app.Start).execute()
 
-    @verifyInit('AppPauseAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
-    @verifyInit('AppStartAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('app.Stop', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('app.Start', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
     def test_AppRestartActionAppIsNotRunningProfileIsSpecified(self):
         node = mock()
-        action = AppRestartAction(node, **{'name': 'AppName', 'profile': 'NewProfile', 'host': '', 'port': ''})
-        when(NodeInfoAction).execute().thenReturn(ChainFactory([lambda: {
+        action = app.Restart(node, **{'name': 'AppName', 'profile': 'NewProfile', 'host': '', 'port': ''})
+        when(common.NodeInfo).execute().thenReturn(Chain([lambda: {
             'apps': {}
         }]))
 
-        when(AppPauseAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'NotRunning'}]))
-        when(AppStartAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Started'}]))
+        when(app.Stop).execute().thenReturn(Chain([lambda: {'AppName': 'NotRunning'}]))
+        when(app.Start).execute().thenReturn(Chain([lambda: {'AppName': 'Started'}]))
         action.execute().get()
 
-        verify(NodeInfoAction).execute()
-        verify(AppPauseAction).execute()
-        verify(AppStartAction).execute()
+        verify(common.NodeInfo).execute()
+        verify(app.Stop).execute()
+        verify(app.Start).execute()
 
-    @verifyInit('AppPauseAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
-    @verifyInit('AppStartAction', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('app.Stop', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
+    @verifyInit('app.Start', {'host': '', 'port': '', 'name': 'AppName', 'profile': 'NewProfile'})
     def test_AppRestartActionAppIsNotRunningProfileIsNotSpecified(self):
         node = mock()
-        action = AppRestartAction(node, **{'name': 'AppName', 'host': '', 'port': ''})
-        when(NodeInfoAction).execute().thenReturn(ChainFactory([lambda: {
+        action = app.Restart(node, **{'name': 'AppName', 'host': '', 'port': ''})
+        when(common.NodeInfo).execute().thenReturn(Chain([lambda: {
             'apps': {}
         }]))
 
-        when(AppPauseAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'NotRunning'}]))
-        when(AppStartAction).execute().thenReturn(ChainFactory([lambda: {'AppName': 'Started'}]))
+        when(app.Stop).execute().thenReturn(Chain([lambda: {'AppName': 'NotRunning'}]))
+        when(app.Start).execute().thenReturn(Chain([lambda: {'AppName': 'Started'}]))
         self.assertRaises(ToolsError, action.execute().get)
 
-        verify(NodeInfoAction).execute()
+        verify(common.NodeInfo).execute()
 
 
 class ProfileTestCase(unittest.TestCase):
@@ -255,38 +254,38 @@ class ProfileTestCase(unittest.TestCase):
 
     def test_ProfileListAction(self):
         storage = mock()
-        action = ProfileListAction(storage)
-        when(storage).find(any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action = profile.List(storage)
+        when(storage).find(any(str), any(tuple)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).find('profiles', PROFILES_TAGS)
 
     def test_ProfileViewActionValueErrors(self):
         storage = mock()
-        self.assertRaises(ValueError, ProfileViewAction, storage, **{})
-        self.assertRaises(ValueError, ProfileViewAction, storage, **{'profile': ''})
+        self.assertRaises(ValueError, profile.View, storage, **{})
+        self.assertRaises(ValueError, profile.View, storage, **{'profile': ''})
 
     def test_ProfileViewAction(self):
         storage = mock()
-        action = ProfileViewAction(storage, **{'name': 'ProfileName'})
-        when(storage).read(any(str), any(str)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action = profile.View(storage, **{'name': 'ProfileName'})
+        when(storage).read(any(str), any(str)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).read('profiles', 'ProfileName')
 
     def test_ProfileUploadActionValueErrors(self):
         storage = mock()
-        self.assertRaises(ValueError, ProfileUploadAction, storage, **{})
-        self.assertRaises(ValueError, ProfileUploadAction, storage, **{'name': '', 'manifest': 'P'})
-        self.assertRaises(ValueError, ProfileUploadAction, storage, **{'name': 'N', 'manifest': ''})
+        self.assertRaises(ValueError, profile.Upload, storage, **{})
+        self.assertRaises(ValueError, profile.Upload, storage, **{'name': '', 'manifest': 'P'})
+        self.assertRaises(ValueError, profile.Upload, storage, **{'name': 'N', 'manifest': ''})
 
     def test_ProfileUploadAction(self):
         storage = mock()
         jsonEncoder = mock()
-        action = ProfileUploadAction(storage, **{'name': 'ProfileName', 'manifest': 'p.json'})
+        action = profile.Upload(storage, **{'name': 'ProfileName', 'manifest': 'p.json'})
         action.jsonEncoder = jsonEncoder
         when(jsonEncoder).encode('p.json').thenReturn('{-encodedJson-}')
-        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).write('profiles', 'ProfileName', '{-encodedJson-}', PROFILES_TAGS)
@@ -295,27 +294,27 @@ class ProfileTestCase(unittest.TestCase):
     def test_ProfileUploadActionRethrowsExceptions(self):
         storage = mock()
         jsonEncoder = mock()
-        action = ProfileUploadAction(storage, **{'name': 'ProfileName', 'manifest': 'p.json'})
+        action = profile.Upload(storage, **{'name': 'ProfileName', 'manifest': 'p.json'})
         action.jsonEncoder = jsonEncoder
         when(jsonEncoder).encode('p.json').thenRaise(ValueError)
         self.assertRaises(ValueError, action.execute)
 
     def test_ProfileRemoveActionValueErrors(self):
         storage = mock()
-        self.assertRaises(ValueError, ProfileRemoveAction, storage, **{})
-        self.assertRaises(ValueError, ProfileRemoveAction, storage, **{'name': ''})
+        self.assertRaises(ValueError, profile.Remove, storage, **{})
+        self.assertRaises(ValueError, profile.Remove, storage, **{'name': ''})
 
     def test_ProfileRemoveAction(self):
         storage = mock()
-        action = ProfileRemoveAction(storage, **{'name': 'ProfileName'})
-        when(storage).remove(any(str), any(str)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action = profile.Remove(storage, **{'name': 'ProfileName'})
+        when(storage).remove(any(str), any(str)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).remove('profiles', 'ProfileName')
 
     def test_ProfileRemoveActionRethrowsExceptions(self):
         storage = mock()
-        action = ProfileRemoveAction(storage, **{'name': 'ProfileName'})
+        action = profile.Remove(storage, **{'name': 'ProfileName'})
         when(storage).remove(any(str), any(str)).thenRaise(Exception)
         self.assertRaises(Exception, action.execute)
 
@@ -326,84 +325,84 @@ class RunlistTestCase(unittest.TestCase):
 
     def test_RunlistListAction(self):
         storage = mock()
-        action = RunlistListAction(storage)
-        when(storage).find(any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action = runlist.List(storage)
+        when(storage).find(any(str), any(tuple)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).find('runlists', RUNLISTS_TAGS)
 
     def test_RunlistViewActionValueErrors(self):
         storage = mock()
-        self.assertRaises(ValueError, RunlistViewAction, storage, **{})
-        self.assertRaises(ValueError, RunlistViewAction, storage, **{'name': ''})
+        self.assertRaises(ValueError, runlist.View, storage, **{})
+        self.assertRaises(ValueError, runlist.View, storage, **{'name': ''})
 
     def test_RunlistViewAction(self):
         storage = mock()
-        action = RunlistViewAction(storage, **{'name': 'RunlistName'})
-        when(storage).read(any(str), any(str)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action = runlist.View(storage, **{'name': 'RunlistName'})
+        when(storage).read(any(str), any(str)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).read('runlists', 'RunlistName')
 
     def test_RunlistUploadActionValueErrors(self):
         storage = mock()
-        self.assertRaises(ValueError, RunlistUploadAction, storage, **{'name': 'R', 'manifest': ''})
-        self.assertRaises(ValueError, RunlistUploadAction, storage, **{'name': '', 'manifest': 'M'})
-        self.assertRaises(ValueError, RunlistUploadAction, storage, **{'name': 'R', 'manifest': '', 'runlist-raw': ''})
+        self.assertRaises(ValueError, runlist.Upload, storage, **{'name': 'R', 'manifest': ''})
+        self.assertRaises(ValueError, runlist.Upload, storage, **{'name': '', 'manifest': 'M'})
+        self.assertRaises(ValueError, runlist.Upload, storage, **{'name': 'R', 'manifest': '', 'runlist-raw': ''})
 
     def test_RunlistUploadAction(self):
         storage = mock()
         jsonEncoder = mock()
-        action = RunlistUploadAction(storage, **{'name': 'RunlistName', 'manifest': 'r.json'})
+        action = runlist.Upload(storage, **{'name': 'RunlistName', 'manifest': 'r.json'})
         action.jsonEncoder = jsonEncoder
         when(jsonEncoder).encode('r.json').thenReturn('{-encodedJson-}')
-        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).write('runlists', 'RunlistName', '{-encodedJson-}', RUNLISTS_TAGS)
 
     def test_RunlistUploadActionRawRunlistProvided(self):
         storage = mock()
-        action = RunlistUploadAction(storage, **{'name': 'RunlistName', 'runlist-raw': '{raw-data}'})
-        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action = runlist.Upload(storage, **{'name': 'RunlistName', 'runlist-raw': '{raw-data}'})
+        when(storage).write(any(str), any(str), any(str), any(tuple)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).write('runlists', 'RunlistName', msgpack.dumps('{raw-data}'), RUNLISTS_TAGS)
 
     def test_RunlistRemoveActionValueErrors(self):
         storage = mock()
-        self.assertRaises(ValueError, RunlistRemoveAction, storage, **{})
-        self.assertRaises(ValueError, RunlistRemoveAction, storage, **{'name': ''})
+        self.assertRaises(ValueError, runlist.Remove, storage, **{})
+        self.assertRaises(ValueError, runlist.Remove, storage, **{'name': ''})
 
     def test_RunlistRemoveAction(self):
         storage = mock()
-        action = RunlistRemoveAction(storage, **{'name': 'RunlistName'})
-        when(storage).remove(any(str), any(str)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action = runlist.Remove(storage, **{'name': 'RunlistName'})
+        when(storage).remove(any(str), any(str)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).remove('runlists', 'RunlistName')
 
     def test_RunlistAddAppActionValueErrors(self):
         storage = mock()
-        self.assertRaises(ValueError, RunlistAddApplicationAction, storage, **{})
-        self.assertRaises(ValueError, RunlistAddApplicationAction, storage,
+        self.assertRaises(ValueError, runlist.AddApplication, storage, **{})
+        self.assertRaises(ValueError, runlist.AddApplication, storage,
                           **{'name': '', 'profile': 'P', 'app': 'A'})
-        self.assertRaises(ValueError, RunlistAddApplicationAction, storage,
+        self.assertRaises(ValueError, runlist.AddApplication, storage,
                           **{'name': 'N', 'profile': '', 'app': 'A'})
-        self.assertRaises(ValueError, RunlistAddApplicationAction, storage,
+        self.assertRaises(ValueError, runlist.AddApplication, storage,
                           **{'name': 'N', 'profile': 'P', 'app': ''})
 
     def test_RunlistAddAppAction(self):
         storage = mock()
-        action = RunlistAddApplicationAction(storage, **{'name': 'RunlistName', 'app': 'App', 'profile': 'Profile'})
-        when(RunlistViewAction).execute().thenReturn(msgpack.dumps({
+        action = runlist.AddApplication(storage, **{'name': 'RunlistName', 'app': 'App', 'profile': 'Profile'})
+        when(runlist.View).execute().thenReturn(msgpack.dumps({
             'App': 'Profile'
         }))
-        when(RunlistUploadAction).execute().thenReturn('Ok')
+        when(runlist.Upload).execute().thenReturn('Ok')
         action.execute().get()
 
-        verify(RunlistViewAction).execute()
-        verify(RunlistUploadAction).execute()
+        verify(runlist.View).execute()
+        verify(runlist.Upload).execute()
 
 
 class CrashlogTestCase(unittest.TestCase):
@@ -412,25 +411,25 @@ class CrashlogTestCase(unittest.TestCase):
 
     def test_CrashlogListActionValueErrors(self):
         storage = mock()
-        self.assertRaises(ValueError, CrashlogListAction, storage, **{})
-        self.assertRaises(ValueError, CrashlogListAction, storage, **{'name': ''})
+        self.assertRaises(ValueError, crashlog.List, storage, **{})
+        self.assertRaises(ValueError, crashlog.List, storage, **{'name': ''})
 
     def test_CrashlogListAction(self):
         storage = mock()
-        action = CrashlogListAction(storage, **{'name': 'CrashlogName'})
-        when(storage).find(any(str), any(tuple)).thenReturn(ChainFactory([lambda: 'Ok']))
+        action = crashlog.List(storage, **{'name': 'CrashlogName'})
+        when(storage).find(any(str), any(tuple)).thenReturn(Chain([lambda: 'Ok']))
         action.execute().get()
 
         verify(storage).find('crashlogs', ('CrashlogName', ))
 
     def test_CrashlogViewActionValueErrors(self):
         storage = mock()
-        self.assertRaises(ValueError, CrashlogViewAction, storage, **{})
-        self.assertRaises(ValueError, CrashlogViewAction, storage, **{'name': '', 'manifest': 'T'})
+        self.assertRaises(ValueError, crashlog.View, storage, **{})
+        self.assertRaises(ValueError, crashlog.View, storage, **{'name': '', 'manifest': 'T'})
 
     def test_CrashlogViewAction(self):
         storage = mock()
-        action = CrashlogViewAction(storage, **{'name': 'AppName', 'manifest': '10000'})
+        action = crashlog.View(storage, **{'name': 'AppName', 'manifest': '10000'})
         when(storage).find(any(str), any(tuple)).thenReturn([
             '10000:hash1',
             '20000:hash2'
@@ -443,7 +442,7 @@ class CrashlogTestCase(unittest.TestCase):
 
     def test_CrashlogViewActionWithColonNamedApps(self):
         storage = mock()
-        action = CrashlogViewAction(storage, **{'name': 'AppName', 'manifest': '10000'})
+        action = crashlog.View(storage, **{'name': 'AppName', 'manifest': '10000'})
         when(storage).find(any(str), any(tuple)).thenReturn([
             '10000::appName',
             '10000:app:name',
@@ -459,7 +458,7 @@ class CrashlogTestCase(unittest.TestCase):
 
     def test_CrashlogViewActionWithoutTimestampSpecified(self):
         storage = mock()
-        action = CrashlogViewAction(storage, **{'name': 'AppName', 'manifest': ''})
+        action = crashlog.View(storage, **{'name': 'AppName', 'manifest': ''})
         when(storage).find(any(str), any(tuple)).thenReturn([
             '10000:hash1',
             '20000:hash2'
@@ -473,13 +472,13 @@ class CrashlogTestCase(unittest.TestCase):
 
     def test_CrashlogRemoveActionValueErrors(self):
         storage = mock
-        self.assertRaises(ValueError, CrashlogRemoveAction, storage, **{})
-        self.assertRaises(ValueError, CrashlogRemoveAction, storage, **{'name': ''})
-        CrashlogRemoveAction(storage, **{'name': 'N', 'manifest': ''})
+        self.assertRaises(ValueError, crashlog.Remove, storage, **{})
+        self.assertRaises(ValueError, crashlog.Remove, storage, **{'name': ''})
+        crashlog.Remove(storage, **{'name': 'N', 'manifest': ''})
 
     def test_CrashlogRemoveAction(self):
         storage = mock()
-        action = CrashlogRemoveAction(storage, **{'name': 'AppName', 'manifest': '10000'})
+        action = crashlog.Remove(storage, **{'name': 'AppName', 'manifest': '10000'})
         when(storage).find(any(str), any(tuple)).thenReturn([
             '10000:hash1',
             '20000:hash2'
@@ -492,7 +491,7 @@ class CrashlogTestCase(unittest.TestCase):
 
     def test_CrashlogRemoveActionWithoutTimestampSpecified(self):
         storage = mock()
-        action = CrashlogRemoveAction(storage, **{'name': 'AppName', 'manifest': ''})
+        action = crashlog.Remove(storage, **{'name': 'AppName', 'manifest': ''})
         when(storage).find(any(str), any(tuple)).thenReturn([
             '10000:hash1',
             '20000:hash2'
@@ -506,12 +505,12 @@ class CrashlogTestCase(unittest.TestCase):
 
     def test_CrashlogRemoveAllActionValueErrors(self):
         storage = mock()
-        self.assertRaises(ValueError, CrashlogRemoveAllAction, storage, **{})
-        self.assertRaises(ValueError, CrashlogRemoveAllAction, storage, **{'name': ''})
+        self.assertRaises(ValueError, crashlog.RemoveAll, storage, **{})
+        self.assertRaises(ValueError, crashlog.RemoveAll, storage, **{'name': ''})
 
     def test_CrashlogRemoveAll(self):
         storage = mock()
-        action = CrashlogRemoveAllAction(storage, **{'name': 'AppName'})
+        action = crashlog.RemoveAll(storage, **{'name': 'AppName'})
         when(storage).find(any(str), any(tuple)).thenReturn([
             '10000:hash1',
             '20000:hash2'
@@ -530,12 +529,12 @@ class NodeTestCase(unittest.TestCase):
 
     def test_CallValueErrors(self):
         node = mock()
-        self.assertRaises(ValueError, CallAction, node, **{})
-        self.assertRaises(ValueError, CallAction, node, **{'command': ''})
+        self.assertRaises(ValueError, common.Call, node, **{})
+        self.assertRaises(ValueError, common.Call, node, **{'command': ''})
 
     def test_CallActionThrowsExceptionWhenServiceIsNotAvailable(self):
         node = mock()
-        action = CallAction(node, **{'command': 'Service'})
+        action = common.Call(node, **{'command': 'Service'})
         self.assertRaises(ServiceCallError, action.execute().get)
 
     def test_CallActionReturnsApiWhenMethodIsNotSpecified(self):
@@ -545,8 +544,8 @@ class NodeTestCase(unittest.TestCase):
             0: 'method_0',
             1: 'method_1'
         }
-        when(CallAction).getService().thenReturn(service)
-        action = CallAction(node, **{'command': 'Service'})
+        when(common.Call).getService().thenReturn(service)
+        action = common.Call(node, **{'command': 'Service'})
         actual = action.execute().get()
 
         expected = {
@@ -566,8 +565,8 @@ class NodeTestCase(unittest.TestCase):
             0: 'method_0',
             1: 'method_1'
         }
-        when(CallAction).getService().thenReturn(service)
-        action = CallAction(node, **{'command': 'Service.method'})
+        when(common.Call).getService().thenReturn(service)
+        action = common.Call(node, **{'command': 'Service.method'})
         self.assertRaises(ServiceError, action.execute().get)
 
     def test_CallAction(self):
@@ -580,10 +579,10 @@ class NodeTestCase(unittest.TestCase):
             0: 'method_0',
             1: 'method_1'
         }
-        when(CallAction).getService().thenReturn(service)
-        when(CallAction).getMethod(any(object)).thenReturn(callableMethod)
+        when(common.Call).getService().thenReturn(service)
+        when(common.Call).getMethod(any(object)).thenReturn(callableMethod)
 
-        action = CallAction(node, **{
+        action = common.Call(node, **{
             'command': "Service.method_0(1, 2, {'key': 'value'})"
         })
         when(method).__call__(1, 2, {'key': 'value'}).thenReturn('Ok')
@@ -594,37 +593,37 @@ class NodeTestCase(unittest.TestCase):
     def test_CallActionParser(self):
         node = mock()
 
-        action = CallAction(node, **{'command': 'S.m()'})
+        action = common.Call(node, **{'command': 'S.m()'})
         self.assertEqual((), action.parseArguments())
 
-        action = CallAction(node, **{'command': 'S.m(1)'})
+        action = common.Call(node, **{'command': 'S.m(1)'})
         self.assertEqual((1,), action.parseArguments())
 
-        action = CallAction(node, **{'command': 'S.m(1, 2)'})
+        action = common.Call(node, **{'command': 'S.m(1, 2)'})
         self.assertEqual((1, 2), action.parseArguments())
 
-        action = CallAction(node, **{'command': 'S.m("string")'})
+        action = common.Call(node, **{'command': 'S.m("string")'})
         self.assertEqual(('string',), action.parseArguments())
 
-        action = CallAction(node, **{'command': 'S.m((1, 2))'})
+        action = common.Call(node, **{'command': 'S.m((1, 2))'})
         self.assertEqual((1, 2), action.parseArguments())
 
-        action = CallAction(node, **{'command': 'S.m([1, 2])'})
+        action = common.Call(node, **{'command': 'S.m([1, 2])'})
         self.assertEqual(([1, 2],), action.parseArguments())
 
-        action = CallAction(node, **{'command': 'S.m({1: 2})'})
+        action = common.Call(node, **{'command': 'S.m({1: 2})'})
         self.assertEqual(({1: 2},), action.parseArguments())
 
-        action = CallAction(node, **{'command': "S.m({'Echo': 'EchoProfile'})"})
+        action = common.Call(node, **{'command': "S.m({'Echo': 'EchoProfile'})"})
         self.assertEqual(({'Echo': 'EchoProfile'},), action.parseArguments())
 
-        action = CallAction(node, **{'command': 'S.m(True, False)'})
+        action = common.Call(node, **{'command': 'S.m(True, False)'})
         self.assertEqual((True, False), action.parseArguments())
 
-        action = CallAction(node, **{'command': "S.m(1, 2, {'key': 'value'})"})
+        action = common.Call(node, **{'command': "S.m(1, 2, {'key': 'value'})"})
         self.assertEqual((1, 2, {'key': 'value'}), action.parseArguments())
 
-        action = CallAction(node, **{'command': "S.m(1, 2, (3, 4), [5, 6], {'key': 'value'})"})
+        action = common.Call(node, **{'command': "S.m(1, 2, (3, 4), [5, 6], {'key': 'value'})"})
         self.assertEqual((1, 2, (3, 4), [5, 6], {'key': 'value'}), action.parseArguments())
 
     def test_CallActionThrowsExceptionWhenWrongArgsSyntax(self):
@@ -637,10 +636,10 @@ class NodeTestCase(unittest.TestCase):
             0: 'method_0',
             1: 'method_1'
         }
-        when(CallAction).getService().thenReturn(service)
-        when(CallAction).getMethod(any(object)).thenReturn(callableMethod)
+        when(common.Call).getService().thenReturn(service)
+        when(common.Call).getMethod(any(object)).thenReturn(callableMethod)
 
-        action = CallAction(node, **{'command': 'S.M(WrongArgs)'})
+        action = common.Call(node, **{'command': 'S.M(WrongArgs)'})
         self.assertRaises(ServiceCallError, action.execute().get)
 
     def test_CallActionWhenArgumentsIsNotNecessary(self):
@@ -653,10 +652,10 @@ class NodeTestCase(unittest.TestCase):
             0: 'method_0',
             1: 'method_1'
         }
-        when(CallAction).getService().thenReturn(service)
-        when(CallAction).getMethod(any(object)).thenReturn(callableMethod)
+        when(common.Call).getService().thenReturn(service)
+        when(common.Call).getMethod(any(object)).thenReturn(callableMethod)
 
-        action = CallAction(node, **{'command': "S.M()"})
+        action = common.Call(node, **{'command': "S.M()"})
         when(method).__call__().thenReturn('Ok')
         action.execute().get()
 

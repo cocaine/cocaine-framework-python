@@ -60,7 +60,7 @@ class ServiceError(CocaineError):
 
 
 class LocatorResolveError(CocaineError):
-    """ get_api failed """
+    """Raises when `get_api` method failed """
 
     def __init__(self, servicename, host, port, reason=""):
         self.message = "Unable to resolve API for service\
@@ -83,14 +83,36 @@ class ConnectionRefusedError(ConnectionError):
         message = 'Invalid cocaine-runtime endpoint: {host}:{port}'.format(host=host, port=port)
         super(ConnectionRefusedError, self).__init__(message)
 
+
 class AsyncConnectionTimeoutError(ConnectionError):
 
     def __init__(self, path):
         message = 'TimeOutError: {endpoint}'.format(endpoint=path)
         super(AsyncConnectionTimeoutError, self).__init__(message)
 
+
 class AsyncConnectionError(ConnectionError):
 
     def __init__(self, path, errcode):
         message = 'ConnectionError: {endpoint} {error}'.format(endpoint=path, error=errcode)
         super(AsyncConnectionError, self).__init__(message)
+
+
+class ChokeEvent(Exception):
+    pass
+
+
+class ToolsError(CocaineError):
+    pass
+
+
+class UploadError(ToolsError):
+    pass
+
+
+class ServiceCallError(ToolsError):
+    def __init__(self, serviceName, reason):
+        self.message = 'Error in service "{0}" - {1}'.format(serviceName, reason)
+
+    def __str__(self):
+        return self.message

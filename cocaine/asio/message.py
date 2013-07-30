@@ -83,6 +83,7 @@ def closure(m_id, m_session, args):
         return m_id, m_session, args
     return _wrapper
 
+
 class MessageInit(type):
 
     def __call__(cls, rpc_tag, session, *tuple_types):
@@ -95,6 +96,7 @@ class MessageInit(type):
         setattr(msg, "pack", closure(msg.id, msg.session, tuple_types))
         return msg
 
+
 class Message(object):
     __metaclass__ = MessageInit
 
@@ -103,7 +105,7 @@ class Message(object):
         try:
             _id = unpacked_data[0]
             session = unpacked_data[1]
-            args = unpacked_data[2] #if unpacked_data[1] is not None else list()
+            args = unpacked_data[2]  #if unpacked_data[1] is not None else list()
             return Message(PROTOCOL_LIST[_id], session, *args)
         except Exception as err:
             #print str(err)

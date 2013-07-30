@@ -22,10 +22,13 @@
 from weakref import proxy
 from types import MethodType
 
+
 class weakmethod(object):
     __slots__ = ["func"]
+
     def __init__(self, func):
         self.func = func
+
     def __get__(self, obj, cls):
         if obj is not None:
             obj = proxy(obj)

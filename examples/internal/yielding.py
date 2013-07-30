@@ -3,7 +3,7 @@ import logging
 import time
 from tornado.ioloop import IOLoop
 from cocaine.futures import Future
-from cocaine.futures.chain import ChainFactory
+from cocaine.futures.chain import Chain
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
@@ -113,7 +113,7 @@ def step1():
     except SomeErrorServiceError as err:
         log.info('>>> Result: {0}'.format(err))
 
-    result = yield ChainFactory().then(f1).then(f2)
+    result = yield Chain().then(f1).then(f2)
     print(result, '>>> RESULT!!!')
 
     raise Exception('12345')
