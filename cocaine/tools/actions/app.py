@@ -27,16 +27,16 @@ venvFactory = {
 
 
 class List(actions.List):
-    def __init__(self, storage, **config):
-        super(List, self).__init__('manifests', APPS_TAGS, storage, **config)
+    def __init__(self, storage):
+        super(List, self).__init__('manifests', APPS_TAGS, storage)
 
 
 class View(actions.Storage):
-    def __init__(self, storage, **config):
-        super(View, self).__init__(storage, **config)
-        self.name = config.get('name')
+    def __init__(self, storage, name):
+        super(View, self).__init__(storage)
+        self.name = name
         if not self.name:
-            raise ValueError('Specify name of application')
+            raise ValueError('Specify name of the application')
 
     def execute(self):
         return self.storage.read('manifests', self.name)
@@ -47,11 +47,11 @@ class Upload(actions.Storage):
     Storage action class that tries to upload application into storage asynchronously
     """
 
-    def __init__(self, storage, **config):
-        super(Upload, self).__init__(storage, **config)
-        self.name = config.get('name')
-        self.manifest = config.get('manifest')
-        self.package = config.get('package')
+    def __init__(self, storage, name, manifest, package):
+        super(Upload, self).__init__(storage)
+        self.name = name
+        self.manifest = manifest
+        self.package = package
 
         if not self.name:
             raise ValueError('Please specify name of the app')
@@ -77,9 +77,9 @@ class Remove(actions.Storage):
     Storage action class that removes application 'name' from storage
     """
 
-    def __init__(self, storage, **config):
-        super(Remove, self).__init__(storage, **config)
-        self.name = config.get('name')
+    def __init__(self, storage, name):
+        super(Remove, self).__init__(storage)
+        self.name = name
         if not self.name:
             raise ValueError('Empty application name')
 
@@ -91,10 +91,10 @@ class Remove(actions.Storage):
 
 
 class Start(common.Node):
-    def __init__(self, node, **config):
-        super(Start, self).__init__(node, **config)
-        self.name = config.get('name')
-        self.profile = config.get('profile')
+    def __init__(self, node, name, profile):
+        super(Start, self).__init__(node)
+        self.name = name
+        self.profile = profile
         if not self.name:
             raise ValueError('Please specify application name')
         if not self.profile:
@@ -108,9 +108,9 @@ class Start(common.Node):
 
 
 class Stop(common.Node):
-    def __init__(self, node, **config):
-        super(Stop, self).__init__(node, **config)
-        self.name = config.get('name')
+    def __init__(self, node, name):
+        super(Stop, self).__init__(node)
+        self.name = name
         if not self.name:
             raise ValueError('Please specify application name')
 
@@ -119,26 +119,20 @@ class Stop(common.Node):
 
 
 class Restart(common.Node):
-    def __init__(self, node, **config):
-        super(Restart, self).__init__(node, **config)
-        self.name = config.get('name')
-        self.profile = config.get('profile')
+    def __init__(self, node, name, profile):
+        super(Restart, self).__init__(node)
+        self.name = name
+        self.profile = profile
         if not self.name:
             raise ValueError('Please specify application name')
 
     @chain.source
     def execute(self):
         try:
-            info = yield common.NodeInfo(self.node, **self.config).execute()
+            info = yield self.node.info()
             profile = self.profile or info['apps'][self.name]['profile']
-            appStopStatus = yield Stop(self.node, **self.config).execute()
-            appStartConfig = {
-                'host': self.config['host'],
-                'port': self.config['port'],
-                'name': self.name,
-                'profile': profile
-            }
-            appStartStatus = yield Start(self.node, **appStartConfig).execute()
+            appStopStatus = yield Stop(self.node, name=self.name).execute()
+            appStartStatus = yield Start(self.node, name=self.name, profile=profile).execute()
             yield [appStopStatus, appStartStatus]
         except KeyError:
             raise ToolsError('Application "{0}" is not running and profile not specified'.format(self.name))
@@ -147,9 +141,9 @@ class Restart(common.Node):
 
 
 class Check(common.Node):
-    def __init__(self, node, **config):
-        super(Check, self).__init__(node, **config)
-        self.name = config.get('name')
+    def __init__(self, node, name):
+        super(Check, self).__init__(node)
+        self.name = name
         if not self.name:
             raise ValueError('Please specify application name')
 
@@ -167,12 +161,12 @@ class Check(common.Node):
 
 
 class LocalUpload(actions.Storage):
-    def __init__(self, storage, **config):
-        super(LocalUpload, self).__init__(storage, **config)
-        self.path = config.get('path') or os.path.curdir
-        self.name = config.get('name')
-        self.manifest = config.get('manifest')
-        self.virtualEnvironmentType = config.get('venv')
+    def __init__(self, storage, path, name, manifest, venv):
+        super(LocalUpload, self).__init__(storage)
+        self.path = path or os.path.curdir
+        self.name = name
+        self.manifest = manifest
+        self.virtualEnvironmentType = venv
         if not self.name:
             self.name = os.path.basename(os.path.abspath(self.path))
         if not self.name:
@@ -228,10 +222,10 @@ class LocalUpload(actions.Storage):
 
 
 class UploadRemote(actions.Storage):
-    def __init__(self, storage, **config):
-        super(UploadRemote, self).__init__(storage, **config)
-        self.name = config.get('name')
-        self.url = config.get('url')
+    def __init__(self, storage, path, name):
+        super(UploadRemote, self).__init__(storage)
+        self.url = path
+        self.name = name
         if not self.url:
             raise ValueError('Please specify repository URL')
         if not self.name:

@@ -7,39 +7,36 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
 class List(actions.Storage):
-    def __init__(self, storage, **config):
-        super(List, self).__init__(storage, **config)
-        self.name = config.get('name')
+    def __init__(self, storage, name):
+        super(List, self).__init__(storage)
+        self.name = name
         if not self.name:
             raise ValueError('Please specify crashlog name')
 
     def execute(self):
-        return self.storage.find('crashlogs', (self.name, ))
+        return self.storage.find('crashlogs', [self.name])
 
 
-def parseCrashlogs(crashlogs, timestamp=None):
-    flt = lambda x: (x == timestamp if timestamp else True)
+def _parseCrashlogs(crashlogs, timestamp=None):
+    isFilter = lambda x: (x == timestamp if timestamp else True)
     _list = (log.split(':', 1) for log in crashlogs)
-    return [(ts, time.ctime(float(ts) / 1000000), name) for ts, name in _list if flt(ts)]
+    return [(ts, time.ctime(float(ts) / 1000000), name) for ts, name in _list if isFilter(ts)]
 
 
-class _Specific(actions.Storage):
-    def __init__(self, storage, **config):
-        super(_Specific, self).__init__(storage, **config)
-        self.name = config.get('name')
-        self.timestamp = config.get('timestamp')
+class Specific(actions.Storage):
+    def __init__(self, storage, name, timestamp):
+        super(Specific, self).__init__(storage)
+        self.name = name
+        self.timestamp = timestamp
         if not self.name:
-            raise ValueError('Please specify name')
+            raise ValueError('Please specify application name')
 
 
-class View(_Specific):
-    def __init__(self, storage, **config):
-        super(View, self).__init__(storage, **config)
-
+class View(Specific):
     @chain.source
     def execute(self):
-        crashlogs = yield self.storage.find('crashlogs', (self.name,))
-        parsedCrashlogs = parseCrashlogs(crashlogs, timestamp=self.timestamp)
+        crashlogs = yield self.storage.find('crashlogs', [self.name])
+        parsedCrashlogs = _parseCrashlogs(crashlogs, timestamp=self.timestamp)
         contents = []
         for crashlog in parsedCrashlogs:
             key = '%s:%s' % (crashlog[0], crashlog[2])
@@ -48,14 +45,11 @@ class View(_Specific):
         yield ''.join(contents)
 
 
-class Remove(_Specific):
-    def __init__(self, storage, **config):
-        super(Remove, self).__init__(storage, **config)
-
+class Remove(Specific):
     @chain.source
     def execute(self):
-        crashlogs = yield self.storage.find('crashlogs', (self.name,))
-        parsedCrashlogs = parseCrashlogs(crashlogs, timestamp=self.timestamp)
+        crashlogs = yield self.storage.find('crashlogs', [self.name])
+        parsedCrashlogs = _parseCrashlogs(crashlogs, timestamp=self.timestamp)
         for crashlog in parsedCrashlogs:
             key = '%s:%s' % (crashlog[0], crashlog[2])
             yield self.storage.remove('crashlogs', key)
@@ -63,6 +57,5 @@ class Remove(_Specific):
 
 
 class RemoveAll(Remove):
-    def __init__(self, storage, **config):
-        config['timestamp'] = None
-        super(RemoveAll, self).__init__(storage, **config)
+    def __init__(self, storage, name):
+        super(RemoveAll, self).__init__(storage, name, timestamp=None)

@@ -27,6 +27,7 @@ class Locator(object):
             'timeout': timeout,
             'debug': debug
         }
+        self.config = config
         self.executor = lambda: Executor(**config)
         self.nodeExecutor = lambda: NodeExecutor(**config)
         self.storageExecutor = lambda: StorageExecutor(**config)
@@ -103,6 +104,8 @@ def call(locator,
     command = service + '.' + method + '(' + args + ')'
     locator.executor().executeAction('call', **{
         'command': command,
+        'host': locator.config['host'],
+        'port': locator.config['port']
     })
 
 @appDispatcher.command(name='list')
@@ -388,7 +391,6 @@ def crashlog_removeall(locator,
     """Remove all crashlogs for application from the storage."""
     locator.storageExecutor().executeAction('crashlog:removeall', **{
         'name': name,
-        'timestamp': None
     })
 
 

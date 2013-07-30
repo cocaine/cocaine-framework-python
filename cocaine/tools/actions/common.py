@@ -9,9 +9,8 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
 class Node(object):
-    def __init__(self, node=None, **config):
+    def __init__(self, node=None):
         self.node = node
-        self.config = config
 
     def execute(self):
         raise NotImplementedError()
@@ -23,12 +22,12 @@ class NodeInfo(Node):
 
 
 class Call(object):
-    def __init__(self, serviceStub=None, **config):
-        command = config.get('command')
+    def __init__(self, serviceStub, command, host, port):
         if not command:
             raise ValueError('Please specify service name for getting API or full command to invoke')
-        service, separator, methodWithArguments = command.partition('.')
-        self.serviceName = service
+        self.host = host
+        self.port = port
+        self.serviceName, separator, methodWithArguments = command.partition('.')
         rx = re.compile(r'(.*?)\((.*)\)')
         match = rx.match(methodWithArguments)
         if match:

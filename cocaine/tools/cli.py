@@ -107,7 +107,7 @@ class PrettyPrintableCrashlogListAction(crashlog.List):
         try:
             crashlogs = result.get()
             print('Currently available crashlogs for application \'%s\'' % self.name)
-            for item in crashlog.parseCrashlogs(crashlogs):
+            for item in crashlog._parseCrashlogs(crashlogs):
                 print ' '.join(item)
         except ChokeEvent:
             pass
@@ -261,7 +261,9 @@ class Executor(object):
     def __init__(self, serviceName=None, availableActions=AVAILABLE_DEFAULT_ACTIONS, **config):
         self.serviceName = serviceName
         self.availableActions = availableActions
-        self.config = config
+        self.host = config['host']
+        self.port = config['port']
+        self.timeout = config['timeout']
         self.loop = IOLoop.instance()
 
     def executeAction(self, actionName, **options):
@@ -273,12 +275,12 @@ class Executor(object):
         :param options: various action configuration
         """
         try:
-            service = self.createService(self.config.get('host'), self.config.get('port'))
+            service = self.createService(self.host, self.port)
 
             Action = self.availableActions[actionName]
-            action = Action(service, **dict(self.config.items() + options.items()))
+            action = Action(service, **options)
             action.execute()
-            self.loop.add_timeout(time() + self.config.get('timeout'), self.timeoutErrorback)
+            self.loop.add_timeout(time() + self.timeout, self.timeoutErrorback)
             IOLoop.instance().start()
         except CocaineError as err:
             raise ToolsError(err)
@@ -286,6 +288,7 @@ class Executor(object):
             raise ToolsError(err)
         except KeyError as err:
             raise ToolsError('Action {0} is not available'.format(err))
+        # todo: keyboard interruption
         except Exception as err:
             raise ToolsError('Unknown error occurred - {0}'.format(err))
 
