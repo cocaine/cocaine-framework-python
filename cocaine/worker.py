@@ -131,7 +131,7 @@ class Worker(object):
                 _session.push(msg.data)
             except Exception as err:
                 self._logger.error("On push error: %s" % str(err))
-                self.terminate(1, "Push error")
+                self.terminate(1, "Push error: %s" % str(err))
                 return
 
         elif msg.id == message.RPC_CHOKE:
