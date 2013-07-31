@@ -19,6 +19,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 import logging
+import os
 
 import socket
 import fcntl
@@ -42,35 +43,55 @@ class ConnectionFailedError(Exception):
     pass
 
 
+class AlreadyConnectedError(Exception):
+    pass
+
+
 class PipeNG(object):
     def __init__(self, sock):
         self.sock = sock
         self._ioLoop = Loop.instance()
+
+        self._connecting = False
         self._connected = False
         self._onConnectedDeferred = FutureCallableMock()
 
     def connect(self, endpoint):
+        if self._connecting:
+            return self._onConnectedDeferred
+
+        if self._connected:
+            raise AlreadyConnectedError()
+
+        self._connecting = True
         try:
             self.sock.connect(endpoint)
+            self._ioLoop.add_handler(self.sock.fileno(), self._onConnectedCallback, self._ioLoop.WRITE)
         except socket.error as err:
             if err.errno not in (errno.EINPROGRESS, errno.EWOULDBLOCK):
                 log.warning('Connect error on fd {0}: {1}'.format(self.sock.fileno(), err))
                 self.close()
+                deferredCallback = lambda: self._onConnectedDeferred.ready(FutureResult(ConnectionFailedError(err)))
+                self._ioLoop.ioloop.add_callback(deferredCallback)
 
-        self._ioLoop.add_handler(self.sock.fileno(), self._onConnectedCallback, self._ioLoop.WRITE)
         return self._onConnectedDeferred
 
     def close(self):
         if self._connected:
-            self.close_fd()
+            self._connecting = False
             self._connected = False
+            self.close_fd()
 
     def close_fd(self):
         raise NotImplementedError()
 
     def _onConnectedCallback(self, fd, event):
+        assert fd == self.sock.fileno(), 'Incoming fd must be socket fd'
+        assert event in (self._ioLoop.WRITE, self._ioLoop.ERROR), 'Event must be either write or error'
+
         err = self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
         if err == 0:
+            self._connecting = False
             self._connected = True
             self._ioLoop.stop_listening(self.sock.fileno())
             self._onConnectedDeferred.ready(FutureResult(None))
@@ -78,7 +99,8 @@ class PipeNG(object):
             if self.is_valid_fd():
                 self._ioLoop.stop_listening(self.sock.fileno())
                 self.sock.close()
-            self._onConnectedDeferred.ready(FutureResult(ConnectionFailedError()))
+            error = socket.error(err, os.strerror(err))
+            self._onConnectedDeferred.ready(FutureResult(ConnectionFailedError(error)))
 
     def is_valid_fd(self):
         if self.sock is None:
