@@ -18,6 +18,7 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+import logging
 
 import socket
 import fcntl
@@ -26,11 +27,68 @@ import types
 import time
 from functools import partial
 
+from cocaine.futures.chain import FutureCallableMock, FutureResult
 from cocaine.asio.ev import Loop
 from cocaine.exceptions import AsyncConnectionError
 from cocaine.exceptions import AsyncConnectionTimeoutError
 
 __all__ = ["Pipe"]
+
+
+log = logging.getLogger(__name__)
+
+
+class ConnectionFailedError(Exception):
+    pass
+
+
+class PipeNG(object):
+    def __init__(self, sock):
+        self.sock = sock
+        self._ioLoop = Loop.instance()
+        self._connected = False
+        self._onConnectedDeferred = FutureCallableMock()
+
+    def connect(self, endpoint):
+        try:
+            self.sock.connect(endpoint)
+        except socket.error as err:
+            if err.errno not in (errno.EINPROGRESS, errno.EWOULDBLOCK):
+                log.warning('Connect error on fd {0}: {1}'.format(self.sock.fileno(), err))
+                self.close()
+
+        self._ioLoop.add_handler(self.sock.fileno(), self._onConnectedCallback, self._ioLoop.WRITE)
+        return self._onConnectedDeferred
+
+    def close(self):
+        if self._connected:
+            self.close_fd()
+            self._connected = False
+
+    def close_fd(self):
+        raise NotImplementedError()
+
+    def _onConnectedCallback(self, fd, event):
+        err = self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+        if err == 0:
+            self._connected = True
+            self._ioLoop.stop_listening(self.sock.fileno())
+            self._onConnectedDeferred.ready(FutureResult(None))
+        elif err not in (errno.EINPROGRESS, errno.EAGAIN, errno.EALREADY):
+            if self.is_valid_fd():
+                self._ioLoop.stop_listening(self.sock.fileno())
+                self.sock.close()
+            self._onConnectedDeferred.ready(FutureResult(ConnectionFailedError()))
+
+    def is_valid_fd(self):
+        if self.sock is None:
+            return False
+        try:
+            self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+        except socket.error as e:
+            if e.errno in (errno.EBADF, errno.ENOTSOCK):
+                return False
+        return True
 
 
 class Pipe(object):
