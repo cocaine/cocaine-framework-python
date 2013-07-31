@@ -85,9 +85,12 @@ class FutureCallableMock(Future):
     def isBound(self):
         return any([self.callback, self.errorback])
 
-    def ready(self, result):
+    def ready(self, result=None):
         if not self.isBound():
             return
+
+        if not isinstance(result, FutureResult):
+            result = FutureResult(result)
 
         try:
             log.debug('FutureCallableMock.ready() - {0}({1})'.format(result, repr(result.result)))
