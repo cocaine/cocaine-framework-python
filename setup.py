@@ -65,6 +65,7 @@ setup(
     packages=[
         "cocaine",
         "cocaine.asio",
+        "cocaine.asio.ng",
         "cocaine.decorators",
         "cocaine.services",
         "cocaine.futures",

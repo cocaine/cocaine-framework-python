@@ -18,9 +18,6 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-import functools
-import logging
-import os
 
 import socket
 import fcntl
@@ -29,122 +26,11 @@ import types
 import time
 from functools import partial
 
-from cocaine.futures.chain import FutureCallableMock, FutureResult
 from cocaine.asio.ev import Loop
 from cocaine.exceptions import AsyncConnectionError
 from cocaine.exceptions import AsyncConnectionTimeoutError
 
 __all__ = ["Pipe"]
-
-
-log = logging.getLogger(__name__)
-
-
-class ConnectionError(Exception):
-    pass
-
-
-class ConnectionFailedError(ConnectionError):
-    pass
-
-
-class IllegalStateError(ConnectionError):
-    pass
-
-
-class TimeoutError(ConnectionError):
-    def __init__(self, timeout):
-        super(TimeoutError, self).__init__('timeout ({0}s)'.format(timeout))
-
-
-class Pipe_(object):
-    NOT_CONNECTED, CONNECTING, CONNECTED = range(3)
-
-    def __init__(self, sock):
-        self.sock = sock
-        self._ioLoop = Loop.instance()
-
-        self._state = self.NOT_CONNECTED
-        self._onConnectedDeferred = FutureCallableMock()
-        self._connectionTimeoutTuple = None
-
-    def isConnected(self):
-        return self._state == self.CONNECTED
-
-    def isConnecting(self):
-        return self._state == self.CONNECTING
-
-    def connect(self, endpoint, timeout=None):
-        if self.isConnecting():
-            return self._onConnectedDeferred
-
-        if self.isConnected():
-            raise IllegalStateError('already connected')
-
-        # if timeout is not None and timeout < 0.001:
-        #     raise ValueError('timeout can not be less than 1 ms.')
-
-        self._state = self.CONNECTING
-        try:
-            self.sock.connect(endpoint)
-        except socket.error as err:
-            if err.errno not in (errno.EINPROGRESS, errno.EWOULDBLOCK):
-                log.warning('connect error on fd {0}: {1}'.format(self.sock.fileno(), err))
-                self.close()
-                self._ioLoop.add_callback(lambda: self._onConnectedDeferred.ready(ConnectionFailedError(err)))
-        else:
-            self._ioLoop.add_handler(self.sock.fileno(), self._onConnectedCallback, self._ioLoop.WRITE)
-            if timeout:
-                start = time.time()
-                fd = self._ioLoop.add_timeout(start + timeout, self._onConnectionTimeout)
-                self._connectionTimeoutTuple = fd, start, timeout
-
-        return self._onConnectedDeferred
-
-    def close(self):
-        if self._state == self.CONNECTED:
-            self._state = self.NOT_CONNECTED
-            self.close_fd()
-
-    def close_fd(self):
-        raise NotImplementedError()
-
-    def _onConnectionTimeout(self):
-        if self._connectionTimeoutTuple:
-            fd, start, timeout = self._connectionTimeoutTuple
-            self._ioLoop.remove_timeout(fd)
-            self._connectionTimeoutTuple = None
-            self._ioLoop.stop_listening(self.sock.fileno())
-            self.close()
-            self._onConnectedDeferred.ready(FutureResult(TimeoutError(timeout)))
-
-    def _onConnectedCallback(self, fd, event):
-        assert fd == self.sock.fileno(), 'Incoming fd must be socket fd'
-        assert event in (self._ioLoop.WRITE, self._ioLoop.ERROR), 'Event must be either write or error'
-
-        def removeConnectionTimeout():
-            if self._connectionTimeoutTuple:
-                fd, start, timeout = self._connectionTimeoutTuple
-                self._ioLoop.remove_timeout(fd)
-                self._connectionTimeoutTuple = None
-
-        err = self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
-        if err == 0:
-            self._state = self.CONNECTED
-            removeConnectionTimeout()
-            self._ioLoop.stop_listening(self.sock.fileno())
-            self._onConnectedDeferred.ready()
-        elif err not in (errno.EINPROGRESS, errno.EAGAIN, errno.EALREADY):
-            self.close()
-            removeConnectionTimeout()
-            self._ioLoop.stop_listening(self.sock.fileno())
-            self._onConnectedDeferred.ready(ConnectionFailedError(err))
-
-
-class TcpPipe(Pipe_):
-    def close_fd(self):
-        self.sock.close()
-        self.sock = None
 
 
 class Pipe(object):
