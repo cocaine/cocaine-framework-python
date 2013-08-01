@@ -53,7 +53,7 @@ class Pipe(object):
     def isConnecting(self):
         return self._state == self.CONNECTING
 
-    def connect(self, address, timeout=None):
+    def connect(self, address, timeout=None, blocking=False):
         if self.isConnecting():
             return self._onConnectedDeferred
 
@@ -64,6 +64,20 @@ class Pipe(object):
             raise ValueError('timeout must be >= 1 ms.')
 
         self._state = self.CONNECTING
+        if blocking:
+            return self._blockingConnect(address, timeout)
+        else:
+            return self._connect(address, timeout)
+
+    def _blockingConnect(self, address, timeout=None):
+        try:
+            self.sock.settimeout(timeout)
+            self.sock.connect(address)
+            self._state = self.CONNECTED
+        finally:
+            self.sock.setblocking(False)
+
+    def _connect(self, address, timeout):
         try:
             self.sock.connect(address)
         except socket.error as err:
