@@ -47,7 +47,6 @@ class AbstractService(object):
         yield 'Successfully connected to the {0}'.format(endpoint)
 
     def _on_message(self, args):
-        print('!Chunk', args)
         msg = Message.initialize(args)
         if msg is None:
             return
@@ -65,6 +64,21 @@ class AbstractService(object):
             print "Exception in _on_message: %s" % str(err)
             raise err
 
+    def closure(self, methodId):
+        def wrapper(*args):
+            if not self.isConnected():
+                raise ServiceError(self.name, 'service is disconnected', -200)
+            future = Future()
+            self._session += 1
+            print(methodId, self._session, args)
+            self._writableStream.write([methodId, self._session, args])
+            self._subscribers[self._session] = future
+            return Chain([lambda: future])
+        return wrapper
+
+    def isConnected(self):
+        return self._pipe is not None and self._pipe.isConnected()
+
 
 class Locator(AbstractService):
     def __init__(self):
@@ -75,11 +89,8 @@ class Locator(AbstractService):
         yield self._connect(endpoint)
 
     def resolve(self, name):
-        future = Future()
-        self._session += 1
-        self._writableStream.write([0, 1, [name]])
-        self._subscribers[self._session] = future
-        return Chain([lambda: future])
+        RESOLVE_METHOD_ID = 0
+        return self.closure(RESOLVE_METHOD_ID)(name)
 
 
 class Service(AbstractService):
@@ -90,10 +101,11 @@ class Service(AbstractService):
     @chain.source
     def connect(self, locatorEndpoint=('127.0.0.1', 10053)):
         try:
-            print('Before locator connect')
             yield self.locator.connect(endpoint=locatorEndpoint)
-            print('Before resolve')
             endpoint, session, api = yield self.locator.resolve(self.name)
-            print('After resolve:', endpoint, api)
+            print(endpoint, session, api)
+            yield super(Service, self)._connect(endpoint)
+            for methodId, methodName in api.items():
+                setattr(self, methodName, self.closure(methodId))
         except Exception as err:
             print('err', err)

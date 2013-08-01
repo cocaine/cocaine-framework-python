@@ -33,7 +33,7 @@ class Pipe(object):
     def __init__(self, sock):
         self.sock = sock
         self.sock.setblocking(False)
-        if self.sock.family == socket.SOCK_STREAM:
+        if self.sock.type == socket.SOL_TCP:
             self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         fcntl.fcntl(self.sock.fileno(), fcntl.F_SETFD, fcntl.FD_CLOEXEC)
 
@@ -116,29 +116,23 @@ class Pipe(object):
             self._ioLoop.stop_listening(self.sock.fileno())
             self._onConnectedDeferred.ready(ConnectionFailedError(os.strerror(err)))
 
-    def read(self, buff, size):
+    def _handle(self, func, *args):
         try:
-            return self.sock.recv_into(buff, size)
+            return func(*args)
         except socket.error as e:
-            if e.errno in (errno.ECONNRESET, errno.ECONNABORTED, errno.EPIPE):
-                self.close()
-                return 0
-            elif e.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
-                return 0
-            else:
-                raise
-
-    def write(self, buff):
-        try:
-            return self.sock.send(buff)
-        except socket.error as e:
-            if e.errno in (errno.EWOULDBLOCK, errno.EAGAIN):
+            if e.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
                 return 0
             elif e.errno in (errno.ECONNRESET, errno.ECONNABORTED, errno.EPIPE):
                 self.close()
                 return 0
             else:
                 raise
+
+    def read(self, buff, size):
+        return self._handle(self.sock.recv_into, buff, size)
+
+    def write(self, buff):
+        return self._handle(self.sock.send, buff)
 
     @property
     def connected(self):
