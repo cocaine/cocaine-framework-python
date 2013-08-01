@@ -11,9 +11,44 @@ from cocaine.futures import chain, Future
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
+class ConnectStrategy:
+    def connect(self, service, endpoint):
+        raise NotImplementedError()
+
+
+class SynchronousConnectStrategy(ConnectStrategy):
+    def connect(self, service, endpoint):
+        pass
+
+
+class AsynchronousConnectStrategy(ConnectStrategy):
+    @chain.source
+    def connect(self, service, endpoint):
+        addressInfoList = filter(lambda (f, t, p, c, a): t == socket.SOCK_STREAM, socket.getaddrinfo(*endpoint))
+        print(addressInfoList)
+        for family, socktype, proto, canonname, address in addressInfoList:
+            sock = socket.socket(family=family, type=socktype, proto=proto)
+            try:
+                print(family, socktype, proto, canonname, address)
+                service._pipe = Pipe(sock)
+                yield service._pipe.connect(address, timeout=0.1)
+            except ConnectionError as err:
+                print('base, error', err)
+            else:
+                service._ioLoop = service._pipe._ioLoop
+                service._writableStream = WritableStream(service._ioLoop, service._pipe)
+                service._readableStream = ReadableStream(service._ioLoop, service._pipe)
+                service._ioLoop.bind_on_fd(service._pipe.fileno())
+                service._readableStream.bind(service.decoder.decode)
+                break
+        yield 'Successfully connected to the {0}'.format(endpoint)
+
+
 class AbstractService(object):
-    def __init__(self, name):
+    def __init__(self, name, ConnectionStrategy):
         self.name = name
+        self.connectionStrategy = ConnectionStrategy()
+
         self._pipe = None
         self._ioLoop = None
         self._writableStream = None
@@ -25,26 +60,8 @@ class AbstractService(object):
         self._subscribers = {}
         self._session = 0
 
-    @chain.source
     def _connect(self, endpoint):
-        addressInfoList = filter(lambda (f, t, p, c, a): t == socket.SOCK_STREAM, socket.getaddrinfo(*endpoint))
-        print(addressInfoList)
-        for family, socktype, proto, canonname, address in addressInfoList:
-            sock = socket.socket(family=family, type=socktype, proto=proto)
-            try:
-                print(family, socktype, proto, canonname, address)
-                self._pipe = Pipe(sock)
-                yield self._pipe.connect(address, timeout=0.1)
-            except ConnectionError as err:
-                print('base, error', err)
-            else:
-                self._ioLoop = self._pipe._ioLoop
-                self._writableStream = WritableStream(self._ioLoop, self._pipe)
-                self._readableStream = ReadableStream(self._ioLoop, self._pipe)
-                self._ioLoop.bind_on_fd(self._pipe.fileno())
-                self._readableStream.bind(self.decoder.decode)
-                break
-        yield 'Successfully connected to the {0}'.format(endpoint)
+        return self.connectionStrategy.connect(self, endpoint)
 
     def _on_message(self, args):
         msg = Message.initialize(args)
@@ -81,8 +98,8 @@ class AbstractService(object):
 
 
 class Locator(AbstractService):
-    def __init__(self):
-        super(Locator, self).__init__('locator')
+    def __init__(self, ConnectionStrategy):
+        super(Locator, self).__init__('locator', ConnectionStrategy)
 
     @chain.source
     def connect(self, endpoint):
@@ -94,9 +111,9 @@ class Locator(AbstractService):
 
 
 class Service(AbstractService):
-    def __init__(self, name):
-        super(Service, self).__init__(name)
-        self.locator = Locator()
+    def __init__(self, name, ConnectionStrategy=AsynchronousConnectStrategy):
+        super(Service, self).__init__(name, ConnectionStrategy)
+        self.locator = Locator(ConnectionStrategy)
 
     @chain.source
     def connect(self, locatorEndpoint=('127.0.0.1', 10053)):
