@@ -47,6 +47,7 @@ class AbstractService(object):
     def __init__(self, name, isBlocking):
         self.name = name
         self.isBlocking = isBlocking
+        self._connect = strategy.init(self._connect, isBlocking)
 
         self._pipe = None
         self._ioLoop = None
@@ -58,8 +59,6 @@ class AbstractService(object):
 
         self._subscribers = {}
         self._session = 0
-
-        self._connect = strategy.init(self._connect, isBlocking)
 
     def isConnected(self):
         return self._pipe is not None and self._pipe.isConnected()
@@ -88,7 +87,7 @@ class AbstractService(object):
                 self._readableStream.bind(self.decoder.decode)
                 return
 
-        if time() - start > timeout:
+        if timeout is not None and time() - start > timeout:
             raise ConnectionTimeoutError(host, port, timeout)
 
         reason = 'multiple connection errors: ' + ', '.join(err.message for err in errors)
