@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import functools
 import logging
 import msgpack
@@ -139,8 +140,8 @@ class Locator(AbstractService):
     def __init__(self, isBlocking):
         super(Locator, self).__init__('locator', isBlocking)
 
-    def connect(self, host, port):
-        return self._connect(host, port)
+    def connect(self, host, port, timeout=None):
+        return self._connect(host, port, timeout)
 
     def resolve(self, name, timeout=None):
         if self.isBlocking:
@@ -171,7 +172,16 @@ class Locator(AbstractService):
             self._pipe.sock.setblocking(False)
 
     def _nonBlockingResolve(self, name, timeout):
-        return self._closure(RESOLVE_METHOD_ID)(name)
+        return self._closure(RESOLVE_METHOD_ID)(name, timeout=timeout)
+
+
+@contextmanager
+def cumulative(timeout):
+    start = time()
+
+    def t():
+        return timeout - (time() - start) if timeout is not None else None
+    yield t
 
 
 class Service(AbstractService):
@@ -180,9 +190,10 @@ class Service(AbstractService):
         self.locator = Locator(isBlocking)
         self.connect = strategy.init(self.connect, isBlocking)
 
-    def connect(self, host='127.0.0.1', port=10053):
-        yield self.locator.connect(host, port)
-        endpoint, session, api = yield self.locator.resolve(self.name)
-        yield self._connect(*endpoint)
-        for methodId, methodName in api.items():
-            setattr(self, methodName, self._closure(methodId))
+    def connect(self, host='127.0.0.1', port=10053, timeout=None):
+        with cumulative(timeout) as timeLeft:
+            yield self.locator.connect(host, port, timeout=timeLeft())
+            endpoint, session, api = yield self.locator.resolve(self.name, timeout=timeLeft())
+            yield self._connect(*endpoint, timeout=timeLeft())
+            for methodId, methodName in api.items():
+                setattr(self, methodName, self._closure(methodId))
