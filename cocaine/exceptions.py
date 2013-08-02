@@ -73,22 +73,8 @@ class LocatorResolveError(CocaineError):
         return self.__str__()
 
 
-class ConnectionError(CocaineError):
+class ConnectionError(Exception):
     pass
-
-
-class IllegalStateError(ConnectionError):
-    pass
-
-
-class ConnectionRefusedError(ConnectionError):
-    def __init__(self, host, port):
-        super(ConnectionRefusedError, self).__init__('connection refused - {0}:{1}'.format(host, port))
-
-
-class ConnectionTimeoutError(ConnectionError):
-    def __init__(self, timeout):
-        super(ConnectionTimeoutError, self).__init__('connection failed - timeout ({0}s)'.format(timeout))
 
 
 class AsyncConnectionTimeoutError(ConnectionError):
@@ -109,6 +95,7 @@ class ChokeEvent(Exception):
     pass
 
 
+############ COCAINE TOOL ERRORS ############
 class ToolsError(CocaineError):
     pass
 

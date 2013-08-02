@@ -1,10 +1,11 @@
 import errno
+import functools
 import logging
 import os
 import socket
 import fcntl
 import time
-from cocaine.exceptions import ConnectionError, IllegalStateError, ConnectionTimeoutError
+from cocaine.asio.ng import IllegalStateError, ConnectionRefusedError, ConnectionTimeoutError, ConnectionError
 from cocaine.futures.chain import FutureCallableMock
 from cocaine.asio.ev import Loop
 
@@ -60,6 +61,14 @@ class Pipe(object):
             self.sock.settimeout(timeout)
             self.sock.connect(address)
             self._state = self.CONNECTED
+        except socket.error as err:
+            host, port = address
+            if err.errno == errno.ECONNREFUSED:
+                raise ConnectionRefusedError(host, port)
+            elif err.errno == errno.ETIMEDOUT:
+                raise ConnectionTimeoutError(host, port, timeout)
+            else:
+                raise ConnectionError(host, port, err)
         finally:
             self.sock.setblocking(False)
 
@@ -67,16 +76,19 @@ class Pipe(object):
         try:
             self.sock.connect(address)
         except socket.error as err:
+            host, port = address
             if err.errno in (errno.EINPROGRESS, errno.EWOULDBLOCK):
-                self._ioLoop.add_handler(self.sock.fileno(), self._onConnectedCallback, self._ioLoop.WRITE)
+                callback = functools.partial(self._onConnectedCallback, host, port)
+                self._ioLoop.add_handler(self.sock.fileno(), callback, self._ioLoop.WRITE)
                 if timeout:
                     start = time.time()
-                    fd = self._ioLoop.add_timeout(start + timeout, self._onConnectionTimeout)
+                    errorback = functools.partial(self._onConnectionTimeout, host, port)
+                    fd = self._ioLoop.add_timeout(start + timeout, errorback)
                     self._connectionTimeoutTuple = fd, start, timeout
             else:
                 log.warning('connect error on fd {0}: {1}'.format(self.sock.fileno(), err))
                 self.close()
-                self._ioLoop.add_callback(lambda: self._onConnectedDeferred.ready(ConnectionError(err)))
+                self._ioLoop.add_callback(lambda: self._onConnectedDeferred.ready(ConnectionError(host, port, err)))
         return self._onConnectedDeferred
 
     def close(self):
@@ -85,16 +97,16 @@ class Pipe(object):
             self.sock.close()
             self.sock = None
 
-    def _onConnectionTimeout(self):
+    def _onConnectionTimeout(self, host, port):
         if self._connectionTimeoutTuple:
             fd, start, timeout = self._connectionTimeoutTuple
             self._ioLoop.remove_timeout(fd)
             self._connectionTimeoutTuple = None
             self._ioLoop.stop_listening(self.sock.fileno())
             self.close()
-            self._onConnectedDeferred.ready(ConnectionTimeoutError(timeout))
+            self._onConnectedDeferred.ready(ConnectionTimeoutError(host, port, timeout))
 
-    def _onConnectedCallback(self, fd, event):
+    def _onConnectedCallback(self, host, port, fd, event):
         assert fd == self.sock.fileno(), 'Incoming fd must be socket fd'
         assert event in (self._ioLoop.WRITE, self._ioLoop.ERROR), 'Event must be either write or error'
 
@@ -114,7 +126,7 @@ class Pipe(object):
             self.close()
             removeConnectionTimeout()
             self._ioLoop.stop_listening(self.sock.fileno())
-            self._onConnectedDeferred.ready(ConnectionError(os.strerror(err)))
+            self._onConnectedDeferred.ready(ConnectionError(host, port, os.strerror(err)))
 
     def _handle(self, func, *args):
         try:
