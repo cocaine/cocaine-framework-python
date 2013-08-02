@@ -50,7 +50,7 @@ def cumulative(timeout):
     yield timeLeft
 
 
-class watcher(object):
+class guard(object):
     class socket(object):
         @classmethod
         @contextmanager
@@ -60,6 +60,15 @@ class watcher(object):
                 yield sock
             finally:
                 sock.setblocking(False)
+
+        @classmethod
+        @contextmanager
+        def timeout(cls, sock, timeout):
+            try:
+                sock.settimeout(timeout)
+                yield sock
+            finally:
+                sock.settimeout(0.0)
 
 
 RESOLVE_METHOD_ID = 0
@@ -138,7 +147,7 @@ class AbstractService(object):
     def _invoke(self, methodId):
         def wrapper(*args, **kwargs):
             if not self.isConnected():
-                raise ServiceError(self.name, 'service is disconnected', -200)
+                raise IllegalStateError('service "{0}" is not connected'.format(self.name))
 
             future = Future()
             timeout = kwargs.get('timeout', None)
@@ -229,12 +238,16 @@ class Service(AbstractService):
         Note: Left for backward compatibility.
         """
         if not self.isConnected():
-            raise IllegalStateError('service is not connected')
+            raise IllegalStateError('service "{0}" is not connected'.format(self.name))
 
         if method not in self.api:
             raise ValueError('service "{0}" has no method named "{1}"'.format(self.name, method))
 
-        with watcher.socket.blocking(self._pipe.sock) as sock:
+        timeout = kwargs.get('timeout', None)
+        if timeout is not None and timeout <= 0:
+            raise ValueError('timeout must be positive number')
+
+        with guard.socket.timeout(self._pipe.sock, timeout) as sock:
             self._session += 1
             sock.send(msgpack.dumps([self.api[method], self._session, args]))
             unpacker = msgpack.Unpacker()
