@@ -37,12 +37,11 @@ class Decoder(object):
         assert callable(callback)
         self.callback = callback
 
-    def decode(self, buffer):
+    def decode(self, buf):
         """
-         buffer is msgpack.Unpacker (stream unpacker)
+        :param buf: stream unpacker, msgpack.Unpacker type
         """
-        # if not enough data - 0 iterations
-        for res in buffer:
+        for res in buf:
             self.callback(res)
 
 
