@@ -42,6 +42,15 @@ class strategy:
         return chain.source(func)
 
 
+@contextmanager
+def cumulative(timeout):
+    start = time()
+
+    def timeLeft():
+        return timeout - (time() - start) if timeout is not None else None
+    yield timeLeft
+
+
 RESOLVE_METHOD_ID = 0
 
 
@@ -155,7 +164,8 @@ class Locator(AbstractService):
     def _blockingResolve(self, name, timeout):
         try:
             self._pipe.sock.settimeout(timeout)
-            self._writableStream.write([0, 1, [name]])
+            self._session += 1
+            self._writableStream.write([RESOLVE_METHOD_ID, self._session, [name]])
             unpacker = msgpack.Unpacker()
             messages = []
             while True:
@@ -166,6 +176,7 @@ class Locator(AbstractService):
                     messages.append(msg)
                 if messages and messages[-1].id == message.RPC_CHOKE:
                     break
+
             assert len(messages) == 2, 'protocol is corrupted! Locator must return exactly 2 chunks'
             chunk, choke = messages
             if chunk.id == message.RPC_ERROR:
@@ -176,15 +187,6 @@ class Locator(AbstractService):
 
     def _nonBlockingResolve(self, name, timeout):
         return self._closure(RESOLVE_METHOD_ID)(name, timeout=timeout)
-
-
-@contextmanager
-def cumulative(timeout):
-    start = time()
-
-    def t():
-        return timeout - (time() - start) if timeout is not None else None
-    yield t
 
 
 class Service(AbstractService):
