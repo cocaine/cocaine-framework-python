@@ -24,6 +24,7 @@ import time
 from msgpack import Unpacker, packb, unpackb
 
 from cocaine.asio import ev
+from cocaine.asio.ng import LocatorResolveError
 from cocaine.asio.pipe import Pipe
 from cocaine.asio.stream import ReadableStream
 from cocaine.asio.stream import WritableStream
@@ -31,7 +32,6 @@ from cocaine.asio.stream import Decoder
 from cocaine.asio import message
 from cocaine.asio.message import Message
 from cocaine.exceptions import ServiceError
-from cocaine.exceptions import LocatorResolveError
 
 from locator import Locator
 

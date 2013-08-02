@@ -19,7 +19,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-__all__ = ["ServiceError", "RequestError", "LocatorResolveError"]
+__all__ = ["ServiceError", "RequestError"]
 
 
 class CocaineError(Exception):
@@ -46,31 +46,8 @@ class RequestError(CocaineError):
 
 class ServiceError(CocaineError):
     """Exception raised when error message is received from service"""
-
-    def __init__(self, servicename, msg, code):
-        self.servicename = servicename
-        self.msg = msg
-        self.code = code
-
-    def __repr__(self):
-        return "ServiceException [%d] %s: %s" % (self.code, self.servicename, self.msg)
-
-    def __str__(self):
-        return "ServiceException [%d] %s: %s" % (self.code, self.servicename, self.msg)
-
-
-class LocatorResolveError(CocaineError):
-    """Raises when locator can not resolve service API"""
-
-    def __init__(self, name, host, port, reason):
-        message = 'unable to resolve API for service "%s" at %s:%d - %s' % (name, host, port, reason)
-        super(LocatorResolveError, self).__init__(message)
-
-    def __str__(self):
-        return "LocatorResolveError: %s" % self.message
-
-    def __repr__(self):
-        return self.__str__()
+    def __init__(self, servicename, reason, code):
+        super(ServiceError, self).__init__('error in service "{0}" - {1} [{2}]'.format(servicename, reason, code))
 
 
 class ConnectionError(Exception):
