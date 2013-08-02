@@ -1,8 +1,9 @@
 import logging
 import msgpack
 import socket
-from cocaine.asio.ng import ConnectionResolveError, ConnectionError
+from time import time
 
+from cocaine.asio.ng import ConnectionResolveError, ConnectionError, ConnectionTimeoutError
 from cocaine.asio.ng.pipe import Pipe
 from cocaine.futures.chain import Chain
 from cocaine.asio import message
@@ -48,33 +49,51 @@ class AbstractService(object):
     @chain.source
     def _connectAsynchronously(self, host, port, timeout=None):
         addressInfoList = socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM)
+        if not addressInfoList:
+            raise ConnectionResolveError(host, port)
+
+        start = time()
+        errors = []
         for family, socktype, proto, canonname, address in addressInfoList:
             sock = socket.socket(family=family, type=socktype, proto=proto)
             try:
                 self._pipe = Pipe(sock)
-                yield self._pipe.connect(address, timeout=1)
-            except ConnectionError:
-                pass
+                remainingTimeout = timeout - (time() - start) if timeout is not None else None
+                yield self._pipe.connect(address, timeout=remainingTimeout)
+            except ConnectionError as err:
+                errors.append(err)
             else:
                 self._configureStreams()
                 return
+
+        if time() - start > timeout:
+            raise ConnectionTimeoutError(host, port, timeout)
+
+        reason = 'multiple connection errors: ' + ', '.join(err.message for err in errors)
+        raise ConnectionError(host, port, reason)
 
     def _connectSynchronously(self, host, port, timeout=None):
         addressInfoList = socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM)
         if not addressInfoList:
             raise ConnectionResolveError(host, port)
 
+        start = time()
         errors = []
         for family, socktype, proto, canonname, address in addressInfoList:
             sock = socket.socket(family=family, type=socktype, proto=proto)
             try:
                 self._pipe = Pipe(sock)
-                self._pipe.connect(address, timeout=timeout, blocking=True)
+                remainingTimeout = timeout - (time() - start) if timeout is not None else None
+                self._pipe.connect(address, timeout=remainingTimeout, blocking=True)
             except ConnectionError as err:
                 errors.append(err)
             else:
                 self._configureStreams()
                 return
+
+        if time() - start > timeout:
+            raise ConnectionTimeoutError(host, port, timeout)
+
         reason = 'multiple connection errors: ' + ', '.join(err.message for err in errors)
         raise ConnectionError(host, port, reason)
 
