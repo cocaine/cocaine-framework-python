@@ -1,22 +1,27 @@
+import errno
+import logging
 import msgpack
 import socket
+import time
+
 from cocaine.asio.ng.pipe import Pipe
 from cocaine.futures.chain import Chain
 from cocaine.asio import message
 from cocaine.asio.message import Message
-from cocaine.exceptions import ConnectionError, ServiceError
+from cocaine.exceptions import ConnectionError, ServiceError, ConnectionRefusedError, LocatorResolveError, ConnectionTimeoutError
 from cocaine.asio.stream import Decoder, WritableStream, ReadableStream
 from cocaine.futures import chain, Future
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
+log = logging.getLogger(__name__)
+
+
 RESOLVE_METHOD_ID = 0
 
 
 class AbstractService(object):
-    DEFAULT_TIMEOUT = 5.0
-
     def __init__(self, name, blocking):
         self.name = name
         self.blocking = blocking
@@ -32,6 +37,9 @@ class AbstractService(object):
         self._subscribers = {}
         self._session = 0
 
+    def isConnected(self):
+        return self._pipe is not None and self._pipe.isConnected()
+
     def _connect(self, endpoint):
         if self.blocking:
             return self._connectSynchronously(endpoint)
@@ -39,7 +47,7 @@ class AbstractService(object):
             return self._connectAsynchronously(endpoint)
 
     @chain.source
-    def _connectAsynchronously(self, endpoint):
+    def _connectAsynchronously(self, endpoint, timeout=None):
         addressInfoList = filter(lambda (f, t, p, c, a): t == socket.SOCK_STREAM, socket.getaddrinfo(*endpoint))
         for family, socktype, proto, canonname, address in addressInfoList:
             sock = socket.socket(family=family, type=socktype, proto=proto)
@@ -47,7 +55,7 @@ class AbstractService(object):
                 self._pipe = Pipe(sock)
                 yield self._pipe.connect(address, timeout=1)
             except ConnectionError:
-                pass
+                raise
             else:
                 self._ioLoop = self._pipe._ioLoop
                 self._writableStream = WritableStream(self._ioLoop, self._pipe)
@@ -56,15 +64,20 @@ class AbstractService(object):
                 self._readableStream.bind(self.decoder.decode)
                 break
 
-    def _connectSynchronously(self, endpoint):
+    def _connectSynchronously(self, endpoint, timeout=None):
         addressInfoList = filter(lambda (f, t, p, c, a): t == socket.SOCK_STREAM, socket.getaddrinfo(*endpoint))
         for family, socktype, proto, canonname, address in addressInfoList:
             sock = socket.socket(family=family, type=socktype, proto=proto)
             try:
                 self._pipe = Pipe(sock)
-                self._pipe.connect(address, timeout=1, blocking=True)
-            except socket.error:
-                pass
+                self._pipe.connect(address, timeout=timeout, blocking=True)
+            except socket.error as err:
+                if err.errno == errno.ECONNREFUSED:
+                    raise ConnectionRefusedError(*endpoint)
+                elif err.errno == errno.ETIMEDOUT:
+                    raise ConnectionTimeoutError(timeout)
+                else:
+                    raise ConnectionError(err)
             else:
                 self._ioLoop = self._pipe._ioLoop
                 self._writableStream = WritableStream(self._ioLoop, self._pipe)
@@ -88,7 +101,7 @@ class AbstractService(object):
             elif msg.id == message.RPC_ERROR:
                 self._subscribers[msg.session].error(ServiceError(self.name, msg.message, msg.code))
         except Exception as err:
-            print "Exception in _on_message: %s" % str(err)
+            log.warning('"_on_message" method has caught an error - %s', err)
             raise err
 
     def closure(self, methodId):
@@ -101,9 +114,6 @@ class AbstractService(object):
             self._subscribers[self._session] = future
             return Chain([lambda: future])
         return wrapper
-
-    def isConnected(self):
-        return self._pipe is not None and self._pipe.isConnected()
 
 
 class Locator(AbstractService):
@@ -123,17 +133,17 @@ class Locator(AbstractService):
                 unpacker = msgpack.Unpacker()
                 messages = []
                 while True:
-                    response = self._pipe.sock.recv(4)
+                    response = self._pipe.sock.recv(4096)
                     unpacker.feed(response)
                     for msg in unpacker:
                         msg = Message.initialize(msg)
                         messages.append(msg)
                     if messages and messages[-1].id == message.RPC_CHOKE:
                         break
-                assert len(messages) == 2
+                assert len(messages) == 2, 'protocol is corrupted! Locator must return chunk + choke.'
                 chunk, choke = messages
                 if chunk.id == message.RPC_ERROR:
-                    raise Exception(chunk.message)
+                    raise LocatorResolveError(name, 0, 0, chunk.message)
                 return msgpack.loads(chunk.data)
             finally:
                 self._pipe.sock.setblocking(False)
@@ -159,7 +169,7 @@ class Service(AbstractService):
             setattr(self, methodName, self.closure(methodId))
 
     def _resolveAndConnectSynchronously(self, locatorEndpoint):
-        self.locator.connect(locatorEndpoint)
+        self.locator.connect(endpoint=locatorEndpoint)
         endpoint, session, api = self.locator.resolve(self.name)
         self._connect(endpoint)
         for methodId, methodName in api.items():

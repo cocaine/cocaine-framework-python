@@ -4,8 +4,8 @@ import os
 import socket
 import fcntl
 import time
-from cocaine.exceptions import ConnectionError
-from cocaine.futures.chain import FutureCallableMock, FutureResult
+from cocaine.exceptions import ConnectionError, IllegalStateError, ConnectionTimeoutError
+from cocaine.futures.chain import FutureCallableMock
 from cocaine.asio.ev import Loop
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -14,31 +14,17 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 log = logging.getLogger(__name__)
 
 
-class ConnectionFailedError(ConnectionError):
-    pass
-
-
-class IllegalStateError(ConnectionError):
-    pass
-
-
-class TimeoutError(ConnectionError):
-    def __init__(self, timeout):
-        super(TimeoutError, self).__init__('timeout ({0}s)'.format(timeout))
-
-
 class Pipe(object):
     NOT_CONNECTED, CONNECTING, CONNECTED = range(3)
 
-    def __init__(self, sock):
+    def __init__(self, sock, ioLoop=None):
         self.sock = sock
         self.sock.setblocking(False)
         if self.sock.type == socket.SOL_TCP:
             self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         fcntl.fcntl(self.sock.fileno(), fcntl.F_SETFD, fcntl.FD_CLOEXEC)
 
-        #todo: Inject loop
-        self._ioLoop = Loop.instance()
+        self._ioLoop = ioLoop or Loop.instance()
 
         self._state = self.NOT_CONNECTED
         self._onConnectedDeferred = FutureCallableMock()
@@ -90,7 +76,7 @@ class Pipe(object):
             else:
                 log.warning('connect error on fd {0}: {1}'.format(self.sock.fileno(), err))
                 self.close()
-                self._ioLoop.add_callback(lambda: self._onConnectedDeferred.ready(ConnectionFailedError(err)))
+                self._ioLoop.add_callback(lambda: self._onConnectedDeferred.ready(ConnectionError(err)))
         return self._onConnectedDeferred
 
     def close(self):
@@ -106,7 +92,7 @@ class Pipe(object):
             self._connectionTimeoutTuple = None
             self._ioLoop.stop_listening(self.sock.fileno())
             self.close()
-            self._onConnectedDeferred.ready(FutureResult(TimeoutError(timeout)))
+            self._onConnectedDeferred.ready(ConnectionTimeoutError(timeout))
 
     def _onConnectedCallback(self, fd, event):
         assert fd == self.sock.fileno(), 'Incoming fd must be socket fd'
@@ -128,7 +114,7 @@ class Pipe(object):
             self.close()
             removeConnectionTimeout()
             self._ioLoop.stop_listening(self.sock.fileno())
-            self._onConnectedDeferred.ready(ConnectionFailedError(os.strerror(err)))
+            self._onConnectedDeferred.ready(ConnectionError(os.strerror(err)))
 
     def _handle(self, func, *args):
         try:
