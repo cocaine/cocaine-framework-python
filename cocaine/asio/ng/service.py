@@ -50,6 +50,18 @@ def cumulative(timeout):
     yield timeLeft
 
 
+class watcher(object):
+    class socket(object):
+        @classmethod
+        @contextmanager
+        def blocking(cls, sock):
+            try:
+                sock.setblocking(True)
+                yield sock
+            finally:
+                sock.setblocking(False)
+
+
 RESOLVE_METHOD_ID = 0
 
 
@@ -123,7 +135,7 @@ class AbstractService(object):
             log.warning('"_on_message" method has caught an error - %s', err)
             raise err
 
-    def _closure(self, methodId):
+    def _invoke(self, methodId):
         def wrapper(*args, **kwargs):
             if not self.isConnected():
                 raise ServiceError(self.name, 'service is disconnected', -200)
@@ -184,7 +196,7 @@ class Locator(AbstractService):
             self._pipe.sock.setblocking(False)
 
     def _nonBlockingResolve(self, name, timeout):
-        return self._closure(RESOLVE_METHOD_ID)(name, timeout=timeout)
+        return self._invoke(RESOLVE_METHOD_ID)(name, timeout=timeout)
 
 
 class Service(AbstractService):
@@ -192,6 +204,7 @@ class Service(AbstractService):
         super(Service, self).__init__(name, isBlocking)
         self.locator = Locator(isBlocking)
         self.connect = strategy.init(self.connect, isBlocking)
+        self.api = {}
         if isBlocking:
             self.connect()
 
@@ -205,6 +218,37 @@ class Service(AbstractService):
         with cumulative(timeout) as timeLeft:
             yield self.locator.connect(host, port, timeout=timeLeft())
             endpoint, session, api = yield self.locator.resolve(self.name, timeout=timeLeft())
+            self.api = dict((methodName, methodId) for methodId, methodName in api.items())
             yield self._connect(*endpoint, timeout=timeLeft())
             for methodId, methodName in api.items():
-                setattr(self, methodName, self._closure(methodId))
+                setattr(self, methodName, self._invoke(methodId))
+
+    def perform_sync(self, method, *args, **kwargs):
+        """Performs synchronous method invocation.
+
+        Note: Left for backward compatibility.
+        """
+        if not self.isConnected():
+            raise IllegalStateError('service is not connected')
+
+        if method not in self.api:
+            raise ValueError('service "{0}" has no method named "{1}"'.format(self.name, method))
+
+        with watcher.socket.blocking(self._pipe.sock) as sock:
+            self._session += 1
+            sock.send(msgpack.dumps([self.api[method], self._session, args]))
+            unpacker = msgpack.Unpacker()
+            error = None
+            while True:
+                data = sock.recv(4096)
+                unpacker.feed(data)
+                for chunk in unpacker:
+                    msg = Message.initialize(chunk)
+                    if msg is None:
+                        continue
+                    if msg.id == message.RPC_CHUNK:
+                        yield msgpack.loads(msg.data)
+                    elif msg.id == message.RPC_CHOKE:
+                        raise error or StopIteration
+                    elif msg.id == message.RPC_ERROR:
+                        error = Exception(msg.message)
