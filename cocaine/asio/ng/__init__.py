@@ -18,7 +18,7 @@ class ConnectionRefusedError(ConnectionError):
 
 class ConnectionTimeoutError(ConnectionError):
     def __init__(self, host, port, timeout):
-        super(ConnectionTimeoutError, self).__init__(host, port, 'timeout ({0}s)'.format(timeout))
+        super(ConnectionTimeoutError, self).__init__(host, port, 'timeout ({0:.3f}s)'.format(timeout))
 
 
 class IllegalStateError(Exception):

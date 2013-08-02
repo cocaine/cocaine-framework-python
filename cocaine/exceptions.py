@@ -91,6 +91,7 @@ class AsyncConnectionError(ConnectionError):
         super(AsyncConnectionError, self).__init__(message)
 
 
+############ PROTOCOL ############
 class ChokeEvent(Exception):
     pass
 
@@ -106,7 +107,4 @@ class UploadError(ToolsError):
 
 class ServiceCallError(ToolsError):
     def __init__(self, serviceName, reason):
-        self.message = 'Error in service "{0}" - {1}'.format(serviceName, reason)
-
-    def __str__(self):
-        return self.message
+        super(ServiceCallError, self).__init__('error in service "{0}" - {1}'.format(serviceName, reason))

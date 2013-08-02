@@ -47,14 +47,11 @@ class Pipe(object):
         if self.isConnected():
             raise IllegalStateError('already connected')
 
-        if timeout is not None and timeout < 0.001:
-            raise ValueError('timeout must be >= 1 ms.')
-
         self._state = self.CONNECTING
         if blocking:
             return self._blockingConnect(address, timeout)
         else:
-            return self._connect(address, timeout)
+            return self._nonBlockingConnect(address, timeout)
 
     def _blockingConnect(self, address, timeout=None):
         try:
@@ -72,7 +69,7 @@ class Pipe(object):
         finally:
             self.sock.setblocking(False)
 
-    def _connect(self, address, timeout):
+    def _nonBlockingConnect(self, address, timeout):
         try:
             self.sock.connect(address)
         except socket.error as err:
@@ -128,6 +125,12 @@ class Pipe(object):
             self._ioLoop.stop_listening(self.sock.fileno())
             self._onConnectedDeferred.ready(ConnectionError(host, port, os.strerror(err)))
 
+    def read(self, buff, size):
+        return self._handle(self.sock.recv_into, buff, size)
+
+    def write(self, buff):
+        return self._handle(self.sock.send, buff)
+
     def _handle(self, func, *args):
         try:
             return func(*args)
@@ -139,12 +142,6 @@ class Pipe(object):
                 return 0
             else:
                 raise
-
-    def read(self, buff, size):
-        return self._handle(self.sock.recv_into, buff, size)
-
-    def write(self, buff):
-        return self._handle(self.sock.send, buff)
 
     @property
     def connected(self):
