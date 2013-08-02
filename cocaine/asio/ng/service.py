@@ -1,5 +1,4 @@
 from contextlib import contextmanager
-import functools
 import logging
 import msgpack
 import socket
@@ -81,7 +80,6 @@ class AbstractService(object):
         addressInfoList = socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM)
         if not addressInfoList:
             raise ConnectionResolveError(host, port)
-        print(addressInfoList)
 
         start = time()
         errors = []

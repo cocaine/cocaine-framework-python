@@ -59,7 +59,7 @@ class Pipe(object):
             self.sock.connect(address)
             self._state = self.CONNECTED
         except socket.error as err:
-            host, port = address
+            host, port = address[:2]
             if err.errno == errno.ECONNREFUSED:
                 raise ConnectionRefusedError(host, port)
             elif err.errno == errno.ETIMEDOUT:
@@ -73,7 +73,7 @@ class Pipe(object):
         try:
             self.sock.connect(address)
         except socket.error as err:
-            host, port = address
+            host, port = address[:2]
             if err.errno in (errno.EINPROGRESS, errno.EWOULDBLOCK):
                 callback = functools.partial(self._onConnectedCallback, host, port)
                 self._ioLoop.add_handler(self.sock.fileno(), callback, self._ioLoop.WRITE)
