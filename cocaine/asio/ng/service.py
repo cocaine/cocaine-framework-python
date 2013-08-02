@@ -1,3 +1,4 @@
+import functools
 import logging
 import msgpack
 import socket
@@ -8,7 +9,7 @@ from cocaine.asio.ng.pipe import Pipe
 from cocaine.futures.chain import Chain
 from cocaine.asio import message
 from cocaine.asio.message import Message
-from cocaine.exceptions import ServiceError
+from cocaine.exceptions import ServiceError, TimeoutError
 from cocaine.asio.stream import Decoder, WritableStream, ReadableStream
 from cocaine.futures import chain, Future
 
@@ -112,10 +113,21 @@ class AbstractService(object):
             raise err
 
     def _closure(self, methodId):
-        def wrapper(*args):
+        def wrapper(*args, **kwargs):
             if not self.isConnected():
                 raise ServiceError(self.name, 'service is disconnected', -200)
+
             future = Future()
+            timeout = kwargs.get('timeout', None)
+            if timeout is not None:
+                fd = self._ioLoop.add_timeout(time() + timeout, lambda: future.error(TimeoutError(timeout)))
+
+                def timeoutRemover(func):
+                    def wrapper(*args, **kwargs):
+                        self._ioLoop.remove_timeout(fd)
+                        return func(*args, **kwargs)
+                    return wrapper
+                future.close = timeoutRemover(future.close)
             self._session += 1
             self._writableStream.write([methodId, self._session, args])
             self._subscribers[self._session] = future
