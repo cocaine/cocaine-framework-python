@@ -19,6 +19,8 @@ class Pipe(object):
     NOT_CONNECTED, CONNECTING, CONNECTED = range(3)
 
     def __init__(self, sock, ioLoop=None):
+        self.host = '0.0.0.0'
+        self.port = 0
         self.sock = sock
         self.sock.setblocking(False)
         if self.sock.type == socket.SOL_TCP:
@@ -48,6 +50,7 @@ class Pipe(object):
             raise IllegalStateError('already connected')
 
         self._state = self.CONNECTING
+        self.host, self.port = address[:2]
         if blocking:
             return self._blockingConnect(address, timeout)
         else:
@@ -89,7 +92,8 @@ class Pipe(object):
         return self._onConnectedDeferred
 
     def close(self):
-        if self._state == self.CONNECTED:
+        if self._state != self.NOT_CONNECTED:
+            self.host, self.port = '0.0.0.0', 0
             self._state = self.NOT_CONNECTED
             self.sock.close()
             self.sock = None

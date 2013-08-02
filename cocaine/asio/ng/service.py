@@ -4,7 +4,7 @@ import msgpack
 import socket
 from time import time
 
-from cocaine.asio.ng import ConnectionResolveError, ConnectionError, ConnectionTimeoutError, IllegalStateError
+from cocaine.asio.ng import ConnectionResolveError, ConnectionError, ConnectionTimeoutError, IllegalStateError, LocatorResolveError
 from cocaine.asio.ng.pipe import Pipe
 from cocaine.futures.chain import Chain
 from cocaine.asio import message
@@ -181,14 +181,13 @@ class Locator(AbstractService):
             return self._nonBlockingResolve(name, timeout)
 
     def _blockingResolve(self, name, timeout):
-        try:
-            self._pipe.sock.settimeout(timeout)
+        with guard.socket.timeout(self._pipe.sock, timeout) as sock:
             self._session += 1
-            self._writableStream.write([RESOLVE_METHOD_ID, self._session, [name]])
+            sock.send(msgpack.dumps([RESOLVE_METHOD_ID, self._session, [name]]))
             unpacker = msgpack.Unpacker()
             messages = []
             while True:
-                response = self._pipe.sock.recv(4096)
+                response = sock.recv(4096)
                 unpacker.feed(response)
                 for msg in unpacker:
                     msg = Message.initialize(msg)
@@ -199,10 +198,8 @@ class Locator(AbstractService):
             assert len(messages) == 2, 'protocol is corrupted! Locator must return exactly 2 chunks'
             chunk, choke = messages
             if chunk.id == message.RPC_ERROR:
-                raise Exception(chunk.message)
+                raise LocatorResolveError(name, self._pipe.host, self._pipe.port, chunk.message)
             return msgpack.loads(chunk.data)
-        finally:
-            self._pipe.sock.setblocking(False)
 
     def _nonBlockingResolve(self, name, timeout):
         return self._invoke(RESOLVE_METHOD_ID)(name, timeout=timeout)

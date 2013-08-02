@@ -27,5 +27,5 @@ class IllegalStateError(Exception):
 
 class LocatorResolveError(ConnectionError):
     def __init__(self, name, host, port, reason):
-        message = 'unable to resolve API for service "%s" at %s:%d - %s' % (name, host, port, reason)
-        super(LocatorResolveError, self).__init__(message)
+        message = 'unable to resolve API for service "{0}" because {1}'.format(name, reason)
+        super(LocatorResolveError, self).__init__(host, port, message)
