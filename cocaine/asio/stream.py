@@ -20,7 +20,6 @@
 #
 
 import array
-import collections
 from threading import Lock
 
 import msgpack
@@ -28,13 +27,6 @@ import msgpack
 from cocaine.utils import weakmethod
 
 START_CHUNK_SIZE = 10240
-
-
-def encode_dec(f):
-    def wrapper(self, data):
-        encode = msgpack.packb(data)
-        return f(self, encode, len(encode))
-    return wrapper
 
 
 class Decoder(object):
@@ -134,9 +126,8 @@ class WritableStream(object):
                 self._buffer.pop(0)
                 self.tx_offset = 0
 
-    @encode_dec
-    def write(self, data, size):
-        self._buffer.append(data)
+    def write(self, data):
+        self._buffer.append(msgpack.dumps(data))
         self._on_event()
 
         if not self.is_attached and self.pipe.connected:

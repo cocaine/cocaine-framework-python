@@ -1,5 +1,4 @@
 import datetime
-import time
 import sys
 from tornado.ioloop import IOLoop
 from cocaine.exceptions import ChokeEvent
