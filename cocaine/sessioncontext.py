@@ -20,11 +20,11 @@
 #
 
 import traceback
+from cocaine.exceptions import RequestError
 
 import msgpack
 
 from cocaine.decorators import default
-from cocaine.exceptions import *
 from cocaine.logging.log import core_log
 from cocaine.futures import Future
 from cocaine.futures import chain

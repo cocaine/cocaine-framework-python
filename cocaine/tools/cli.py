@@ -6,10 +6,11 @@ import socket
 from time import time
 
 from tornado.ioloop import IOLoop
+from cocaine.asio.ng import ConnectionRefusedError
 
 from cocaine.tools.actions import common, app, profile, runlist, crashlog
 from cocaine.services import Service
-from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError, ChokeEvent, ToolsError
+from cocaine.exceptions import CocaineError, ConnectionError, ChokeEvent, ToolsError
 from cocaine.tools.actions.app import LocalUpload
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
