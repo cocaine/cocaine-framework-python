@@ -112,7 +112,7 @@ class AbstractService(object):
             log.warning('"_on_message" method has caught an error - %s', err)
             raise err
 
-    def closure(self, methodId):
+    def _closure(self, methodId):
         def wrapper(*args):
             if not self.isConnected():
                 raise ServiceError(self.name, 'service is disconnected', -200)
@@ -160,7 +160,7 @@ class Locator(AbstractService):
             self._pipe.sock.setblocking(False)
 
     def _nonBlockingResolve(self, name, timeout):
-        return self.closure(RESOLVE_METHOD_ID)(name)
+        return self._closure(RESOLVE_METHOD_ID)(name)
 
 
 class Service(AbstractService):
@@ -174,4 +174,4 @@ class Service(AbstractService):
         endpoint, session, api = yield self.locator.resolve(self.name)
         yield self._connect(*endpoint)
         for methodId, methodName in api.items():
-            setattr(self, methodName, self.closure(methodId))
+            setattr(self, methodName, self._closure(methodId))
