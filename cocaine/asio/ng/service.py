@@ -5,7 +5,7 @@ import msgpack
 import socket
 from time import time
 
-from cocaine.asio.ng import ConnectionResolveError, ConnectionError, ConnectionTimeoutError
+from cocaine.asio.ng import ConnectionResolveError, ConnectionError, ConnectionTimeoutError, IllegalStateError
 from cocaine.asio.ng.pipe import Pipe
 from cocaine.futures.chain import Chain
 from cocaine.asio import message
@@ -66,6 +66,9 @@ class AbstractService(object):
         return self._pipe is not None and self._pipe.isConnected()
 
     def _connect(self, host, port, timeout=None):
+        if self.isConnected():
+            raise IllegalStateError('service "{0}" is already connected'.format(self.name))
+
         addressInfoList = socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM)
         if not addressInfoList:
             raise ConnectionResolveError(host, port)
@@ -185,12 +188,20 @@ def cumulative(timeout):
 
 
 class Service(AbstractService):
-    def __init__(self, name, isBlocking=False):
+    def __init__(self, name, isBlocking=True):
         super(Service, self).__init__(name, isBlocking)
         self.locator = Locator(isBlocking)
         self.connect = strategy.init(self.connect, isBlocking)
+        if isBlocking:
+            self.connect()
 
     def connect(self, host='127.0.0.1', port=10053, timeout=None):
+        """Connect to the service through locator.
+
+        :param host: locator host
+        :param port: locator port
+        :param timeout: timeout
+        """
         with cumulative(timeout) as timeLeft:
             yield self.locator.connect(host, port, timeout=timeLeft())
             endpoint, session, api = yield self.locator.resolve(self.name, timeout=timeLeft())
