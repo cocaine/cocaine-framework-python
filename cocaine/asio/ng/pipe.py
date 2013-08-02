@@ -5,7 +5,8 @@ import os
 import socket
 import fcntl
 import time
-from cocaine.asio.ng import IllegalStateError, ConnectionRefusedError, ConnectionTimeoutError, ConnectionError
+
+from cocaine.asio.ng.exceptions import *
 from cocaine.futures.chain import FutureCallableMock
 from cocaine.asio.ev import Loop
 

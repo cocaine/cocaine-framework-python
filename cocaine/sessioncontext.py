@@ -44,6 +44,7 @@ class Sandbox(object):
             event_handler.invoke(request, stream)
         else:
             self._logger.warn("there is no handler for event %s" % event_name)
+            #todo: define magic constants
             stream.error(-100, "there is no handler for event %s" % event_name)
 
     def on(self, event_name, event_handler):

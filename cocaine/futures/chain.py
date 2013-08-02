@@ -3,7 +3,8 @@ from threading import Thread
 import time
 import types
 from tornado.ioloop import IOLoop
-from cocaine.exceptions import ChokeEvent, TimeoutError
+from cocaine.exceptions import ChokeEvent
+from cocaine.asio.ng.exceptions import TimeoutError
 from cocaine.futures import Future
 import logging
 
@@ -335,7 +336,8 @@ class Chain(object):
         self._trackLastResult()
 
         if timeout:
-            self.ioLoop.add_timeout(time.time() + timeout, lambda: self._saveLastResult(FutureResult(TimeoutError())))
+            self.ioLoop.add_timeout(time.time() + timeout,
+                                    lambda: self._saveLastResult(FutureResult(TimeoutError(timeout))))
         self.ioLoop.start()
         self._removeTrackingLastResult()
         return self._getLastResult()

@@ -3,9 +3,8 @@ import socket
 import errno
 import tarfile
 import msgpack
-from cocaine.asio.ng import ConnectionRefusedError
 
-from cocaine.exceptions import ConnectionError
+from cocaine.asio.ng.exceptions import ConnectionError, ConnectionRefusedError
 from cocaine.services import Service
 from cocaine.tools import log
 

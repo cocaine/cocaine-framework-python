@@ -5,7 +5,8 @@ from cocaine.futures.chain import Chain
 import logging
 from tornado.testing import AsyncTestCase
 from cocaine.testing.mocks import ServiceMock, checker
-from cocaine.exceptions import TimeoutError, ChokeEvent
+from cocaine.exceptions import ChokeEvent
+from cocaine.asio.ng.exceptions import TimeoutError
 
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'

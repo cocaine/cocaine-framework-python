@@ -4,12 +4,12 @@ import msgpack
 import socket
 from time import time
 
-from cocaine.asio.ng import ConnectionResolveError, ConnectionError, ConnectionTimeoutError, IllegalStateError, LocatorResolveError
+from cocaine.asio.ng.exceptions import *
 from cocaine.asio.ng.pipe import Pipe
 from cocaine.futures.chain import Chain
 from cocaine.asio import message
 from cocaine.asio.message import Message
-from cocaine.exceptions import ServiceError, TimeoutError
+from cocaine.exceptions import ServiceError
 from cocaine.asio.stream import Decoder, WritableStream, ReadableStream
 from cocaine.futures import chain, Future
 

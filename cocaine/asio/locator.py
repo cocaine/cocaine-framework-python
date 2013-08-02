@@ -26,7 +26,7 @@ from threading import Lock
 import msgpack
 
 from cocaine.asio.message import Message
-from cocaine.asio.ng import LocatorResolveError
+from cocaine.asio.ng.exceptions import LocatorResolveError
 from cocaine.asio.stream import WritableStream
 from cocaine.asio.stream import ReadableStream
 from cocaine.asio.pipe import Pipe

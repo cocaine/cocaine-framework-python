@@ -27,21 +27,10 @@ class CocaineError(Exception):
     pass
 
 
-class TimeoutError(CocaineError):
-    pass
-
-
 class RequestError(CocaineError):
     """Exception raised when u try to request chunks from closed request """
-
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __repr__(self):
-        return "RequestError: %s" % self.msg
-
-    def __str__(self):
-        return "RequestError: %s" % self.msg
+    def __init__(self, reason):
+        super(RequestError, self).__init__('request error - {0}'.format(reason))
 
 
 class ServiceError(CocaineError):
@@ -55,14 +44,12 @@ class ConnectionError(Exception):
 
 
 class AsyncConnectionTimeoutError(ConnectionError):
-
     def __init__(self, path):
         message = 'TimeOutError: {endpoint}'.format(endpoint=path)
         super(AsyncConnectionTimeoutError, self).__init__(message)
 
 
 class AsyncConnectionError(ConnectionError):
-
     def __init__(self, path, errcode):
         message = 'ConnectionError: {endpoint} {error}'.format(endpoint=path, error=errcode)
         super(AsyncConnectionError, self).__init__(message)

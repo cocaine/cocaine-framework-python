@@ -6,7 +6,7 @@ import socket
 from time import time
 
 from tornado.ioloop import IOLoop
-from cocaine.asio.ng import ConnectionRefusedError
+from cocaine.asio.ng.exceptions import ConnectionRefusedError
 
 from cocaine.tools.actions import common, app, profile, runlist, crashlog
 from cocaine.services import Service
