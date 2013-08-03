@@ -22,6 +22,7 @@ class Pipe(object):
     def __init__(self, sock, ioLoop=None):
         self.host = '0.0.0.0'
         self.port = 0
+
         self.sock = sock
         self.sock.setblocking(False)
         if self.sock.type == socket.SOL_TCP:
@@ -150,4 +151,4 @@ class Pipe(object):
 
     @property
     def connected(self):
-        return self._state == self.CONNECTED
+        return self.isConnected()
