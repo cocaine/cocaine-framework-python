@@ -1,12 +1,15 @@
 import collections
-from threading import Thread
 import time
 import types
+import logging
+from threading import Thread
+
 from tornado.ioloop import IOLoop
+
 from cocaine.exceptions import ChokeEvent
 from cocaine.asio.ng.exceptions import TimeoutError
 from cocaine.futures import Future
-import logging
+
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -186,6 +189,17 @@ class GeneratorFutureMock(Future):
             chainFuture = FutureCallableMock()
             result.then(lambda r: chainFuture.ready(r))
             future = chainFuture
+        elif hasattr(result, 'add_done_callback'):
+            # Meant to be tornado.concurrent._DummyFuture or python 3.3 concurrent.future.Future
+            tornadoFuture = FutureCallableMock()
+
+            def unwrapResult(result):
+                try:
+                    tornadoFuture.ready(result.result())
+                except Exception as err:
+                    tornadoFuture.ready(err)
+            result.add_done_callback(unwrapResult)
+            future = tornadoFuture
         elif isinstance(result, ConcurrentWorker):
             concurrentFuture = FutureCallableMock()
             result.runBackground(lambda r: concurrentFuture.ready(r))
