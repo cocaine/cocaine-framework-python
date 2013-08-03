@@ -101,6 +101,10 @@ class AbstractService(object):
         self._subscribers = {}
         self._session = 0
 
+    @property
+    def address(self):
+        return self._pipe.address if self.isConnected() else 'unknown'
+
     def isConnected(self):
         return self._pipe is not None and self._pipe.isConnected()
 
@@ -110,7 +114,7 @@ class AbstractService(object):
 
         addressInfoList = socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM)
         if not addressInfoList:
-            raise ConnectionResolveError(host, port)
+            raise ConnectionResolveError((host, port))
 
         start = time()
         errors = []
@@ -131,10 +135,10 @@ class AbstractService(object):
                 return
 
         if timeout is not None and time() - start > timeout:
-            raise ConnectionTimeoutError(host, port, timeout)
+            raise ConnectionTimeoutError((host, port), timeout)
 
         reason = 'multiple connection errors: ' + ', '.join(err.message for err in errors)
-        raise ConnectionError(host, port, reason)
+        raise ConnectionError((host, port), reason)
 
     def _on_message(self, args):
         msg = Message.initialize(args)
@@ -208,7 +212,7 @@ class Locator(AbstractService):
             assert len(messages) == 2, 'protocol is corrupted! Locator must return exactly 2 chunks'
             chunk, choke = messages
             if chunk.id == message.RPC_ERROR:
-                raise LocatorResolveError(name, self._pipe.host, self._pipe.port, chunk.message)
+                raise LocatorResolveError(name, self.address, chunk.message)
             return msgpack.loads(chunk.data)
 
     def _nonBlockingResolve(self, name, timeout):

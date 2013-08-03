@@ -20,8 +20,7 @@ class Pipe(object):
     NOT_CONNECTED, CONNECTING, CONNECTED = range(3)
 
     def __init__(self, sock, ioLoop=None):
-        self.host = '0.0.0.0'
-        self.port = 0
+        self.address = None
 
         self.sock = sock
         self.sock.setblocking(False)
@@ -52,7 +51,6 @@ class Pipe(object):
             raise IllegalStateError('already connected')
 
         self._state = self.CONNECTING
-        self.host, self.port = address[:2]
         if blocking:
             return self._blockingConnect(address, timeout)
         else:
@@ -64,13 +62,12 @@ class Pipe(object):
             self.sock.connect(address)
             self._state = self.CONNECTED
         except socket.error as err:
-            host, port = address[:2]
             if err.errno == errno.ECONNREFUSED:
-                raise ConnectionRefusedError(host, port)
+                raise ConnectionRefusedError(address)
             elif err.errno == errno.ETIMEDOUT:
-                raise ConnectionTimeoutError(host, port, timeout)
+                raise ConnectionTimeoutError(address, timeout)
             else:
-                raise ConnectionError(host, port, err)
+                raise ConnectionError(address, err)
         finally:
             self.sock.setblocking(False)
 
@@ -78,38 +75,37 @@ class Pipe(object):
         try:
             self.sock.connect(address)
         except socket.error as err:
-            host, port = address[:2]
             if err.errno in (errno.EINPROGRESS, errno.EWOULDBLOCK):
-                callback = functools.partial(self._onConnectedCallback, host, port)
+                callback = functools.partial(self._onConnectedCallback, address)
                 self._ioLoop.add_handler(self.sock.fileno(), callback, self._ioLoop.WRITE)
                 if timeout:
                     start = time.time()
-                    errorback = functools.partial(self._onConnectionTimeout, host, port)
+                    errorback = functools.partial(self._onConnectionTimeout, address)
                     fd = self._ioLoop.add_timeout(start + timeout, errorback)
                     self._connectionTimeoutTuple = fd, start, timeout
             else:
                 log.warning('connect error on fd {0}: {1}'.format(self.sock.fileno(), err))
                 self.close()
-                self._ioLoop.add_callback(lambda: self._onConnectedDeferred.ready(ConnectionError(host, port, err)))
+                self._ioLoop.add_callback(lambda: self._onConnectedDeferred.ready(ConnectionError(address, err)))
         return self._onConnectedDeferred
 
     def close(self):
         if self._state != self.NOT_CONNECTED:
-            self.host, self.port = '0.0.0.0', 0
             self._state = self.NOT_CONNECTED
+            self.address = None
             self.sock.close()
             self.sock = None
 
-    def _onConnectionTimeout(self, host, port):
+    def _onConnectionTimeout(self, address):
         if self._connectionTimeoutTuple:
             fd, start, timeout = self._connectionTimeoutTuple
             self._ioLoop.remove_timeout(fd)
             self._connectionTimeoutTuple = None
             self._ioLoop.stop_listening(self.sock.fileno())
             self.close()
-            self._onConnectedDeferred.ready(ConnectionTimeoutError(host, port, timeout))
+            self._onConnectedDeferred.ready(ConnectionTimeoutError(address, timeout))
 
-    def _onConnectedCallback(self, host, port, fd, event):
+    def _onConnectedCallback(self, address, fd, event):
         assert fd == self.sock.fileno(), 'Incoming fd must be socket fd'
         assert event in (self._ioLoop.WRITE, self._ioLoop.ERROR), 'Event must be either write or error'
 
@@ -129,7 +125,7 @@ class Pipe(object):
             self.close()
             removeConnectionTimeout()
             self._ioLoop.stop_listening(self.sock.fileno())
-            self._onConnectedDeferred.ready(ConnectionError(host, port, os.strerror(err)))
+            self._onConnectedDeferred.ready(ConnectionError(address, os.strerror(err)))
 
     def read(self, buff, size):
         return self._handle(self.sock.recv_into, buff, size)

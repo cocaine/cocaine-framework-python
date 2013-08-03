@@ -304,7 +304,7 @@ class Executor(object):
             options[self.serviceName] = service
         except socket.error as err:
             if err.errno == errno.ECONNREFUSED:
-                raise ConnectionRefusedError(host, port)
+                raise ConnectionRefusedError((host, port))
             else:
                 raise ConnectionError('Unknown connection error: {0}'.format(err))
 

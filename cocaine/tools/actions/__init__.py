@@ -52,9 +52,9 @@ class Storage(object):
             self.storage = Service('storage', host, port)
         except socket.error as err:
             if err.errno == errno.ECONNREFUSED:
-                raise ConnectionRefusedError(host, port)
+                raise ConnectionRefusedError((host, port))
             else:
-                raise ConnectionError('Unknown connection error: {0}'.format(err))
+                raise ConnectionError((host, port), 'Unknown connection error: {0}'.format(err))
 
     def execute(self):
         raise NotImplementedError()

@@ -89,7 +89,7 @@ class Locator(object):
                 u.feed(response)
                 msg = Message.initialize(u.next())
         except Exception as err:
-            raise LocatorResolveError(name, endpoint, port, str(err))
+            raise LocatorResolveError(name, (endpoint, port), str(err))
         finally:
             if locator_pipe is not None:
                 locator_pipe.close()
