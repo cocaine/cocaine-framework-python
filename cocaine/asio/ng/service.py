@@ -1,8 +1,11 @@
-from contextlib import contextmanager
+import sys
 import logging
 import msgpack
 import socket
 from time import time
+from contextlib import contextmanager
+
+from optparse import OptionParser
 
 from cocaine.asio.ng.exceptions import *
 from cocaine.asio.ng.pipe import Pipe
@@ -17,6 +20,16 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
 log = logging.getLogger(__name__)
+
+parser = OptionParser()
+parser.add_option('--locator-host', default='127.0.0.1')
+parser.add_option('--locator-port', default=10053)
+option, args = parser.parse_args(sys.argv)
+
+LOCATOR_DEFAULT_HOST = option.locator_host
+LOCATOR_DEFAULT_PORT = option.locator_port
+
+LOCATOR_RESOLVE_METHOD_ID = 0
 
 
 class strategy:
@@ -69,9 +82,6 @@ class guard(object):
                 yield sock
             finally:
                 sock.settimeout(0.0)
-
-
-RESOLVE_METHOD_ID = 0
 
 
 class AbstractService(object):
@@ -183,7 +193,7 @@ class Locator(AbstractService):
     def _blockingResolve(self, name, timeout):
         with guard.socket.timeout(self._pipe.sock, timeout) as sock:
             self._session += 1
-            sock.send(msgpack.dumps([RESOLVE_METHOD_ID, self._session, [name]]))
+            sock.send(msgpack.dumps([LOCATOR_RESOLVE_METHOD_ID, self._session, [name]]))
             unpacker = msgpack.Unpacker()
             messages = []
             while True:
@@ -202,7 +212,7 @@ class Locator(AbstractService):
             return msgpack.loads(chunk.data)
 
     def _nonBlockingResolve(self, name, timeout):
-        return self._invoke(RESOLVE_METHOD_ID)(name, timeout=timeout)
+        return self._invoke(LOCATOR_RESOLVE_METHOD_ID)(name, timeout=timeout)
 
 
 class Service(AbstractService):
@@ -214,7 +224,7 @@ class Service(AbstractService):
         if isBlocking:
             self.connect()
 
-    def connect(self, host='127.0.0.1', port=10053, timeout=None):
+    def connect(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, timeout=None):
         """Connect to the service through locator.
 
         :param host: locator host
