@@ -125,19 +125,18 @@ class Worker(object):
             return
 
         elif msg.id == message.RPC_INVOKE:
-            #todo: _stream might be referenced
+            request = Request()
+            stream = Stream(msg.session, self, msg.event)
             try:
-                _request = Request()
-                _stream = Stream(msg.session, self, msg.event)
-                self.sandbox.invoke(msg.event, _request, _stream)
-                self.sessions[msg.session] = _request
+                self.sandbox.invoke(msg.event, request, stream)
+                self.sessions[msg.session] = request
             except (ImportError, SyntaxError) as err:
-                _stream.error(2, "unrecoverable error: %s " % str(err))
+                stream.error(2, "unrecoverable error: %s " % str(err))
                 self.terminate(1, "Bad code")
             except Exception as err:
                 self._logger.error("On invoke error: %s" % err)
                 traceback.print_stack()
-                _stream.error(1, "Invocation error")
+                stream.error(1, "Invocation error")
 
         elif msg.id == message.RPC_CHUNK:
             self._logger.debug("Receive chunk: %d" % msg.session)
