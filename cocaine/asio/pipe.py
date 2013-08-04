@@ -90,11 +90,12 @@ class Pipe(object):
         return self._onConnectedDeferred
 
     def close(self):
-        if self._state != self.NOT_CONNECTED:
-            self._state = self.NOT_CONNECTED
-            self.address = None
-            self.sock.close()
-            self.sock = None
+        if self._state == self.NOT_CONNECTED:
+            return
+        self._state = self.NOT_CONNECTED
+        self.address = None
+        self.sock.close()
+        self.sock = None
 
     def _onConnectionTimeout(self, address):
         if self._connectionTimeoutTuple:
@@ -144,7 +145,3 @@ class Pipe(object):
                 return 0
             else:
                 raise
-
-    @property
-    def connected(self):
-        return self.isConnected()
