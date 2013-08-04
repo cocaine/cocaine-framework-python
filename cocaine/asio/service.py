@@ -1,4 +1,3 @@
-import sys
 import logging
 import socket
 from time import time
@@ -58,7 +57,7 @@ def cumulative(timeout):
     yield timeLeft
 
 
-class guard(object):
+class scope(object):
     class socket(object):
         @classmethod
         @contextmanager
@@ -83,7 +82,7 @@ class AbstractService(object):
     def __init__(self, name, isBlocking):
         self.name = name
         self.isBlocking = isBlocking
-        self._connect = strategy.init(self._connect, isBlocking)
+        self._connectToEndpoint = strategy.init(self._connectToEndpoint, isBlocking)
 
         self._pipe = None
         self._ioLoop = None
@@ -103,7 +102,7 @@ class AbstractService(object):
     def isConnected(self):
         return self._pipe is not None and self._pipe.isConnected()
 
-    def _connect(self, host, port, timeout=None):
+    def _connectToEndpoint(self, host, port, timeout=None):
         if self.isConnected():
             raise IllegalStateError('service "{0}" is already connected'.format(self.name))
 
@@ -180,8 +179,8 @@ class Locator(AbstractService):
     def __init__(self, isBlocking):
         super(Locator, self).__init__('locator', isBlocking)
 
-    def connect(self, host, port, timeout=None):
-        return self._connect(host, port, timeout)
+    def connect(self, host, port, timeout):
+        return self._connectToEndpoint(host, port, timeout)
 
     def resolve(self, name, timeout=None):
         if self.isBlocking:
@@ -190,7 +189,7 @@ class Locator(AbstractService):
             return self._nonBlockingResolve(name, timeout)
 
     def _blockingResolve(self, name, timeout):
-        with guard.socket.timeout(self._pipe.sock, timeout) as sock:
+        with scope.socket.timeout(self._pipe.sock, timeout) as sock:
             self._session += 1
             sock.send(msgpack.dumps([LOCATOR_RESOLVE_METHOD_ID, self._session, [name]]))
             unpacker = msgpack.Unpacker()
@@ -215,16 +214,16 @@ class Locator(AbstractService):
 
 
 class Service(AbstractService):
-    def __init__(self, name, blocking_connect=True, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT):
-        super(Service, self).__init__(name, blocking_connect)
+    def __init__(self, name, connectNow=True, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT):
+        super(Service, self).__init__(name, connectNow)
 
-        if not blocking_connect and any([host != LOCATOR_DEFAULT_HOST, port != LOCATOR_DEFAULT_PORT]):
+        if not connectNow and any([host != LOCATOR_DEFAULT_HOST, port != LOCATOR_DEFAULT_PORT]):
             raise ValueError('you should not specify locator address in __init__ while performing non-blocking connect')
 
-        self.locator = Locator(blocking_connect)
-        self.connect = strategy.init(self.connect, blocking_connect)
+        self.locator = Locator(connectNow)
+        self.connect = strategy.init(self.connect, connectNow)
         self.api = {}
-        if blocking_connect:
+        if connectNow:
             self.connect(host, port)
 
     def connect(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, timeout=None):
@@ -238,7 +237,7 @@ class Service(AbstractService):
             yield self.locator.connect(host, port, timeout=timeLeft())
             endpoint, session, api = yield self.locator.resolve(self.name, timeout=timeLeft())
             self.api = dict((methodName, methodId) for methodId, methodName in api.items())
-            yield self._connect(*endpoint, timeout=timeLeft())
+            yield self._connectToEndpoint(*endpoint, timeout=timeLeft())
             for methodId, methodName in api.items():
                 setattr(self, methodName, self._invoke(methodId))
 
@@ -257,7 +256,7 @@ class Service(AbstractService):
         if timeout is not None and timeout <= 0:
             raise ValueError('timeout must be positive number')
 
-        with guard.socket.timeout(self._pipe.sock, timeout) as sock:
+        with scope.socket.timeout(self._pipe.sock, timeout) as sock:
             self._session += 1
             sock.send(msgpack.dumps([self.api[method], self._session, args]))
             unpacker = msgpack.Unpacker()
