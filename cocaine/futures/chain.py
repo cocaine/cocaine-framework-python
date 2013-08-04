@@ -7,7 +7,7 @@ from threading import Thread
 from tornado.ioloop import IOLoop
 
 from cocaine.exceptions import ChokeEvent
-from cocaine.asio.ng.exceptions import TimeoutError
+from cocaine.asio.exceptions import TimeoutError
 from cocaine.futures import Future
 
 

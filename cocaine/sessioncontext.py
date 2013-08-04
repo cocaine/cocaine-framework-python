@@ -20,10 +20,10 @@
 #
 
 import traceback
-from cocaine.exceptions import RequestError
 
 import msgpack
 
+from cocaine.exceptions import RequestError
 from cocaine.decorators import default
 from cocaine.logging.log import core_log
 from cocaine.futures import Future

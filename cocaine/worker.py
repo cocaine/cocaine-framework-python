@@ -18,9 +18,11 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+import socket
 
 import sys
 import traceback
+import types
 
 from cocaine.asio import ev
 from cocaine.asio.pipe import Pipe
@@ -56,8 +58,20 @@ class Worker(object):
         self.disown_timer.start()
         self.heartbeat_timer.start()
 
-        self.pipe = Pipe(self.endpoint)
-        self.pipe.connect()
+        if isinstance(self.endpoint, types.TupleType):
+            if len(self.endpoint) == 2:
+                socket_type = socket.AF_INET
+            elif len(self.endpoint) == 4:
+                socket_type = socket.AF_INET6
+            else:
+                raise ValueError('invalid endpoint')
+        elif isinstance(self.endpoint, types.StringType):
+            socket_type = socket.AF_UNIX
+        else:
+            raise ValueError('invalid endpoint')
+        sock = socket.socket(socket_type)
+        self.pipe = Pipe(sock)
+        self.pipe.connect(self.endpoint)
         self.loop.bind_on_fd(self.pipe.fileno())
 
         self.decoder = Decoder()
@@ -111,6 +125,7 @@ class Worker(object):
             return
 
         elif msg.id == message.RPC_INVOKE:
+            #todo: _stream might be referenced
             try:
                 _request = Request()
                 _stream = Stream(msg.session, self, msg.event)

@@ -1,33 +1,28 @@
 import sys
 import logging
-import msgpack
 import socket
 from time import time
 from contextlib import contextmanager
 
-from optparse import OptionParser
+import msgpack
 
-from cocaine.asio.ng.exceptions import *
-from cocaine.asio.ng.pipe import Pipe
-from cocaine.futures.chain import Chain
+from cocaine.exceptions import ServiceError
+from cocaine.asio.exceptions import *
+from cocaine.asio.pipe import Pipe
 from cocaine.asio import message
 from cocaine.asio.message import Message
-from cocaine.exceptions import ServiceError
 from cocaine.asio.stream import Decoder, WritableStream, ReadableStream
-from cocaine.futures import chain, Future
+from cocaine.futures import Future, chain
+from cocaine.futures.chain import Chain
+
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
 log = logging.getLogger(__name__)
 
-parser = OptionParser()
-parser.add_option('--locator-host', default='127.0.0.1')
-parser.add_option('--locator-port', default=10053)
-option, args = parser.parse_args(sys.argv)
-
-LOCATOR_DEFAULT_HOST = option.locator_host
-LOCATOR_DEFAULT_PORT = option.locator_port
+LOCATOR_DEFAULT_HOST = '127.0.0.1'
+LOCATOR_DEFAULT_PORT = 10053
 
 LOCATOR_RESOLVE_METHOD_ID = 0
 
@@ -220,13 +215,17 @@ class Locator(AbstractService):
 
 
 class Service(AbstractService):
-    def __init__(self, name, isBlocking=True):
-        super(Service, self).__init__(name, isBlocking)
-        self.locator = Locator(isBlocking)
-        self.connect = strategy.init(self.connect, isBlocking)
+    def __init__(self, name, blocking_connect=True, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT):
+        super(Service, self).__init__(name, blocking_connect)
+
+        if not blocking_connect and any([host != LOCATOR_DEFAULT_HOST, port != LOCATOR_DEFAULT_PORT]):
+            raise ValueError('you should not specify locator address in __init__ while performing non-blocking connect')
+
+        self.locator = Locator(blocking_connect)
+        self.connect = strategy.init(self.connect, blocking_connect)
         self.api = {}
-        if isBlocking:
-            self.connect()
+        if blocking_connect:
+            self.connect(host, port)
 
     def connect(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, timeout=None):
         """Connect to the service through locator.

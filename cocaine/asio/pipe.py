@@ -1,230 +1,150 @@
-# encoding: utf-8
-#
-#    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
-#    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
-#
-#    This file is part of Cocaine.
-#
-#    Cocaine is free software; you can redistribute it and/or modify
-#    it under the terms of the GNU Lesser General Public License as published
-#    by the Free Software Foundation; either version 3 of the License, or
-#    (at your option) any later version.
-#
-#    Cocaine is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-#    GNU Lesser General Public License for more details.
-#
-#    You should have received a copy of the GNU Lesser General Public License
-#    along with this program. If not, see <http://www.gnu.org/licenses/>.
-#
-
+import errno
+import functools
+import logging
+import os
 import socket
 import fcntl
-import errno
-import types
 import time
-from functools import partial
 
 from cocaine.asio.ev import Loop
-from cocaine.exceptions import AsyncConnectionError
-from cocaine.exceptions import AsyncConnectionTimeoutError
+from cocaine.asio.exceptions import *
+from cocaine.futures.chain import FutureCallableMock
 
-__all__ = ["Pipe"]
+__author__ = 'Evgeny Safronov <division494@gmail.com>'
+
+
+log = logging.getLogger(__name__)
 
 
 class Pipe(object):
+    NOT_CONNECTED, CONNECTING, CONNECTED = range(3)
 
-    def __init__(self, path, on_disconnect_clb=None):
-        if isinstance(path, types.TupleType):
-            self.sock = TCP.get_socket()
-        elif isinstance(path, types.StringType):
-            self.sock = UNIX.get_socket()
-        else:
-            raise Exception("Invalid connection path type")
-        self._connected = False
-        self._connection_failed = False  # Implement states for this
-        self.path = path
-        assert(on_disconnect_clb is None or callable(on_disconnect_clb))
-        self._on_disconnect = on_disconnect_clb or (lambda: None)
+    def __init__(self, sock, ioLoop=None):
+        self.address = None
 
-    def connect(self):
-        while True:
-            try:
-                self.sock.connect(self.path)
-            except socket.error as e:
-                # The specified socket is connection-mode
-                # and is already connected.
-                if e.errno == errno.EISCONN:
-                    break
-                elif e.errno not in (
-                    # O_NONBLOCK is set for the file descriptor for the socket
-                    # and the connection cannot be immediately established;
-                    # the connection shall be established asynchronously.
-                    errno.EINPROGRESS, errno.EAGAIN,
-                    # A connection request is already
-                    # in progress for the specified socket.
-                    errno.EALREADY):
-                    self.sock.close()
-                    raise
-            else:
-                break
-        self.connected = True
+        self.sock = sock
+        self.sock.setblocking(False)
+        if self.sock.type == socket.SOL_TCP:
+            self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        fcntl.fcntl(self.sock.fileno(), fcntl.F_SETFD, fcntl.FD_CLOEXEC)
 
-    def _on_socket_event(self, ioloop, on_connect_callback, istimeout=False, *args):
-        if istimeout:
-            # Called with timeout event.
-            # Check connection state and connection_failed state
-            if not self._connected and not self._connection_failed:
-                if self.is_valid_fd:
-                    # remove fd from event polling
-                    ioloop.stop_listening(self.sock.fileno())
-                    # we can't reuse socket - close it
-                    self.sock.close()
-                # send timeout error as result
-                on_connect_callback(ConnectionResult(AsyncConnectionTimeoutError(self.path)))
-            return
+        self._ioLoop = ioLoop or Loop.instance()
 
-        err = self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
-        if err == 0:
-            # Connect successfully
-            self.connected = True
-            # remove fd from event polling
-            ioloop.stop_listening(self.sock.fileno())
-            # remove handler
-            on_connect_callback(ConnectionResult())
-        elif err not in (errno.EINPROGRESS, errno.EAGAIN, errno.EALREADY):
-            # remove fd from event polling
-            if self.is_valid_fd:
-                ioloop.stop_listening(self.sock.fileno())
-                # we can't reuse socket - close it
-                self.sock.close()
-            self._connection_failed = True
-            # send error as result
-            on_connect_callback(ConnectionResult(AsyncConnectionError(self.path, errno.errorcode[err])))
-
-    def async_connect(self, on_connect_callback, timeout=None, _ioloop=None):
-        ioloop = _ioloop or Loop.instance()
-        self.sock.connect_ex(self.path)
-
-        event_handler = partial(self._on_socket_event,
-                                ioloop,
-                                on_connect_callback)
-
-        ioloop.add_handler(self.sock.fileno(),
-                           partial(event_handler, False),
-                           ioloop.WRITE)
-
-        if timeout is not None:
-            ioloop.add_timeout(time.time() + timeout,
-                               partial(event_handler, True))
-
-    def read(self, buff, size):
-        try:
-            return self.sock.recv_into(buff, size)
-        except socket.error as e:
-            if e.errno in (errno.ECONNRESET, errno.ECONNABORTED, errno.EPIPE):
-                self.connected = False
-                return 0
-            elif e.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
-                return 0
-            else:
-                raise
-
-    def write(self, buff):
-        try:
-            return self.sock.send(buff)
-        except socket.error as e:
-            if e.errno in (errno.EWOULDBLOCK, errno.EAGAIN):
-                return 0
-            else:
-                if e.errno in (errno.ECONNRESET,
-                               errno.ECONNABORTED,
-                               errno.EPIPE):
-                    # log it
-                    self.connected = False
-                self.close()
-                return 0
-
-    def close(self):
-        self.sock.close()
-        #self._connected = False
+        self._state = self.NOT_CONNECTED
+        self._onConnectedDeferred = FutureCallableMock()
+        self._connectionTimeoutTuple = None
 
     def fileno(self):
         return self.sock.fileno()
 
-    @property
-    def is_valid_fd(self):
-        if self.sock is None:
-            return False
+    def isConnected(self):
+        return self._state == self.CONNECTED
+
+    def isConnecting(self):
+        return self._state == self.CONNECTING
+
+    def connect(self, address, timeout=None, blocking=False):
+        if self.isConnecting():
+            return self._onConnectedDeferred
+
+        if self.isConnected():
+            raise IllegalStateError('already connected')
+
+        self._state = self.CONNECTING
+        if blocking:
+            return self._blockingConnect(address, timeout)
+        else:
+            return self._nonBlockingConnect(address, timeout)
+
+    def _blockingConnect(self, address, timeout=None):
         try:
-            self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+            self.sock.settimeout(timeout)
+            self.sock.connect(address)
+            self._state = self.CONNECTED
+        except socket.error as err:
+            if err.errno == errno.ECONNREFUSED:
+                raise ConnectionRefusedError(address)
+            elif err.errno == errno.ETIMEDOUT:
+                raise ConnectionTimeoutError(address, timeout)
+            else:
+                raise ConnectionError(address, err)
+        finally:
+            self.sock.setblocking(False)
+
+    def _nonBlockingConnect(self, address, timeout):
+        try:
+            self.sock.connect(address)
+        except socket.error as err:
+            if err.errno in (errno.EINPROGRESS, errno.EWOULDBLOCK):
+                callback = functools.partial(self._onConnectedCallback, address)
+                self._ioLoop.add_handler(self.sock.fileno(), callback, self._ioLoop.WRITE)
+                if timeout:
+                    start = time.time()
+                    errorback = functools.partial(self._onConnectionTimeout, address)
+                    fd = self._ioLoop.add_timeout(start + timeout, errorback)
+                    self._connectionTimeoutTuple = fd, start, timeout
+            else:
+                log.warning('connect error on fd {0}: {1}'.format(self.sock.fileno(), err))
+                self.close()
+                self._ioLoop.add_callback(lambda: self._onConnectedDeferred.ready(ConnectionError(address, err)))
+        return self._onConnectedDeferred
+
+    def close(self):
+        if self._state != self.NOT_CONNECTED:
+            self._state = self.NOT_CONNECTED
+            self.address = None
+            self.sock.close()
+            self.sock = None
+
+    def _onConnectionTimeout(self, address):
+        if self._connectionTimeoutTuple:
+            fd, start, timeout = self._connectionTimeoutTuple
+            self._ioLoop.remove_timeout(fd)
+            self._connectionTimeoutTuple = None
+            self._ioLoop.stop_listening(self.sock.fileno())
+            self.close()
+            self._onConnectedDeferred.ready(ConnectionTimeoutError(address, timeout))
+
+    def _onConnectedCallback(self, address, fd, event):
+        assert fd == self.sock.fileno(), 'Incoming fd must be socket fd'
+        assert event in (self._ioLoop.WRITE, self._ioLoop.ERROR), 'Event must be either write or error'
+
+        def removeConnectionTimeout():
+            if self._connectionTimeoutTuple:
+                fd, start, timeout = self._connectionTimeoutTuple
+                self._ioLoop.remove_timeout(fd)
+                self._connectionTimeoutTuple = None
+
+        err = self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+        if err == 0:
+            self._state = self.CONNECTED
+            removeConnectionTimeout()
+            self._ioLoop.stop_listening(self.sock.fileno())
+            self._onConnectedDeferred.ready()
+        elif err not in (errno.EINPROGRESS, errno.EAGAIN, errno.EALREADY):
+            self.close()
+            removeConnectionTimeout()
+            self._ioLoop.stop_listening(self.sock.fileno())
+            self._onConnectedDeferred.ready(ConnectionError(address, os.strerror(err)))
+
+    def read(self, buff, size):
+        return self._handle(self.sock.recv_into, buff, size)
+
+    def write(self, buff):
+        return self._handle(self.sock.send, buff)
+
+    def _handle(self, func, *args):
+        try:
+            return func(*args)
         except socket.error as e:
-            if e.errno in (errno.EBADF, errno.ENOTSOCK):
-                return False
-        return True
+            if e.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
+                return 0
+            elif e.errno in (errno.ECONNRESET, errno.ECONNABORTED, errno.EPIPE):
+                self.close()
+                return 0
+            else:
+                raise
 
     @property
     def connected(self):
-        return self._connected
-
-    @connected.setter
-    def connected(self, value):
-        self._connected = value
-        if not value:
-            self._on_disconnect()
-
-    # Next methods are used only perform_sync
-    def writeall(self, buff):
-        """Only for synchronous calls"""
-        return self.sock.sendall(buff)
-
-    def recv(self, length):
-        return self.sock.recv(length)
-
-    def settimeout(self, value):
-        self.sock.settimeout(value)
-
-
-class TCP(object):
-
-    __slots__ = ('get_socket', 'configure')
-
-    @staticmethod
-    def get_socket():
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        TCP.configure(sock)
-        return sock
-
-    @staticmethod
-    def configure(sock):
-        sock.setblocking(0)
-        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        fcntl.fcntl(sock.fileno(), fcntl.F_SETFD, fcntl.FD_CLOEXEC)
-
-
-class UNIX(object):
-
-    __slots__ = ('get_socket', 'configure')
-
-    @staticmethod
-    def get_socket():
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        UNIX.configure(sock)
-        return sock
-
-    @staticmethod
-    def configure(sock):
-        sock.setblocking(0)
-        fcntl.fcntl(sock.fileno(), fcntl.F_SETFD, fcntl.FD_CLOEXEC)
-
-
-class ConnectionResult(object):
-
-    def __init__(self, error=None):
-        if error is not None:
-            def res():
-                raise error
-        else:
-            res = lambda: True
-        setattr(self, "get", res)
+        return self.isConnected()

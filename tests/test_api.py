@@ -1,12 +1,13 @@
 from __future__ import absolute_import
-
 import unittest
-from cocaine.futures.chain import Chain
 import logging
+
 from tornado.testing import AsyncTestCase
+
+from cocaine.futures.chain import Chain
 from cocaine.testing.mocks import ServiceMock, checker
 from cocaine.exceptions import ChokeEvent
-from cocaine.asio.ng.exceptions import TimeoutError
+from cocaine.asio.exceptions import TimeoutError
 
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
