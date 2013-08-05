@@ -71,7 +71,7 @@ class Worker(object):
             raise ValueError('invalid endpoint')
         sock = socket.socket(socket_type)
         self.pipe = Pipe(sock)
-        self.pipe.connect(self.endpoint)
+        self.pipe.connect(self.endpoint, blocking=True)
         self.loop.bind_on_fd(self.pipe.fileno())
 
         self.decoder = Decoder()
