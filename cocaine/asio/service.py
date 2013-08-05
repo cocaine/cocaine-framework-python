@@ -102,10 +102,10 @@ class AbstractService(object):
 
     @property
     def address(self):
-        return self._pipe.address if self.isConnected() else 'unknown'
+        return self._pipe.address if self.isConnected() else ('NOT_CONNECTED', 0)
 
     def isConnecting(self):
-        return self._pipe.isConnecting()
+        return self._pipe is not None and self._pipe.isConnecting()
 
     def isConnected(self):
         return self._pipe is not None and self._pipe.isConnected()
@@ -266,7 +266,7 @@ class Service(AbstractService):
 
     def disconnect(self):
         if not self._pipe:
-            raise IllegalStateError('non connected')
+            return
         self._pipe.close()
         self._pipe = None
 
