@@ -50,10 +50,11 @@ class Remove(Specific):
 
 
 class AddApplication(Specific):
-    def __init__(self, storage, name, app, profile):
+    def __init__(self, storage, name, app, profile, force=False):
         super(AddApplication, self).__init__(storage, name)
         self.app = app
         self.profile = profile
+        self.force = force
         if not self.app:
             raise ValueError('Please specify application name')
         if not self.profile:
@@ -61,18 +62,25 @@ class AddApplication(Specific):
 
     @chain.source
     def execute(self):
+        result = {
+            'runlist': self.name,
+            'status': 'modified',
+            'added': {
+                'app': self.app,
+                'profile': self.profile,
+            }
+        }
+
+        runlists = yield List(self.storage).execute()
+        if self.force and self.name not in runlists:
+            log.debug('Runlist does not exist. Creating new one ...')
+            yield Create(self.storage, self.name).execute()
+            result['status'] = 'created'
+
         runlistInfo = yield View(self.storage, name=self.name).execute()
         runlist = msgpack.loads(runlistInfo)
         log.debug('Found runlist: {0}'.format(runlist))
         runlist[self.app] = self.profile
         runlistUploadAction = Upload(self.storage, name=self.name, runlist=runlist)
         yield runlistUploadAction.execute()
-        result = {
-            'runlist': self.name,
-            'status': 'Success',
-            'added': {
-                'app': self.app,
-                'profile': self.profile,
-            }
-        }
         yield result

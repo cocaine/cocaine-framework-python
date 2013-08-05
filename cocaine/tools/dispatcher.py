@@ -339,7 +339,8 @@ def runlist_remove(locator,
 def runlist_add_app(locator,
                     name=('n', '', 'runlist name'),
                     app=('', '', 'application name'),
-                    profile=('', '', 'suggested profile')):
+                    profile=('', '', 'suggested profile'),
+                    force=('', False, 'create runlist if it is not exist')):
     """Add specified application with profile to the runlist.
 
     Existence of application or profile is not checked.
@@ -347,7 +348,8 @@ def runlist_add_app(locator,
     locator.storageExecutor().executeAction('runlist:add-app', **{
         'name': name,
         'app': app,
-        'profile': profile
+        'profile': profile,
+        'force': force
     })
 
 
