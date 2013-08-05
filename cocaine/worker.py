@@ -58,7 +58,7 @@ class Worker(object):
         self.disown_timer.start()
         self.heartbeat_timer.start()
 
-        if isinstance(self.endpoint, types.TupleType):
+        if isinstance(self.endpoint, types.TupleType) or isinstance(self.endpoint, types.ListType):
             if len(self.endpoint) == 2:
                 socket_type = socket.AF_INET
             elif len(self.endpoint) == 4:
