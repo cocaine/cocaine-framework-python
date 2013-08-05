@@ -60,6 +60,7 @@ class Pipe(object):
         try:
             self.sock.settimeout(timeout)
             self.sock.connect(address)
+            self.address = address
             self._state = self.CONNECTED
         except socket.error as err:
             if err.errno == errno.ECONNREFUSED:
@@ -119,6 +120,7 @@ class Pipe(object):
         err = self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
         if err == 0:
             self._state = self.CONNECTED
+            self.address = address
             removeConnectionTimeout()
             self._ioLoop.stop_listening(self.sock.fileno())
             self._onConnectedDeferred.ready()

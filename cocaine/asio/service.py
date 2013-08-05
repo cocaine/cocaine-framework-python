@@ -30,6 +30,13 @@ class strategy:
         return strategy.sync(func) if isBlocking else strategy.async(func)
 
     @classmethod
+    def blockingBehaviour(cls, func):
+        def wrapper(*args, **kwargs):
+            blocking = kwargs.get('blocking', False)
+            return strategy.init(func, blocking)(*args, **kwargs)
+        return wrapper
+
+    @classmethod
     def sync(cls, func):
         def wrapper(*args, **kwargs):
             coroutine = func(*args, **kwargs)
@@ -77,10 +84,8 @@ class scope(object):
 
 
 class AbstractService(object):
-    def __init__(self, name, isBlocking):
+    def __init__(self, name):
         self.name = name
-        self.isBlocking = isBlocking
-        self._connectToEndpoint = strategy.init(self._connectToEndpoint, isBlocking)
 
         self._pipe = None
         self._ioLoop = None
@@ -105,7 +110,8 @@ class AbstractService(object):
     def isConnected(self):
         return self._pipe is not None and self._pipe.isConnected()
 
-    def _connectToEndpoint(self, host, port, timeout=None):
+    @strategy.blockingBehaviour
+    def _connectToEndpoint(self, host, port, timeout, blocking=False):
         if self.isConnected():
             raise IllegalStateError('service "{0}" is already connected'.format(self.name))
 
@@ -120,11 +126,12 @@ class AbstractService(object):
             try:
                 self._pipe = Pipe(sock)
                 remainingTimeout = timeout - (time() - start) if timeout is not None else None
-                yield self._pipe.connect(address, timeout=remainingTimeout, blocking=self.isBlocking)
+                yield self._pipe.connect(address, timeout=remainingTimeout, blocking=blocking)
             except ConnectionError as err:
                 errors.append(err)
             else:
                 self._ioLoop = self._pipe._ioLoop
+                #todo: Is we REALLY need to reconnect streams instead of creating new ones?
                 self._writableStream = WritableStream(self._ioLoop, self._pipe)
                 self._readableStream = ReadableStream(self._ioLoop, self._pipe)
                 self._ioLoop.bind_on_fd(self._pipe.fileno())
@@ -215,17 +222,17 @@ class AbstractService(object):
 class Locator(AbstractService):
     RESOLVE_METHOD_ID = 0
 
-    def __init__(self, isBlocking):
-        super(Locator, self).__init__('locator', isBlocking)
+    def __init__(self):
+        super(Locator, self).__init__('locator')
         self.api = {
             'resolve': self.RESOLVE_METHOD_ID
         }
 
-    def connect(self, host, port, timeout):
-        return self._connectToEndpoint(host, port, timeout)
+    def connect(self, host, port, timeout, blocking):
+        return self._connectToEndpoint(host, port, timeout, blocking=blocking)
 
-    def resolve(self, name, timeout=None):
-        if self.isBlocking:
+    def resolve(self, name, timeout, blocking):
+        if blocking:
             (endpoint, session, api), = [chunk for chunk in self.perform_sync('resolve', name, timeout=timeout)]
             return endpoint, session, api
         else:
@@ -233,46 +240,39 @@ class Locator(AbstractService):
 
 
 class Service(AbstractService):
-    def __init__(self, name, connectNow=True, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT):
-        super(Service, self).__init__(name, connectNow)
+    def __init__(self, name, blockingConnect=True, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT):
+        super(Service, self).__init__(name)
 
-        if not connectNow and any([host != LOCATOR_DEFAULT_HOST, port != LOCATOR_DEFAULT_PORT]):
+        if not blockingConnect and any([host != LOCATOR_DEFAULT_HOST, port != LOCATOR_DEFAULT_PORT]):
             raise ValueError('you should not specify locator address in __init__ while performing non-blocking connect')
 
-        self.locator = Locator(connectNow)
-        self.connect = strategy.init(self.connect, connectNow)
-        self.reconnect = strategy.init(self.reconnect, connectNow)
-        if connectNow:
-            self.connect(host, port)
+        self.locator = Locator()
+        if blockingConnect:
+            self.connect(host, port, blocking=True)
 
-    def connect(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, timeout=None):
-        """Connect to the service through locator.
-
-        :param host: locator host
-        :param port: locator port
-        :param timeout: timeout
-        """
+    @strategy.blockingBehaviour
+    def connect(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, timeout=None, blocking=False):
         with cumulative(timeout) as timeLeft:
             try:
-                yield self.locator.connect(host, port, timeout=timeLeft())
+                yield self.locator.connect(host, port, timeout=timeLeft(), blocking=blocking)
             except IllegalStateError:
                 # That's ok if locator is already connected.
                 pass
-            endpoint, session, api = yield self.locator.resolve(self.name, timeout=timeLeft())
+            endpoint, session, api = yield self.locator.resolve(self.name, timeout=timeLeft(), blocking=blocking)
             self.api = dict((methodName, methodId) for methodId, methodName in api.items())
-            yield self._connectToEndpoint(*endpoint, timeout=timeLeft())
+            yield self._connectToEndpoint(*endpoint, timeout=timeLeft(), blocking=blocking)
             for methodId, methodName in api.items():
                 setattr(self, methodName, self._invoke(methodId))
 
     def disconnect(self):
         if not self._pipe:
             raise IllegalStateError('non connected')
-
         self._pipe.close()
         self._pipe = None
 
-    def reconnect(self):
+    @strategy.blockingBehaviour
+    def reconnect(self, timeout=None, blocking=False):
         if self.isConnecting():
             raise IllegalStateError('already connecting')
         self.disconnect()
-        yield self.connect()
+        yield self.connect(timeout=timeout, blocking=blocking)

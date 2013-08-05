@@ -57,7 +57,7 @@ def _construct_logger_methods(cls, verbosity_level):
         if _lvl <= verbosity_level:
             def func(data):
                 cls._counter += 1
-                cls._logger.w_stream.write(Message("Message", cls._counter, _lvl,  cls.target, str(data)).pack())
+                cls._logger._writableStream.write(Message("Message", cls._counter, _lvl,  cls.target, str(data)).pack())
             return func
         else:
             def func(data):
