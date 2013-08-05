@@ -23,8 +23,6 @@ log = logging.getLogger(__name__)
 LOCATOR_DEFAULT_HOST = '127.0.0.1'
 LOCATOR_DEFAULT_PORT = 10053
 
-LOCATOR_RESOLVE_METHOD_ID = 0
-
 
 class strategy:
     @classmethod
@@ -94,6 +92,8 @@ class AbstractService(object):
 
         self._subscribers = {}
         self._session = 0
+
+        self.api = {}
 
     @property
     def address(self):
@@ -174,73 +174,6 @@ class AbstractService(object):
             return Chain([lambda: future])
         return wrapper
 
-
-class Locator(AbstractService):
-    def __init__(self, isBlocking):
-        super(Locator, self).__init__('locator', isBlocking)
-
-    def connect(self, host, port, timeout):
-        return self._connectToEndpoint(host, port, timeout)
-
-    def resolve(self, name, timeout=None):
-        if self.isBlocking:
-            return self._blockingResolve(name, timeout)
-        else:
-            return self._nonBlockingResolve(name, timeout)
-
-    def _blockingResolve(self, name, timeout):
-        with scope.socket.timeout(self._pipe.sock, timeout) as sock:
-            self._session += 1
-            sock.send(msgpack.dumps([LOCATOR_RESOLVE_METHOD_ID, self._session, [name]]))
-            unpacker = msgpack.Unpacker()
-            messages = []
-            while True:
-                response = sock.recv(4096)
-                unpacker.feed(response)
-                for msg in unpacker:
-                    msg = Message.initialize(msg)
-                    messages.append(msg)
-                if messages and messages[-1].id == message.RPC_CHOKE:
-                    break
-
-            assert len(messages) == 2, 'protocol is corrupted! Locator must return exactly 2 chunks'
-            chunk, choke = messages
-            if chunk.id == message.RPC_ERROR:
-                raise LocatorResolveError(name, self.address, chunk.message)
-            return msgpack.loads(chunk.data)
-
-    def _nonBlockingResolve(self, name, timeout):
-        return self._invoke(LOCATOR_RESOLVE_METHOD_ID)(name, timeout=timeout)
-
-
-class Service(AbstractService):
-    def __init__(self, name, connectNow=True, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT):
-        super(Service, self).__init__(name, connectNow)
-
-        if not connectNow and any([host != LOCATOR_DEFAULT_HOST, port != LOCATOR_DEFAULT_PORT]):
-            raise ValueError('you should not specify locator address in __init__ while performing non-blocking connect')
-
-        self.locator = Locator(connectNow)
-        self.connect = strategy.init(self.connect, connectNow)
-        self.api = {}
-        if connectNow:
-            self.connect(host, port)
-
-    def connect(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, timeout=None):
-        """Connect to the service through locator.
-
-        :param host: locator host
-        :param port: locator port
-        :param timeout: timeout
-        """
-        with cumulative(timeout) as timeLeft:
-            yield self.locator.connect(host, port, timeout=timeLeft())
-            endpoint, session, api = yield self.locator.resolve(self.name, timeout=timeLeft())
-            self.api = dict((methodName, methodId) for methodId, methodName in api.items())
-            yield self._connectToEndpoint(*endpoint, timeout=timeLeft())
-            for methodId, methodName in api.items():
-                setattr(self, methodName, self._invoke(methodId))
-
     def perform_sync(self, method, *args, **kwargs):
         """Performs synchronous method invocation.
 
@@ -274,3 +207,51 @@ class Service(AbstractService):
                         raise error or StopIteration
                     elif msg.id == message.RPC_ERROR:
                         error = ServiceError(self.name, msg.message, msg.code)
+
+
+class Locator(AbstractService):
+    RESOLVE_METHOD_ID = 0
+
+    def __init__(self, isBlocking):
+        super(Locator, self).__init__('locator', isBlocking)
+        self.api = {
+            'resolve': self.RESOLVE_METHOD_ID
+        }
+
+    def connect(self, host, port, timeout):
+        return self._connectToEndpoint(host, port, timeout)
+
+    def resolve(self, name, timeout=None):
+        if self.isBlocking:
+            (endpoint, session, api), = [chunk for chunk in self.perform_sync('resolve', name, timeout=timeout)]
+            return endpoint, session, api
+        else:
+            return self._invoke(self.RESOLVE_METHOD_ID)(name, timeout=timeout)
+
+
+class Service(AbstractService):
+    def __init__(self, name, connectNow=True, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT):
+        super(Service, self).__init__(name, connectNow)
+
+        if not connectNow and any([host != LOCATOR_DEFAULT_HOST, port != LOCATOR_DEFAULT_PORT]):
+            raise ValueError('you should not specify locator address in __init__ while performing non-blocking connect')
+
+        self.locator = Locator(connectNow)
+        self.connect = strategy.init(self.connect, connectNow)
+        if connectNow:
+            self.connect(host, port)
+
+    def connect(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, timeout=None):
+        """Connect to the service through locator.
+
+        :param host: locator host
+        :param port: locator port
+        :param timeout: timeout
+        """
+        with cumulative(timeout) as timeLeft:
+            yield self.locator.connect(host, port, timeout=timeLeft())
+            endpoint, session, api = yield self.locator.resolve(self.name, timeout=timeLeft())
+            self.api = dict((methodName, methodId) for methodId, methodName in api.items())
+            yield self._connectToEndpoint(*endpoint, timeout=timeLeft())
+            for methodId, methodName in api.items():
+                setattr(self, methodName, self._invoke(methodId))
