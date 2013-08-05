@@ -94,6 +94,7 @@ class Pipe(object):
             return
         self._state = self.NOT_CONNECTED
         self.address = None
+        self._ioLoop.stop_listening(self.sock.fileno())
         self.sock.close()
         self.sock = None
 
@@ -102,7 +103,6 @@ class Pipe(object):
             timeoutId, start, timeout = self._connectionTimeoutTuple
             self._ioLoop.remove_timeout(timeoutId)
             self._connectionTimeoutTuple = None
-            self._ioLoop.stop_listening(self.sock.fileno())
             self.close()
             self._onConnectedDeferred.ready(ConnectionTimeoutError(address, timeout))
 
@@ -125,7 +125,6 @@ class Pipe(object):
         elif err not in (errno.EINPROGRESS, errno.EAGAIN, errno.EALREADY):
             self.close()
             removeConnectionTimeout()
-            self._ioLoop.stop_listening(self.sock.fileno())
             self._onConnectedDeferred.ready(ConnectionError(address, os.strerror(err)))
 
     def read(self, buff, size):

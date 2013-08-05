@@ -99,6 +99,9 @@ class AbstractService(object):
     def address(self):
         return self._pipe.address if self.isConnected() else 'unknown'
 
+    def isConnecting(self):
+        return self._pipe.isConnecting()
+
     def isConnected(self):
         return self._pipe is not None and self._pipe.isConnected()
 
@@ -238,6 +241,7 @@ class Service(AbstractService):
 
         self.locator = Locator(connectNow)
         self.connect = strategy.init(self.connect, connectNow)
+        self.reconnect = strategy.init(self.reconnect, connectNow)
         if connectNow:
             self.connect(host, port)
 
@@ -249,9 +253,26 @@ class Service(AbstractService):
         :param timeout: timeout
         """
         with cumulative(timeout) as timeLeft:
-            yield self.locator.connect(host, port, timeout=timeLeft())
+            try:
+                yield self.locator.connect(host, port, timeout=timeLeft())
+            except IllegalStateError:
+                # That's ok if locator is already connected.
+                pass
             endpoint, session, api = yield self.locator.resolve(self.name, timeout=timeLeft())
             self.api = dict((methodName, methodId) for methodId, methodName in api.items())
             yield self._connectToEndpoint(*endpoint, timeout=timeLeft())
             for methodId, methodName in api.items():
                 setattr(self, methodName, self._invoke(methodId))
+
+    def disconnect(self):
+        if not self._pipe:
+            raise IllegalStateError('non connected')
+
+        self._pipe.close()
+        self._pipe = None
+
+    def reconnect(self):
+        if self.isConnecting():
+            raise IllegalStateError('already connecting')
+        self.disconnect()
+        yield self.connect()
