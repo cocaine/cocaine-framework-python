@@ -160,11 +160,11 @@ class AbstractService(object):
             future = Future()
             timeout = kwargs.get('timeout', None)
             if timeout is not None:
-                fd = self._ioLoop.add_timeout(time() + timeout, lambda: future.error(TimeoutError(timeout)))
+                timeoutId = self._ioLoop.add_timeout(time() + timeout, lambda: future.error(TimeoutError(timeout)))
 
                 def timeoutRemover(func):
                     def wrapper(*args, **kwargs):
-                        self._ioLoop.remove_timeout(fd)
+                        self._ioLoop.remove_timeout(timeoutId)
                         return func(*args, **kwargs)
                     return wrapper
                 future.close = timeoutRemover(future.close)

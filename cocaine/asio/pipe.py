@@ -81,8 +81,8 @@ class Pipe(object):
                 if timeout:
                     start = time.time()
                     errorback = functools.partial(self._onConnectionTimeout, address)
-                    fd = self._ioLoop.add_timeout(start + timeout, errorback)
-                    self._connectionTimeoutTuple = fd, start, timeout
+                    timeoutId = self._ioLoop.add_timeout(start + timeout, errorback)
+                    self._connectionTimeoutTuple = timeoutId, start, timeout
             else:
                 log.warning('connect error on fd {0}: {1}'.format(self.sock.fileno(), err))
                 self.close()
@@ -99,8 +99,8 @@ class Pipe(object):
 
     def _onConnectionTimeout(self, address):
         if self._connectionTimeoutTuple:
-            fd, start, timeout = self._connectionTimeoutTuple
-            self._ioLoop.remove_timeout(fd)
+            timeoutId, start, timeout = self._connectionTimeoutTuple
+            self._ioLoop.remove_timeout(timeoutId)
             self._connectionTimeoutTuple = None
             self._ioLoop.stop_listening(self.sock.fileno())
             self.close()
