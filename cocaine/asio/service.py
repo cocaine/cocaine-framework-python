@@ -110,6 +110,12 @@ class AbstractService(object):
     def isConnected(self):
         return self._pipe is not None and self._pipe.isConnected()
 
+    def disconnect(self):
+        if not self._pipe:
+            return
+        self._pipe.close()
+        self._pipe = None
+
     @strategy.blockingBehaviour
     def _connectToEndpoint(self, host, port, timeout, blocking=False):
         if self.isConnected():
@@ -220,12 +226,14 @@ class AbstractService(object):
 
 
 class Locator(AbstractService):
-    RESOLVE_METHOD_ID = 0
+    RESOLVE_METHOD_ID, SYNC_METHOD_ID, REPORTS_METHOD_ID = range(3)
 
     def __init__(self):
         super(Locator, self).__init__('locator')
         self.api = {
-            'resolve': self.RESOLVE_METHOD_ID
+            'resolve': self.RESOLVE_METHOD_ID,
+            'sync': self.SYNC_METHOD_ID,
+            'reports': self.REPORTS_METHOD_ID,
         }
 
     def connect(self, host, port, timeout, blocking):
@@ -246,29 +254,21 @@ class Service(AbstractService):
         if not blockingConnect and any([host != LOCATOR_DEFAULT_HOST, port != LOCATOR_DEFAULT_PORT]):
             raise ValueError('you should not specify locator address in __init__ while performing non-blocking connect')
 
-        self.locator = Locator()
         if blockingConnect:
             self.connect(host, port, blocking=True)
 
     @strategy.blockingBehaviour
     def connect(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, timeout=None, blocking=False):
         with cumulative(timeout) as timeLeft:
-            try:
-                yield self.locator.connect(host, port, timeout=timeLeft(), blocking=blocking)
-            except IllegalStateError:
-                # That's ok if locator is already connected.
-                pass
-            endpoint, session, api = yield self.locator.resolve(self.name, timeout=timeLeft(), blocking=blocking)
-            self.api = dict((methodName, methodId) for methodId, methodName in api.items())
+            locator = Locator()
+            yield locator.connect(host, port, timeout=timeLeft(), blocking=blocking)
+            endpoint, session, api = yield locator.resolve(self.name, timeout=timeLeft(), blocking=blocking)
             yield self._connectToEndpoint(*endpoint, timeout=timeLeft(), blocking=blocking)
+
+            self.api = dict((methodName, methodId) for methodId, methodName in api.items())
             for methodId, methodName in api.items():
                 setattr(self, methodName, self._invoke(methodId))
-
-    def disconnect(self):
-        if not self._pipe:
-            return
-        self._pipe.close()
-        self._pipe = None
+            locator.disconnect()
 
     @strategy.blockingBehaviour
     def reconnect(self, timeout=None, blocking=False):

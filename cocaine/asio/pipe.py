@@ -146,3 +146,6 @@ class Pipe(object):
                 return 0
             else:
                 raise
+
+    def __del__(self):
+        self.close()
