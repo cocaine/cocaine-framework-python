@@ -1,16 +1,18 @@
 import json
-import msgpack
 import sys
 import errno
 import socket
 from time import time
 
+import msgpack
 from tornado.ioloop import IOLoop
 
+from cocaine.asio.exceptions import ConnectionRefusedError
 from cocaine.tools.actions import common, app, profile, runlist, crashlog
 from cocaine.services import Service
-from cocaine.exceptions import CocaineError, ConnectionRefusedError, ConnectionError, ChokeEvent, ToolsError
+from cocaine.exceptions import CocaineError, ConnectionError, ChokeEvent, ToolsError
 from cocaine.tools.actions.app import LocalUpload
+
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
@@ -299,11 +301,11 @@ class Executor(object):
             return
 
         try:
-            service = Service(self.serviceName, host, port)
+            service = Service(self.serviceName, host=host, port=port)
             options[self.serviceName] = service
         except socket.error as err:
             if err.errno == errno.ECONNREFUSED:
-                raise ConnectionRefusedError(host, port)
+                raise ConnectionRefusedError((host, port))
             else:
                 raise ConnectionError('Unknown connection error: {0}'.format(err))
 

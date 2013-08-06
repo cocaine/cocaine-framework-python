@@ -42,7 +42,7 @@ class Call(object):
             'service': self.serviceName,
         }
         if not self.methodName:
-            api = service._service_api
+            api = service.api
             response['request'] = 'api'
             response['response'] = api
         else:

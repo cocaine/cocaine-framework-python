@@ -1,11 +1,15 @@
 import collections
-from threading import Thread
 import time
 import types
-from tornado.ioloop import IOLoop
-from cocaine.exceptions import ChokeEvent, TimeoutError
-from cocaine.futures import Future
 import logging
+from threading import Thread
+
+from tornado.ioloop import IOLoop
+
+from cocaine.exceptions import ChokeEvent
+from cocaine.asio.exceptions import TimeoutError
+from cocaine.futures import Future
+
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -85,9 +89,12 @@ class FutureCallableMock(Future):
     def isBound(self):
         return any([self.callback, self.errorback])
 
-    def ready(self, result):
+    def ready(self, result=None):
         if not self.isBound():
             return
+
+        if not isinstance(result, FutureResult):
+            result = FutureResult(result)
 
         try:
             log.debug('FutureCallableMock.ready() - {0}({1})'.format(result, repr(result.result)))
@@ -182,6 +189,17 @@ class GeneratorFutureMock(Future):
             chainFuture = FutureCallableMock()
             result.then(lambda r: chainFuture.ready(r))
             future = chainFuture
+        elif hasattr(result, 'add_done_callback'):
+            # Meant to be tornado.concurrent._DummyFuture or python 3.3 concurrent.future.Future
+            tornadoFuture = FutureCallableMock()
+
+            def unwrapResult(result):
+                try:
+                    tornadoFuture.ready(result.result())
+                except Exception as err:
+                    tornadoFuture.ready(err)
+            result.add_done_callback(unwrapResult)
+            future = tornadoFuture
         elif isinstance(result, ConcurrentWorker):
             concurrentFuture = FutureCallableMock()
             result.runBackground(lambda r: concurrentFuture.ready(r))
@@ -332,7 +350,8 @@ class Chain(object):
         self._trackLastResult()
 
         if timeout:
-            self.ioLoop.add_timeout(time.time() + timeout, lambda: self._saveLastResult(FutureResult(TimeoutError())))
+            self.ioLoop.add_timeout(time.time() + timeout,
+                                    lambda: self._saveLastResult(FutureResult(TimeoutError(timeout))))
         self.ioLoop.start()
         self._removeTrackingLastResult()
         return self._getLastResult()

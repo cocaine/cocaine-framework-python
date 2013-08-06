@@ -1,4 +1,5 @@
 import functools
+
 from cocaine.futures.chain import Chain
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'

@@ -18,9 +18,11 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+import socket
 
 import sys
 import traceback
+import types
 
 from cocaine.asio import ev
 from cocaine.asio.pipe import Pipe
@@ -56,8 +58,20 @@ class Worker(object):
         self.disown_timer.start()
         self.heartbeat_timer.start()
 
-        self.pipe = Pipe(self.endpoint)
-        self.pipe.connect()
+        if isinstance(self.endpoint, types.TupleType) or isinstance(self.endpoint, types.ListType):
+            if len(self.endpoint) == 2:
+                socket_type = socket.AF_INET
+            elif len(self.endpoint) == 4:
+                socket_type = socket.AF_INET6
+            else:
+                raise ValueError('invalid endpoint')
+        elif isinstance(self.endpoint, types.StringType):
+            socket_type = socket.AF_UNIX
+        else:
+            raise ValueError('invalid endpoint')
+        sock = socket.socket(socket_type)
+        self.pipe = Pipe(sock)
+        self.pipe.connect(self.endpoint, blocking=True)
         self.loop.bind_on_fd(self.pipe.fileno())
 
         self.decoder = Decoder()
@@ -111,18 +125,18 @@ class Worker(object):
             return
 
         elif msg.id == message.RPC_INVOKE:
+            request = Request()
+            stream = Stream(msg.session, self, msg.event)
             try:
-                _request = Request()
-                _stream = Stream(msg.session, self, msg.event)
-                self.sandbox.invoke(msg.event, _request, _stream)
-                self.sessions[msg.session] = _request
+                self.sandbox.invoke(msg.event, request, stream)
+                self.sessions[msg.session] = request
             except (ImportError, SyntaxError) as err:
-                _stream.error(2, "unrecoverable error: %s " % str(err))
+                stream.error(2, "unrecoverable error: %s " % str(err))
                 self.terminate(1, "Bad code")
             except Exception as err:
                 self._logger.error("On invoke error: %s" % err)
                 traceback.print_stack()
-                _stream.error(1, "Invocation error")
+                stream.error(1, "Invocation error")
 
         elif msg.id == message.RPC_CHUNK:
             self._logger.debug("Receive chunk: %d" % msg.session)

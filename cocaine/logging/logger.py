@@ -20,7 +20,7 @@
 
 import sys
 
-from cocaine.asio.baseservice import BaseService
+from cocaine.asio.service import Service
 from cocaine.logging.log_message import Message
 
 __all__ = ["Logger"]
@@ -57,7 +57,7 @@ def _construct_logger_methods(cls, verbosity_level):
         if _lvl <= verbosity_level:
             def func(data):
                 cls._counter += 1
-                cls._logger.w_stream.write(Message("Message", cls._counter, _lvl,  cls.target, str(data)).pack())
+                cls._logger._writableStream.write(Message("Message", cls._counter, _lvl,  cls.target, str(data)).pack())
             return func
         else:
             def func(data):
@@ -69,29 +69,27 @@ def _construct_logger_methods(cls, verbosity_level):
         setattr(cls, name, closure(level))
 
 
-class _Logger(BaseService):
-
-    def __init__(self, endpoint="localhost", port=10053, init_args=sys.argv):
-        super(_Logger, self).__init__("logging", endpoint, port, init_args)
+class _Logger(Service):
+    def __init__(self):
+        super(_Logger, self).__init__('logging')
 
     def _on_message(self, args):
         pass
 
 
 class Logger(object):
-
     def __new__(cls):
         if not hasattr(cls, "_instance"):
             instance = object.__new__(cls)
             try:
                 _logger = _Logger()
-                for verbosity in _logger.perform_sync("verbosity"): #only one chunk and read choke also.
+                for verbosity in _logger.perform_sync("verbosity"):  # only one chunk and read choke also.
                     pass
                 setattr(instance, "_logger", _logger)
                 try:
                     setattr(instance, "target", "app/%s" % sys.argv[sys.argv.index("--app") + 1])
                 except ValueError:
-                    setattr(instance, "target", "app/%s" % "standalone" )
+                    setattr(instance, "target", "app/%s" % "standalone")
                 _construct_logger_methods(instance, verbosity)
             except Exception as err:
                 instance = _STDERR_Logger()

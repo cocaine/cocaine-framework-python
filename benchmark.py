@@ -3,9 +3,10 @@ from time import time
 import numpy
 import objgraph
 import sys
+import msgpack
+
 from tornado.ioloop import IOLoop, PeriodicCallback
 
-import msgpack
 from cocaine.futures.chain import Chain
 from cocaine.services import Service
 

@@ -20,21 +20,13 @@
 #
 
 import array
-import collections
-from threading import Lock
 
 import msgpack
+from cocaine.asio.exceptions import IllegalStateError
 
 from cocaine.utils import weakmethod
 
 START_CHUNK_SIZE = 10240
-
-
-def encode_dec(f):
-    def wrapper(self, data):
-        encode = msgpack.packb(data)
-        return f(self, encode, len(encode))
-    return wrapper
 
 
 class Decoder(object):
@@ -42,16 +34,20 @@ class Decoder(object):
         self.callback = None
 
     def bind(self, callback):
-        assert callable(callback)
+        assert callable(callback), 'callback argument must be callable'
         self.callback = callback
 
-    def decode(self, buffer):
-        """
-         buffer is msgpack.Unpacker (stream unpacker)
-        """
-        # if not enough data - 0 iterations
-        for res in buffer:
-            self.callback(res)
+    def decode(self, unpacker):
+        for chunk in unpacker:
+            self.callback(chunk)
+
+
+def ensureConnected(func):
+    def wrapper(self, *args, **kwargs):
+        if not self.pipe:
+            raise IllegalStateError('pipe is not connected')
+        func(self, *args, **kwargs)
+    return wrapper
 
 
 class ReadableStream(object):
@@ -64,36 +60,38 @@ class ReadableStream(object):
 
         self.buffer = msgpack.Unpacker()
         self.tmp_buff = array.array('c', '\0' * START_CHUNK_SIZE)
-        self.mutex = Lock()
 
+    @ensureConnected
     def bind(self, callback):
-        assert callable(callback)
+        assert callable(callback), 'callback argument must be callable'
         self.callback = callback
         self.is_attached = self.loop.register_read_event(self._on_event, self.pipe.fileno())
 
+    @ensureConnected
     def unbind(self):
         self.callback = None
         if self.is_attached:
             self.loop.unregister_read_event(self.pipe.fileno())
 
     @weakmethod
+    @ensureConnected
     def _on_event(self):
-        with self.mutex:
-            # Bad solution. On python 2.7 and higher - use memoryview and bytearray
-            length = self.pipe.read(self.tmp_buff, self.tmp_buff.buffer_info()[1])
+        # Bad solution. On python 2.7 and higher - use memoryview and bytearray
+        length = self.pipe.read(self.tmp_buff, self.tmp_buff.buffer_info()[1])
 
-            if length <= 0:
-                if length == 0:  # Remote side has closed connection
-                    self.pipe.connected = False
-                    self.loop.stop_listening(self.pipe.fileno())
-                return
+        if length <= 0:
+            if length == 0:
+                # Remote side has closed connection
+                self.loop.stop_listening(self.pipe.fileno())
+                self.pipe = None
+            return
 
-            self.buffer.feed(self.tmp_buff[:length])
-            self.callback(self.buffer)
+        self.buffer.feed(self.tmp_buff[:length])
+        self.callback(self.buffer)
 
-            # Enlarge buffer if messages are big
-            if self.tmp_buff.buffer_info()[1] == length:
-                self.tmp_buff *= 2
+        # Enlarge buffer if it is not large enough
+        if self.tmp_buff.buffer_info()[1] == length:
+            self.tmp_buff *= 2
 
     def reconnect(self, pipe):
         self.pipe = pipe
@@ -134,12 +132,11 @@ class WritableStream(object):
                 self._buffer.pop(0)
                 self.tx_offset = 0
 
-    @encode_dec
-    def write(self, data, size):
-        self._buffer.append(data)
+    def write(self, data):
+        self._buffer.append(msgpack.dumps(data))
         self._on_event()
 
-        if not self.is_attached and self.pipe.connected:
+        if not self.is_attached and self.pipe.isConnected():
             self.loop.register_write_event(self._on_event, self.pipe.fileno())
             self.is_attached = True
 

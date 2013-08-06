@@ -19,7 +19,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-__all__ = ["ServiceError", "RequestError", "LocatorResolveError", "ConnectionRefusedError"]
+__all__ = ["ServiceError", "RequestError"]
 
 
 class CocaineError(Exception):
@@ -27,81 +27,40 @@ class CocaineError(Exception):
     pass
 
 
-class TimeoutError(CocaineError):
-    pass
-
-
 class RequestError(CocaineError):
     """Exception raised when u try to request chunks from closed request """
-
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __repr__(self):
-        return "RequestError: %s" % self.msg
-
-    def __str__(self):
-        return "RequestError: %s" % self.msg
+    def __init__(self, reason):
+        super(RequestError, self).__init__('request error - {0}'.format(reason))
 
 
 class ServiceError(CocaineError):
     """Exception raised when error message is received from service"""
-
-    def __init__(self, servicename, msg, code):
-        self.servicename = servicename
-        self.msg = msg
-        self.code = code
-
-    def __repr__(self):
-        return "ServiceException [%d] %s: %s" % (self.code, self.servicename, self.msg)
-
-    def __str__(self):
-        return "ServiceException [%d] %s: %s" % (self.code, self.servicename, self.msg)
+    def __init__(self, servicename, reason, code):
+        super(ServiceError, self).__init__('error in service "{0}" - {1} [{2}]'.format(servicename, reason, code))
 
 
-class LocatorResolveError(CocaineError):
-    """Raises when `get_api` method failed """
-
-    def __init__(self, servicename, host, port, reason=""):
-        self.message = "Unable to resolve API for service\
-        %s at %s:%d, because %s" % (servicename, host, port, reason) 
-
-    def __str__(self):
-        return "LocatorResolveError: %s" % self.message
-
-    def __repr__(self):
-        return self.__str__()
-
-
-class ConnectionError(CocaineError):
+class ConnectionError(Exception):
     pass
 
 
-class ConnectionRefusedError(ConnectionError):
-
-    def __init__(self, host, port):
-        message = 'Invalid cocaine-runtime endpoint: {host}:{port}'.format(host=host, port=port)
-        super(ConnectionRefusedError, self).__init__(message)
-
-
 class AsyncConnectionTimeoutError(ConnectionError):
-
     def __init__(self, path):
         message = 'TimeOutError: {endpoint}'.format(endpoint=path)
         super(AsyncConnectionTimeoutError, self).__init__(message)
 
 
 class AsyncConnectionError(ConnectionError):
-
     def __init__(self, path, errcode):
         message = 'ConnectionError: {endpoint} {error}'.format(endpoint=path, error=errcode)
         super(AsyncConnectionError, self).__init__(message)
 
 
+############ PROTOCOL ############
 class ChokeEvent(Exception):
     pass
 
 
+############ COCAINE TOOL ERRORS ############
 class ToolsError(CocaineError):
     pass
 
@@ -112,7 +71,4 @@ class UploadError(ToolsError):
 
 class ServiceCallError(ToolsError):
     def __init__(self, serviceName, reason):
-        self.message = 'Error in service "{0}" - {1}'.format(serviceName, reason)
-
-    def __str__(self):
-        return self.message
+        super(ServiceCallError, self).__init__('error in service "{0}" - {1}'.format(serviceName, reason))

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Description of cocaine-tool"""
 import sys
+
 from cocaine.tools.cli import coloredOutput, ToolsError, printError
 from cocaine.tools.dispatcher import d
 

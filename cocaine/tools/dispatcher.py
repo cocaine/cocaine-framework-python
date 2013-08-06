@@ -11,7 +11,7 @@ DEFAULT_HOST = 'localhost'
 DEFAULT_PORT = 10053
 
 
-class Locator(object):
+class Global(object):
     options = [
         ('h', 'host', DEFAULT_HOST, 'hostname'),
         ('p', 'port', DEFAULT_PORT, 'port'),
@@ -68,16 +68,16 @@ def middleware(func):
         opts = extract_dict(kwargs, 'host', 'port', 'color', 'timeout', 'debug')
         if func.__name__ == 'help_inner':
             return func(*args, **kwargs)
-        locator = Locator(**opts)
+        locator = Global(**opts)
         return func(locator, *args, **kwargs)
     return inner
 
 
-d = Dispatcher(globaloptions=Locator.options, middleware=middleware)
-appDispatcher = Dispatcher(globaloptions=Locator.options, middleware=middleware)
-profileDispatcher = Dispatcher(globaloptions=Locator.options, middleware=middleware)
-runlistDispatcher = Dispatcher(globaloptions=Locator.options, middleware=middleware)
-crashlogDispatcher = Dispatcher(globaloptions=Locator.options, middleware=middleware)
+d = Dispatcher(globaloptions=Global.options, middleware=middleware)
+appDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
+profileDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
+runlistDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
+crashlogDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
 
 
 @d.command()

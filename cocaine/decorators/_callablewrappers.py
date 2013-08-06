@@ -25,9 +25,9 @@ from abc import ABCMeta, abstractmethod
 import compiler
 import traceback
 
+from cocaine.exceptions import ChokeEvent
 from cocaine.logging.log import core_log
 from cocaine.futures.chain import Chain
-from cocaine.exceptions import ChokeEvent
 
 
 class _Proxy(object):

@@ -1,11 +1,12 @@
 import datetime
-import time
 import sys
+import logging
+
 from tornado.ioloop import IOLoop
+
 from cocaine.exceptions import ChokeEvent
 from cocaine.futures import Future
 from cocaine.futures.chain import Chain
-import logging
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 

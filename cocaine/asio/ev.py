@@ -41,6 +41,8 @@ class Loop(object):
         self.WRITE = self._ioloop.WRITE
         self.add_handler = self._ioloop.add_handler
         self.add_timeout = self._ioloop.add_timeout
+        self.remove_timeout = self._ioloop.remove_timeout
+        self.add_callback = self._ioloop.add_callback
 
     @staticmethod
     def instance():
