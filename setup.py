@@ -32,7 +32,7 @@ try:
         _version = re.findall(r"\(([^)]*)\)", f.readline())[0]
         print("Find version %s in debian/changelog" % _version)
 except Exception:
-    _version = "0.10.5"
+    _version = "0.10.6.0"
 
 if "--without-tools" in sys.argv:
     tools_requires = []

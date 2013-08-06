@@ -1,3 +1,15 @@
+cocaine-framework-python (0.10.6.0) unstable; urgency=low
+  
+  * IPV6 support
+  * Basic `tornado.concurrent.Future` and python 3.3 `concurrent.futures.Future` support
+  * Add timeout for asynchronous operations
+  * Service can now be completely defined asynchronously
+  * Asynchronous testing support
+  * Runlist modifying tool can now create runlist if it isn't exist by specifying --force option.
+  * Adapt http decorator to new format
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 06 Aug 2013 17:42:28 +0400
+
 cocaine-framework-python (0.10.5.6) unstable; urgency=low
 
   * Improve support of chain idiom
