@@ -246,7 +246,9 @@ def app_restart(locator,
     """
     locator.nodeExecutor().executeAction('app:restart', **{
         'name': name,
-        'profile': profile
+        'profile': profile,
+        'host': locator.config['host'],
+        'port': locator.config['port']
     })
 
 
@@ -255,7 +257,9 @@ def check(locator,
           name=('n', '', 'application name')):
     """Checks application status."""
     locator.nodeExecutor().executeAction('app:check', **{
-        'name': name
+        'name': name,
+        'host': locator.config['host'],
+        'port': locator.config['port']
     })
 
 
