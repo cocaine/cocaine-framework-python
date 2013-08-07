@@ -86,7 +86,10 @@ def info(locator):
 
     Return json-like string with information about cocaine-runtime.
     """
-    locator.nodeExecutor().executeAction('info', **{})
+    locator.nodeExecutor().executeAction('info', **{
+        'host': locator.config['host'],
+        'port': locator.config['port']
+    })
 
 
 @d.command(usage='SERVICE [METHOD ["ARGS"]]')

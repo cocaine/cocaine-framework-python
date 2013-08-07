@@ -17,6 +17,11 @@ class Node(object):
 
 
 class NodeInfo(Node):
+    def __init__(self, node=None, host='127.0.0.1', port=10053):
+        super(NodeInfo, self).__init__(node)
+        self.host = host
+        self.port = port
+
     @chain.source
     def execute(self):
         apps = yield self.node.list()
@@ -24,7 +29,7 @@ class NodeInfo(Node):
         for app in apps:
             info = ''
             try:
-                s = Service(app)
+                s = Service(app, host=self.host, port=self.port)
                 info = yield s.info()
             except Exception as err:
                 info = err

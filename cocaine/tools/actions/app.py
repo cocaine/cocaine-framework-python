@@ -130,6 +130,7 @@ class Restart(common.Node):
     @chain.source
     def execute(self):
         try:
+            #todo: pass locator host & port
             info = yield NodeInfo(self.node).execute()
             profile = self.profile or info['apps'][self.name]['profile']
             appStopStatus = yield Stop(self.node, name=self.name).execute()
@@ -152,6 +153,7 @@ class Check(common.Node):
     def execute(self):
         state = 'stopped or missing'
         try:
+            #todo: pass locator host & port
             info = yield NodeInfo(self.node).execute()
             apps = info['apps']
             app = apps[self.name]
