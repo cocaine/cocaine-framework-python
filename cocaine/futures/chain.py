@@ -49,6 +49,7 @@ class FutureResult(object):
 
 
 class PreparedFuture(Future):
+    #todo: docs
     def __init__(self, result, ioLoop=None):
         super(PreparedFuture, self).__init__()
         self.result = result
@@ -71,6 +72,7 @@ class PreparedFuture(Future):
 
 
 class Deferred(Future):
+    #todo: docs
     def __init__(self):
         super(Deferred, self).__init__()
         self.unbind()
@@ -227,6 +229,7 @@ class ChainItem(object):
             future.bind(self.callback, self.errorback)
         except (AssertionError, AttributeError, TypeError):
             # Rethrow programming errors
+            #todo: save and transfer stack context
             raise
         except Exception as err:
             self.errorback(err)
@@ -238,7 +241,6 @@ class ChainItem(object):
             # Actually it does not matter if we invoke next chain item synchronously or not. But for convenience, let's
             # do it asynchronously.
             self.ioLoop.add_callback(self.nextChainItem.execute, futureResult)
-            # self.nextChainItem.execute(futureResult)
 
     def errorback(self, error):
         self.callback(error)
