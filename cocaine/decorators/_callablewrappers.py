@@ -90,8 +90,7 @@ class _Coroutine(_Proxy):
                                      str(err)))
         finally:
             if not self._response.closed:
-                self._logger.error("Handler for %s didn't close response stream" % self._response.event)
-                self._response.close()
+                self._logger.info("Handler for %s didn't close response stream" % self._response.event)
 
 
     def close(self):
