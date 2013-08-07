@@ -48,9 +48,9 @@ class FutureResult(object):
             return result
 
 
-class FutureMock(Future):
+class PreparedFuture(Future):
     def __init__(self, result, ioLoop=None):
-        super(FutureMock, self).__init__()
+        super(PreparedFuture, self).__init__()
         self.result = result
         self.ioLoop = ioLoop or IOLoop.instance()
         self._bound = False
@@ -70,9 +70,9 @@ class FutureMock(Future):
         return
 
 
-class FutureCallableMock(Future):
+class Deferred(Future):
     def __init__(self):
-        super(FutureCallableMock, self).__init__()
+        super(Deferred, self).__init__()
         self.unbind()
 
     def bind(self, callback, errorback=None, on_done=None):
@@ -181,26 +181,26 @@ class GeneratorFutureMock(Future):
         if isinstance(result, Future):
             future = result
         elif isinstance(result, Chain):
-            chainFuture = FutureCallableMock()
-            result.then(lambda r: chainFuture.ready(r))
-            future = chainFuture
+            deferred = Deferred()
+            result.then(lambda r: deferred.ready(r))
+            future = deferred
         elif hasattr(result, 'add_done_callback'):
             # Meant to be tornado.concurrent._DummyFuture or python 3.3 concurrent.future.Future
-            tornadoFuture = FutureCallableMock()
+            deferred = Deferred()
 
             def unwrapResult(result):
                 try:
-                    tornadoFuture.ready(result.result())
+                    deferred.ready(result.result())
                 except Exception as err:
-                    tornadoFuture.ready(err)
+                    deferred.ready(err)
             result.add_done_callback(unwrapResult)
-            future = tornadoFuture
+            future = deferred
         elif isinstance(result, ConcurrentWorker):
-            concurrentFuture = FutureCallableMock()
-            result.runBackground(lambda r: concurrentFuture.ready(r))
-            future = concurrentFuture
+            deferred = Deferred()
+            result.runBackground(lambda r: deferred.ready(r))
+            future = deferred
         else:
-            future = FutureMock(result, ioLoop=self.ioLoop)
+            future = PreparedFuture(result, ioLoop=self.ioLoop)
         self.__log.debug('W - %s -> %s', repr(result), repr(future))
         return future
 
@@ -222,7 +222,7 @@ class ChainItem(object):
             elif isinstance(future, types.GeneratorType):
                 future = GeneratorFutureMock(future, ioLoop=self.ioLoop)
             else:
-                future = FutureMock(future, ioLoop=self.ioLoop)
+                future = PreparedFuture(future, ioLoop=self.ioLoop)
             self.__log.debug('%d: Binding future %s', id(self), repr(future))
             future.bind(self.callback, self.errorback)
         except (AssertionError, AttributeError, TypeError):

@@ -8,7 +8,7 @@ import time
 
 from cocaine.asio.ev import Loop
 from cocaine.asio.exceptions import *
-from cocaine.futures.chain import FutureCallableMock
+from cocaine.futures.chain import Deferred
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -31,7 +31,7 @@ class Pipe(object):
         self._ioLoop = ioLoop or Loop.instance()
 
         self._state = self.NOT_CONNECTED
-        self._onConnectedDeferred = FutureCallableMock()
+        self._onConnectedDeferred = Deferred()
         self._connectionTimeoutTuple = None
 
     def fileno(self):
