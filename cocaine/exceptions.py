@@ -38,7 +38,7 @@ class ServiceError(CocaineError):
     def __init__(self, servicename, reason, code):
         self.servicename = servicename
         self.code = code
-        self.reason = reason
+        self.msg = reason
         super(ServiceError, self).__init__('error in service "{0}" - {1} [{2}]'.format(servicename, reason, code))
 
 
