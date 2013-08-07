@@ -1,3 +1,9 @@
+cocaine-framework-python (0.10.6.1) unstable; urgency=low
+
+  * fix fd leak in locator
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 07 Aug 2013 16:05:28 +0400
+
 cocaine-framework-python (0.10.6.0) unstable; urgency=low
   
   * IPV6 support
