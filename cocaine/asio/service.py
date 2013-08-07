@@ -147,7 +147,7 @@ class AbstractService(object):
         if timeout is not None and time() - start > timeout:
             raise ConnectionTimeoutError((host, port), timeout)
 
-        reason = 'multiple connection errors: ' + ', '.join(err.message for err in errors)
+        reason = 'multiple connection errors: ' + ', '.join(str(err) for err in errors)
         raise ConnectionError((host, port), reason)
 
     def _on_message(self, args):
