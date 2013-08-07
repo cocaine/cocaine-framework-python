@@ -10,6 +10,7 @@ from cocaine.exceptions import ToolsError
 from cocaine.futures import chain
 from cocaine.tools import actions, log
 from cocaine.tools.actions import common, readArchive, CocaineConfigReader
+from cocaine.tools.actions.common import NodeInfo
 from cocaine.tools.installer import PythonModuleInstaller, ModuleInstallError, _locateFile
 from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
 from cocaine.tools.tags import APPS_TAGS
@@ -129,7 +130,7 @@ class Restart(common.Node):
     @chain.source
     def execute(self):
         try:
-            info = yield self.node.info()
+            info = yield NodeInfo(self.node).execute()
             profile = self.profile or info['apps'][self.name]['profile']
             appStopStatus = yield Stop(self.node, name=self.name).execute()
             appStartStatus = yield Start(self.node, name=self.name, profile=profile).execute()
@@ -151,7 +152,7 @@ class Check(common.Node):
     def execute(self):
         state = 'stopped or missing'
         try:
-            info = yield self.node.info()
+            info = yield NodeInfo(self.node).execute()
             apps = info['apps']
             app = apps[self.name]
             state = app['state']

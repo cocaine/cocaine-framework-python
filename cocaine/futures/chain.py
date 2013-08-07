@@ -14,9 +14,6 @@ from cocaine.futures import Future
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-log = logging.getLogger(__name__)
-
-
 class FutureResult(object):
     """
     Represents future result and provides methods to obtain this result, manipulate or reset.
@@ -97,11 +94,9 @@ class FutureCallableMock(Future):
             result = FutureResult(result)
 
         try:
-            log.debug('FutureCallableMock.ready() - {0}({1})'.format(result, repr(result.result)))
             result = result.get()
             self.callback(result)
         except Exception as err:
-            log.debug('FutureCallableMock.ready() Error - {0})'.format(repr(err)))
             if self.errorback:
                 self.errorback(err)
 
@@ -138,6 +133,7 @@ class GeneratorFutureMock(Future):
         self.ioLoop = ioLoop or IOLoop.instance()
         self._currentFuture = None
         self._results = collections.deque(maxlen=1)
+        self.__log = logging.getLogger(self.__module__ + '.' + self.__class__.__name__)
 
     def bind(self, callback, errorback=None, on_done=None):
         self.callback = callback
@@ -150,20 +146,19 @@ class GeneratorFutureMock(Future):
             future = self._wrapFuture(result)
 
             if result is not None:
-                log.debug('GeneratorFutureMock.advance() - Binding future {0} instead of {1}'.format(
-                    future, self._currentFuture))
+                self.__log.debug('A - Binding future %s instead of %s', repr(future), repr(self._currentFuture))
                 future.bind(self.advance, self.advance)
                 if self._currentFuture:
                     self._currentFuture.unbind()
                 self._currentFuture = future
         except StopIteration:
-            log.debug('GeneratorFutureMock.advance() - StopIteration caught. Value - {0}'.format(repr(value)))
+            self.__log.debug('A - StopIteration caught. Value - %s', repr(value))
             self.callback(value)
         except ChokeEvent as err:
-            log.debug('GeneratorFutureMock.advance() - ChokeEvent caught. Value - {0}'.format(repr(value)))
+            self.__log.debug('A - ChokeEvent caught. Value - %s', repr(value))
             self.errorback(err)
         except Exception as err:
-            log.debug('GeneratorFutureMock.advance - Error: {0}'.format(repr(err)))
+            self.__log.debug('A - Error: %s', repr(err))
             if self._currentFuture and self._currentFuture.isBound():
                 self._currentFuture.unbind()
             self.errorback(err)
@@ -179,7 +174,7 @@ class GeneratorFutureMock(Future):
         else:
             result = self.coroutine.send(value)
         self._results.append(result)
-        log.debug('GeneratorFutureMock._next() - {0} -> {1}'.format(repr(value), repr(result)))
+        self.__log.debug('N - %s -> %s', repr(value), repr(result))
         return result
 
     def _wrapFuture(self, result):
@@ -206,7 +201,7 @@ class GeneratorFutureMock(Future):
             future = concurrentFuture
         else:
             future = FutureMock(result, ioLoop=self.ioLoop)
-        log.debug('GeneratorFutureMock._wrap() - {0} -> {1}'.format(result, future))
+        self.__log.debug('W - %s -> %s', repr(result), repr(future))
         return future
 
 
@@ -215,21 +210,20 @@ class ChainItem(object):
         self.func = func
         self.ioLoop = ioLoop or IOLoop.instance()
         self.nextChainItem = None
-        self.log = logging.getLogger(self.__module__ + '.' + self.__class__.__name__)
+        self.__log = logging.getLogger(self.__module__ + '.' + self.__class__.__name__)
 
     def execute(self, *args, **kwargs):
         try:
-            self.log.debug('{0:x} : Executing {1} with {2}'.format(id(self), self.func,
-                                                                   [repr(arg.result) for arg in args]))
+            self.__log.debug('%d: Executing "%s" with "%s" ...', id(self), self.func, repr(args))
             future = self.func(*args, **kwargs)
-            self.log.debug('{0:x}: Execution done. Received - {2}'.format(id(self), self.func, future))
+            self.__log.debug('%d: Execution done. Received - %s', id(self), repr(future))
             if isinstance(future, Future):
                 pass
             elif isinstance(future, types.GeneratorType):
                 future = GeneratorFutureMock(future, ioLoop=self.ioLoop)
             else:
                 future = FutureMock(future, ioLoop=self.ioLoop)
-            self.log.debug('{0:x}: Binding future {1}'.format(id(self), future))
+            self.__log.debug('%d: Binding future %s', id(self), repr(future))
             future.bind(self.callback, self.errorback)
         except (AssertionError, AttributeError, TypeError):
             # Rethrow programming errors
@@ -238,7 +232,7 @@ class ChainItem(object):
             self.errorback(err)
 
     def callback(self, chunk):
-        self.log.debug('{0:x}: ChainItem.callback - {1}'.format(id(self), repr(chunk)))
+        self.__log.debug('%d: ChainItem.callback - %s', id(self), repr(chunk))
         futureResult = FutureResult(chunk)
         if self.nextChainItem:
             # Actually it does not matter if we invoke next chain item synchronously or not. But for convenience, let's
@@ -247,7 +241,6 @@ class ChainItem(object):
             # self.nextChainItem.execute(futureResult)
 
     def errorback(self, error):
-        self.log.debug('{0:x}: ChainItem.errorback - {1}'.format(id(self), repr(error)))
         self.callback(error)
 
 
@@ -278,7 +271,7 @@ class Chain(object):
         if not functions:
             functions = []
         self.ioLoop = ioLoop or IOLoop.instance()
-        self.log = logging.getLogger(self.__module__ + '.' + self.__class__.__name__)
+        self.__log = logging.getLogger(self.__module__ + '.' + self.__class__.__name__)
         self.chainItems = []
         for func in functions:
             self.then(func)
@@ -298,14 +291,14 @@ class Chain(object):
                      if specified function is not the chunk source. If function is chunk source (i.e. service execution
                      method) than there is no parameters must be provided in function signature.
         """
-        self.log.debug('Adding function "{0}" to the chain'.format(func))
+        self.__log.debug('Adding function "%s" to the chain', repr(func))
         chainItem = ChainItem(func, self.ioLoop)
 
         if len(self.chainItems) == 0:
-            self.log.debug('Executing first chain item asynchronously - {0}'.format(chainItem))
+            self.__log.debug('Executing first chain item asynchronously - %s ...', repr(chainItem))
             self.ioLoop.add_callback(chainItem.execute)
         else:
-            self.log.debug('Coupling {0} to {1}'.format(chainItem, self.chainItems[-1]))
+            self.__log.debug('Coupling %s to %s', repr(chainItem), repr(self.chainItems[-1]))
             self.chainItems[-1].nextChainItem = chainItem
 
         self.chainItems.append(chainItem)
@@ -403,7 +396,7 @@ class Chain(object):
 
     def _checkTimeout(self, timeout):
         if timeout is not None and timeout < 0.001:
-            raise ValueError('Timeout can not be less then 1 ms')
+            raise ValueError('timeout can not be less then 1 ms')
 
     def _trackLastResult(self):
         if not self._isTrackingForLastResult():
