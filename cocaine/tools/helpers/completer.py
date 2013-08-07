@@ -57,4 +57,4 @@ if __name__ == '__main__':
     except Exception as err:
         # Hidden log feature :)
         with open(os.devnull, 'w') as fh:
-            fh.write(err.message)
+            fh.write(str(err))
