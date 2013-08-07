@@ -17,8 +17,23 @@ class Node(object):
 
 
 class NodeInfo(Node):
+    @chain.source
     def execute(self):
-        return self.node.info()
+        apps = yield self.node.list()
+        appsInfo = {}
+        for app in apps:
+            info = ''
+            try:
+                s = Service(app)
+                info = yield s.info()
+            except Exception as err:
+                info = err
+            finally:
+                appsInfo[app] = info
+        result = {
+            'apps': appsInfo
+        }
+        yield result
 
 
 class Call(object):
