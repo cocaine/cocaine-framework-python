@@ -78,11 +78,9 @@ class _Coroutine(_Proxy):
         try:
             res.get()
         except ChokeEvent:
-            if not self._response.closed:
-                self._logger.error("Handler for %s didn't close response stream" % self._response.event)
+            pass
         except StopIteration:
-            if not self._response.closed:
-                self._logger.error("Handler for %s didn't close response stream" % self._response.event)
+            pass
         except Exception as err:
             self._logger.error(repr(err))
             traceback.print_stack()
@@ -90,6 +88,11 @@ class _Coroutine(_Proxy):
                 self._response.error(1, "Error in event '%s' handler %s" %
                                      (self._response.event,
                                      str(err)))
+        finally:
+            if not self._response.closed:
+                self._logger.error("Handler for %s didn't close response stream" % self._response.event)
+                self._response.close()
+
 
     def close(self):
         self._state = None
