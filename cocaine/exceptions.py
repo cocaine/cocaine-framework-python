@@ -36,6 +36,9 @@ class RequestError(CocaineError):
 class ServiceError(CocaineError):
     """Exception raised when error message is received from service"""
     def __init__(self, servicename, reason, code):
+        self.servicename = servicename
+        self.code = code
+        self.reason = reason
         super(ServiceError, self).__init__('error in service "{0}" - {1} [{2}]'.format(servicename, reason, code))
 
 
