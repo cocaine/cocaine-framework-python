@@ -109,7 +109,7 @@ class Pipe(object):
 
     def _onConnectedCallback(self, address, fd, event):
         assert fd == self.sock.fileno(), 'Incoming fd must be socket fd'
-        assert event in (self._ioLoop.WRITE, self._ioLoop.ERROR), 'Event must be either write or error'
+        assert (event & self._ioLoop.WRITE) or (event & self._ioLoop.ERROR), 'Event must be either write or error'
 
         def removeConnectionTimeout():
             if self._connectionTimeoutTuple:
