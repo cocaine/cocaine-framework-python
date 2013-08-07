@@ -261,14 +261,16 @@ class Service(AbstractService):
     def connect(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, timeout=None, blocking=False):
         with cumulative(timeout) as timeLeft:
             locator = Locator()
-            yield locator.connect(host, port, timeout=timeLeft(), blocking=blocking)
-            endpoint, session, api = yield locator.resolve(self.name, timeout=timeLeft(), blocking=blocking)
-            yield self._connectToEndpoint(*endpoint, timeout=timeLeft(), blocking=blocking)
+            try:
+                yield locator.connect(host, port, timeout=timeLeft(), blocking=blocking)
+                endpoint, session, api = yield locator.resolve(self.name, timeout=timeLeft(), blocking=blocking)
+                yield self._connectToEndpoint(*endpoint, timeout=timeLeft(), blocking=blocking)
 
-            self.api = dict((methodName, methodId) for methodId, methodName in api.items())
-            for methodId, methodName in api.items():
-                setattr(self, methodName, self._invoke(methodId))
-            locator.disconnect()
+                self.api = dict((methodName, methodId) for methodId, methodName in api.items())
+                for methodId, methodName in api.items():
+                    setattr(self, methodName, self._invoke(methodId))
+            finally:
+                locator.disconnect()
 
     @strategy.blockingBehaviour
     def reconnect(self, timeout=None, blocking=False):
