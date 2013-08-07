@@ -1,8 +1,9 @@
-cocaine-framework-python (0.10.6.3) unstable; urgency=low
+cocaine-framework-python (0.10.6.4) unstable; urgency=low
 
+  * Fix tools
   * Don't close response stream if event handler didn't close it. 
 
- -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 07 Aug 2013 18:21:24 +0400
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 07 Aug 2013 18:27:54 +0400
 
 cocaine-framework-python (0.10.6.2) unstable; urgency=low
 
