@@ -1,23 +1,19 @@
 #!/usr/bin/env python
 """Description of cocaine-tool"""
-import sys
-
-from cocaine.tools.cli import coloredOutput, ToolsError, printError
+import logging
+from cocaine.tools.cli import ToolsError
 from cocaine.tools.dispatcher import d
 
+log = logging.getLogger('cocaine.tools')
+
 __author__ = 'EvgenySafronov <division494@gmail.com>'
-
-
 __doc__ = '''Provides helpful tools for management, viewing, uploading and other actions with cocaine applications
 and services'''
 
 
 if __name__ == '__main__':
-    if not sys.stdin.isatty():
-        coloredOutput.disable()
-
     try:
         d.dispatch()
     except ToolsError as err:
-        printError(err)
+        log.error(err)
         exit(1)

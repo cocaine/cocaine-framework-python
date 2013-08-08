@@ -1,9 +1,11 @@
 import logging
 import os
 from opster import Dispatcher
+import sys
 from cocaine.asio.service import Locator, Service
 from cocaine.exceptions import ToolsError
-from cocaine.tools.cli import Executor, coloredOutput
+from cocaine.logging.hanlders import ColoredFormatter
+from cocaine.tools.cli import Executor
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -17,40 +19,42 @@ class Global(object):
     options = [
         ('h', 'host', DEFAULT_HOST, 'hostname'),
         ('p', 'port', DEFAULT_PORT, 'port'),
-        ('', 'color', False, 'enable colored output'),
         ('', 'timeout', 1.0, 'timeout, s'),
-        ('', 'debug', ('disable', 'tools', 'all'), 'enable debug mode')
+        ('', 'color', True, 'enable colored output'),
+        ('', 'debug', ('disable', 'tools', 'all'), 'enable debug mode'),
     ]
 
     def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, color=False, timeout=False, debug=False):
         self.host = host
         self.port = port
         self.timeout = timeout
-        self._locator = None
         self.executor = Executor(timeout)
+        self._locator = None
 
-        if not color:
-            coloredOutput.disable()
-
+        message = '%(message)s'
+        level = logging.INFO
         if debug != 'disable':
-            ch = logging.StreamHandler()
-            ch.fileno = ch.stream.fileno
-            ch.setLevel(logging.DEBUG)
-            formatter = logging.Formatter('%(name)s: %(levelname)-8s: %(message)s')
-            ch.setFormatter(formatter)
+            message = '%(name)s: %(levelname)-8s: %(message)s'
+            level = logging.DEBUG
 
-            logNames = [
-                __name__,
-                'cocaine.tools'
-            ]
-            if debug == 'all':
-                logNames.append('cocaine')
+        ch = logging.StreamHandler()
+        ch.fileno = ch.stream.fileno
+        ch.setLevel(level)
+        formatter = ColoredFormatter(message, colored=color and sys.stdin.isatty())
+        ch.setFormatter(formatter)
 
-            for logName in logNames:
-                log = logging.getLogger(logName)
-                log.setLevel(logging.DEBUG)
-                log.propagate = False
-                log.addHandler(ch)
+        logNames = [
+            'cocaine.tools'
+        ]
+
+        if debug == 'all':
+            logNames.append('cocaine')
+
+        for logName in logNames:
+            log = logging.getLogger(logName)
+            log.setLevel(logging.DEBUG)
+            log.propagate = False
+            log.addHandler(ch)
 
     @property
     def locator(self):

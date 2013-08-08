@@ -1,42 +1,16 @@
 import json
-import sys
-import errno
-import socket
 from time import time
 
 import msgpack
 from tornado.ioloop import IOLoop
 
-from cocaine.asio.exceptions import ConnectionRefusedError
+from cocaine.exceptions import CocaineError, ChokeEvent, ToolsError
+from cocaine.tools import log
 from cocaine.tools.actions import common, app, profile, runlist, crashlog
-from cocaine.services import Service
-from cocaine.exceptions import CocaineError, ConnectionError, ChokeEvent, ToolsError
 from cocaine.tools.actions.app import LocalUpload
 
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
-
-
-class COLORED:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-
-    def disable(self):
-        self.HEADER = ''
-        self.OKBLUE = ''
-        self.OKGREEN = ''
-        self.WARNING = ''
-        self.FAIL = ''
-        self.ENDC = ''
-coloredOutput = COLORED()
-
-
-def printError(message):
-    sys.stderr.write('{s}{message}{e}\n'.format(s=coloredOutput.FAIL, message=message, e=coloredOutput.ENDC))
 
 
 def AwaitDoneWrapper(onDoneMessage=None, onErrorMessage=None):
@@ -53,7 +27,7 @@ def AwaitDoneWrapper(onDoneMessage=None, onErrorMessage=None):
                 except ChokeEvent:
                     print((onDoneMessage or 'Action for "{name}" - done').format(name=self.name))
                 except Exception as err:
-                    printError((onErrorMessage or 'Error occurred on action for "{name}": {error}').format(
+                    log.error((onErrorMessage or 'Error occurred on action for "{name}": {error}').format(
                         name=self.name, error=err)
                     )
                 finally:
@@ -78,7 +52,7 @@ def AwaitJsonWrapper(onErrorMessage=None, unpack=False):
                 except ChokeEvent:
                     pass
                 except Exception as err:
-                    printError((onErrorMessage or 'Error occurred: {0}').format(err))
+                    log.error((onErrorMessage or 'Error occurred: {0}').format(err))
                 finally:
                     IOLoop.instance().stop()
         return Wrapper
@@ -95,7 +69,7 @@ class ConsoleAddApplicationToRunlistAction(runlist.AddApplication):
             MESSAGE = 'Application "{app}" with profile "{profile}" has been successfully added to runlist "{runlist}"'
             print(MESSAGE.format(app=self.app, profile=self.profile, runlist=self.name))
         except Exception as err:
-            printError(err)
+            log.error(err)
         finally:
             IOLoop.instance().stop()
 
@@ -115,7 +89,7 @@ class PrettyPrintableCrashlogListAction(crashlog.List):
             pass
         except Exception as err:
             print(repr(err))
-            printError(('' or 'Unable to view "{name}" - {error}').format(name=self.name, error=err))
+            log.error(('' or 'Unable to view "{name}" - {error}').format(name=self.name, error=err))
         finally:
             IOLoop.instance().stop()
 
@@ -129,7 +103,7 @@ class PrettyPrintableCrashlogViewAction(crashlog.View):
             print('Crashlog:')
             print('\n'.join(msgpack.loads(result.get())))
         except Exception as err:
-            printError(err)
+            log.error(err)
         finally:
             IOLoop.instance().stop()
 
@@ -147,7 +121,7 @@ def makePrettyCrashlogRemove(cls, onDoneMessage=None):
                 result.get()
                 print((onDoneMessage or 'Action for app "{0}" finished').format(self.name))
             except Exception as err:
-                printError(err)
+                log.error(err)
             finally:
                 IOLoop.instance().stop()
 
@@ -172,13 +146,13 @@ class CallActionCli(object):
             elif requestType == 'invoke':
                 print(response)
         except Exception as err:
-            printError(err)
+            log.error(err)
         finally:
             IOLoop.instance().stop()
 
 
 APP_LIST_SUCCESS = 'Currently uploaded apps:'
-APP_UPLOAD_SUCCESS = 'The app "{name}" has been successfully uploaded'
+# APP_UPLOAD_SUCCESS = 'The app "{name}" has been successfully uploaded'
 APP_UPLOAD_FAIL = 'Unable to upload application {name} - {error}'
 APP_REMOVE_SUCCESS = 'The app "{name}" has been successfully removed'
 APP_REMOVE_FAIL = 'Unable to remove application {name} - {error}'
@@ -210,12 +184,11 @@ class AppUploadCliAction(object):
 
     def processResult(self, chunk):
         try:
-            result = chunk.get()
-            print(result)
+            chunk.get()
         except ChokeEvent:
             pass
         except Exception as err:
-            printError(err)
+            log.error(err)
         finally:
             IOLoop.instance().stop()
 
@@ -223,7 +196,7 @@ class AppUploadCliAction(object):
 AVAILABLE_TOOLS_ACTIONS = {
     'app:list': AwaitJsonWrapper()(app.List),
     'app:view': AwaitJsonWrapper(unpack=True)(app.View),
-    'app:upload-manual': AwaitDoneWrapper(APP_UPLOAD_SUCCESS, APP_UPLOAD_FAIL)(app.Upload),
+    'app:upload-manual': AwaitDoneWrapper()(app.Upload),
     'app:upload': AppUploadCliAction,
     'app:remove': AwaitDoneWrapper(APP_REMOVE_SUCCESS, APP_REMOVE_FAIL)(app.Remove),
     'profile:list': AwaitJsonWrapper()(profile.List),
@@ -279,11 +252,11 @@ class Executor(object):
         except KeyError as err:
             raise ToolsError('Action {0} is not available'.format(err))
         except KeyboardInterrupt:
-            printError('Terminated by user')
+            log.error('Terminated by user')
             self.loop.stop()
         except Exception as err:
             raise ToolsError('Unknown error occurred - {0}'.format(err))
 
     def timeoutErrorback(self):
-        printError('Timeout')
+        log.error('Timeout')
         self.loop.stop()

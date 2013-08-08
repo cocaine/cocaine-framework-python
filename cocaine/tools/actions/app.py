@@ -70,7 +70,7 @@ class Upload(actions.Storage):
         package = msgpack.dumps(readArchive(self.package))
         yield self.storage.write('manifests', self.name, manifest, APPS_TAGS)
         yield self.storage.write('apps', self.name, package, APPS_TAGS)
-        yield 'The application "{name}" has been successfully uploaded'.format(name=self.name)
+        log.info('The application "%s" has been successfully uploaded', self.name)
 
 
 class Remove(actions.Storage):
@@ -188,14 +188,14 @@ class LocalUpload(actions.Storage):
                 pass
 
             packagePath = self._createPackage(repositoryPath)
+            log.info('Uploading...')
             yield Upload(self.storage, **{
                 'name': self.name,
                 'manifest': manifestPath,
                 'package': packagePath
             }).execute()
-            yield 'Application {0} has been successfully uploaded'.format(self.name)
         except (RepositoryDownloadError, ModuleInstallError) as err:
-            print(err)
+            log.error(err)
 
     def _createRepository(self):
         repositoryPath = tempfile.mkdtemp()
@@ -206,7 +206,7 @@ class LocalUpload(actions.Storage):
 
     @chain.concurrent
     def _createVirtualEnvironment(self, repositoryPath, manifestPath, Installer):
-        log.debug('Creating virtual environment "{0}" ...'.format(self.virtualEnvironmentType))
+        log.debug('Creating virtual environment "{0}"...'.format(self.virtualEnvironmentType))
         stream = None
         for handler in log.handlers:
             if isinstance(handler, logging.StreamHandler) and hasattr(handler, 'fileno'):
@@ -216,7 +216,7 @@ class LocalUpload(actions.Storage):
         installer.install()
 
     def _createPackage(self, repositoryPath):
-        log.debug('Creating package')
+        log.info('Creating package...')
         packagePath = os.path.join(repositoryPath, 'package.tar.gz')
         tar = tarfile.open(packagePath, mode='w:gz')
         tar.add(repositoryPath, arcname='')
