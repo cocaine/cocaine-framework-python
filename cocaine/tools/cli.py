@@ -239,19 +239,13 @@ AVAILABLE_TOOLS_ACTIONS = {
     'crashlog:list': PrettyPrintableCrashlogListAction,
     'crashlog:view': PrettyPrintableCrashlogViewAction,
     'crashlog:remove': makePrettyCrashlogRemove(crashlog.Remove, CRASHLOG_REMOVE_SUCCESS),
-    'crashlog:removeall': makePrettyCrashlogRemove(crashlog.RemoveAll, CRASHLOGS_REMOVE_SUCCESS)
-}
-
-AVAILABLE_NODE_ACTIONS = {
+    'crashlog:removeall': makePrettyCrashlogRemove(crashlog.RemoveAll, CRASHLOGS_REMOVE_SUCCESS),
     'info': AwaitJsonWrapper()(common.NodeInfo),
     'app:start': AwaitJsonWrapper()(app.Start),
     'app:pause': AwaitJsonWrapper()(app.Stop),
     'app:stop': AwaitJsonWrapper()(app.Stop),
     'app:restart': AwaitJsonWrapper()(app.Restart),
-    'app:check': AwaitJsonWrapper()(app.Check)
-}
-
-AVAILABLE_DEFAULT_ACTIONS = {
+    'app:check': AwaitJsonWrapper()(app.Check),
     'call': CallActionCli
 }
 
@@ -260,12 +254,8 @@ class Executor(object):
     """
     This class represents abstract action executor for specified service 'serviceName' and actions pool
     """
-    def __init__(self, serviceName=None, availableActions=AVAILABLE_DEFAULT_ACTIONS, **config):
-        self.serviceName = serviceName
-        self.availableActions = availableActions
-        self.host = config['host']
-        self.port = config['port']
-        self.timeout = config['timeout']
+    def __init__(self, timeout):
+        self.timeout = timeout
         self.loop = IOLoop.current()
 
     def executeAction(self, actionName, **options):
@@ -277,9 +267,7 @@ class Executor(object):
         :param options: various action configuration
         """
         try:
-            self.createService(self.host, self.port, options)
-
-            Action = self.availableActions[actionName]
+            Action = AVAILABLE_TOOLS_ACTIONS[actionName]
             action = Action(**options)
             action.execute()
             self.loop.add_timeout(time() + self.timeout, self.timeoutErrorback)
@@ -296,29 +284,6 @@ class Executor(object):
         except Exception as err:
             raise ToolsError('Unknown error occurred - {0}'.format(err))
 
-    def createService(self, host, port, options):
-        if not self.serviceName:
-            return
-
-        try:
-            service = Service(self.serviceName, host=host, port=port)
-            options[self.serviceName] = service
-        except socket.error as err:
-            if err.errno == errno.ECONNREFUSED:
-                raise ConnectionRefusedError((host, port))
-            else:
-                raise ConnectionError('Unknown connection error: {0}'.format(err))
-
     def timeoutErrorback(self):
         printError('Timeout')
         self.loop.stop()
-
-
-class StorageExecutor(Executor):
-    def __init__(self, **config):
-        super(StorageExecutor, self).__init__('storage', AVAILABLE_TOOLS_ACTIONS, **config)
-
-
-class NodeExecutor(Executor):
-    def __init__(self, **config):
-        super(NodeExecutor, self).__init__('node', AVAILABLE_NODE_ACTIONS, **config)
