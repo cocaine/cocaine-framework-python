@@ -120,19 +120,18 @@ class Stop(common.Node):
 
 
 class Restart(common.Node):
-    def __init__(self, node, name, profile, host, port):
+    def __init__(self, node, locator, name, profile):
         super(Restart, self).__init__(node)
+        self.locator = locator
         self.name = name
         self.profile = profile
-        self.host = host
-        self.port = port
         if not self.name:
             raise ValueError('Please specify application name')
 
     @chain.source
     def execute(self):
         try:
-            info = yield NodeInfo(self.node, host=self.host, port=self.port).execute()
+            info = yield NodeInfo(self.node, self.locator).execute()
             profile = self.profile or info['apps'][self.name]['profile']
             appStopStatus = yield Stop(self.node, name=self.name).execute()
             appStartStatus = yield Start(self.node, name=self.name, profile=profile).execute()
@@ -144,11 +143,10 @@ class Restart(common.Node):
 
 
 class Check(common.Node):
-    def __init__(self, node, name, host, port):
+    def __init__(self, node, locator, name):
         super(Check, self).__init__(node)
         self.name = name
-        self.host = host
-        self.port = port
+        self.locator = locator
         if not self.name:
             raise ValueError('Please specify application name')
 
@@ -156,7 +154,7 @@ class Check(common.Node):
     def execute(self):
         state = 'stopped or missing'
         try:
-            info = yield NodeInfo(self.node, host=self.host, port=self.port).execute()
+            info = yield NodeInfo(self.node, self.locator).execute()
             apps = info['apps']
             app = apps[self.name]
             state = app['state']

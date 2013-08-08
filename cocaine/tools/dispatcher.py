@@ -1,6 +1,8 @@
 import logging
 import os
 from opster import Dispatcher
+from cocaine.asio.service import Locator
+from cocaine.exceptions import ToolsError
 from cocaine.tools.cli import NodeExecutor, StorageExecutor, coloredOutput, Executor
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -21,6 +23,10 @@ class Global(object):
     ]
 
     def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, color=False, timeout=False, debug=False):
+        self.host = host
+        self.port = port
+        self.timeout = timeout
+
         config = {
             'host': host,
             'port': port,
@@ -28,9 +34,11 @@ class Global(object):
             'debug': debug
         }
         self.config = config
+
         self.executor = lambda: Executor(**config)
         self.nodeExecutor = lambda: NodeExecutor(**config)
         self.storageExecutor = lambda: StorageExecutor(**config)
+
         if not color:
             coloredOutput.disable()
 
@@ -47,14 +55,21 @@ class Global(object):
                 'cocaine.tools'
             ]
             if debugLevel == 'all':
-                logNames.append('cocaine.futures.chain')
-                logNames.append('cocaine.testing.mocks')
+                logNames.append('cocaine')
 
             for logName in logNames:
                 log = logging.getLogger(logName)
                 log.setLevel(logging.DEBUG)
                 log.propagate = False
                 log.addHandler(ch)
+
+    def getLocator(self):
+        try:
+            locator = Locator()
+            locator.connect(self.host, self.port, self.timeout, blocking=True)
+            return locator
+        except Exception as err:
+            raise ToolsError(err)
 
 
 def middleware(func):
@@ -80,20 +95,20 @@ runlistDispatcher = Dispatcher(globaloptions=Global.options, middleware=middlewa
 crashlogDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
 
 
-@d.command()
-def info(locator):
+@d.command(usage='')
+def info(options):
     """Show information about cocaine runtime
 
     Return json-like string with information about cocaine-runtime.
     """
-    locator.nodeExecutor().executeAction('info', **{
-        'host': locator.config['host'],
-        'port': locator.config['port']
+    locator = options.getLocator()
+    options.nodeExecutor().executeAction('info', **{
+        'locator': locator
     })
 
 
 @d.command(usage='SERVICE [METHOD ["ARGS"]]')
-def call(locator,
+def call(options,
          service, method='', args=''):
     """Invoke specified method from service.
 
@@ -105,10 +120,10 @@ def call(locator,
     If no method provided, service API will be printed.
     """
     command = service + '.' + method + '(' + args + ')'
-    locator.executor().executeAction('call', **{
+    options.executor().executeAction('call', **{
         'command': command,
-        'host': locator.config['host'],
-        'port': locator.config['port']
+        'host': options.config['host'],
+        'port': options.config['port']
     })
 
 @appDispatcher.command(name='list')
@@ -235,7 +250,7 @@ def app_stop(locator,
 
 
 @appDispatcher.command(name='restart')
-def app_restart(locator,
+def app_restart(options,
                 name=('n', '', 'application name'),
                 profile=('r', '', 'profile name')):
     """Restart application.
@@ -244,22 +259,22 @@ def app_restart(locator,
 
     It can be used to quickly change application profile.
     """
-    locator.nodeExecutor().executeAction('app:restart', **{
+    locator = options.getLocator()
+    options.nodeExecutor().executeAction('app:restart', **{
+        'locator': locator,
         'name': name,
-        'profile': profile,
-        'host': locator.config['host'],
-        'port': locator.config['port']
+        'profile': profile
     })
 
 
 @appDispatcher.command()
-def check(locator,
+def check(options,
           name=('n', '', 'application name')):
     """Checks application status."""
-    locator.nodeExecutor().executeAction('app:check', **{
+    locator = options.getLocator()
+    options.nodeExecutor().executeAction('app:check', **{
+        'locator': locator,
         'name': name,
-        'host': locator.config['host'],
-        'port': locator.config['port']
     })
 
 

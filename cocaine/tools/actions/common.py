@@ -17,26 +17,26 @@ class Node(object):
 
 
 class NodeInfo(Node):
-    def __init__(self, node=None, host='127.0.0.1', port=10053):
+    def __init__(self, node, locator):
         super(NodeInfo, self).__init__(node)
-        self.host = host
-        self.port = port
+        self.locator = locator
 
     @chain.source
     def execute(self):
-        apps = yield self.node.list()
-        appsInfo = {}
-        for app in apps:
+        appNames = yield self.node.list()
+        appInfoList = {}
+        for appName in appNames:
             info = ''
             try:
-                s = Service(app, host=self.host, port=self.port)
-                info = yield s.info()
+                app = Service(appName, blockingConnect=False)
+                yield app.connectThroughLocator(self.locator)
+                info = yield app.info()
             except Exception as err:
                 info = err
             finally:
-                appsInfo[app] = info
+                appInfoList[appName] = info
         result = {
-            'apps': appsInfo
+            'apps': appInfoList
         }
         yield result
 
