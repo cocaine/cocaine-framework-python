@@ -30,7 +30,7 @@ class strategy:
         return strategy.sync(func) if isBlocking else strategy.async(func)
 
     @classmethod
-    def blockingBehaviour(cls, func):
+    def coroutine(cls, func):
         def wrapper(*args, **kwargs):
             blocking = kwargs.get('blocking', False)
             return strategy.init(func, blocking)(*args, **kwargs)
@@ -116,7 +116,7 @@ class AbstractService(object):
         self._pipe.close()
         self._pipe = None
 
-    @strategy.blockingBehaviour
+    @strategy.coroutine
     def _connectToEndpoint(self, host, port, timeout, blocking=False):
         if self.isConnected():
             raise IllegalStateError('service "{0}" is already connected'.format(self.name))
@@ -257,22 +257,25 @@ class Service(AbstractService):
         if blockingConnect:
             self.connect(host, port, blocking=True)
 
-    @strategy.blockingBehaviour
+    @strategy.coroutine
     def connect(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, timeout=None, blocking=False):
-        with cumulative(timeout) as timeLeft:
-            locator = Locator()
-            try:
-                yield locator.connect(host, port, timeout=timeLeft(), blocking=blocking)
-                endpoint, session, api = yield locator.resolve(self.name, timeout=timeLeft(), blocking=blocking)
-                yield self._connectToEndpoint(*endpoint, timeout=timeLeft(), blocking=blocking)
+        locator = Locator()
+        try:
+            yield locator.connect(host, port, timeout, blocking=blocking)
+            yield self.connectThroughLocator(locator, timeout, blocking=blocking)
+        finally:
+            locator.disconnect()
 
-                self.api = dict((methodName, methodId) for methodId, methodName in api.items())
-                for methodId, methodName in api.items():
-                    setattr(self, methodName, self._invoke(methodId))
-            finally:
-                locator.disconnect()
+    @strategy.coroutine
+    def connectThroughLocator(self, locator, timeout=None, blocking=False):
+        endpoint, session, api = yield locator.resolve(self.name, timeout, blocking=blocking)
+        yield self._connectToEndpoint(*endpoint, timeout=timeout, blocking=blocking)
 
-    @strategy.blockingBehaviour
+        self.api = dict((methodName, methodId) for methodId, methodName in api.items())
+        for methodId, methodName in api.items():
+            setattr(self, methodName, self._invoke(methodId))
+
+    @strategy.coroutine
     def reconnect(self, timeout=None, blocking=False):
         if self.isConnecting():
             raise IllegalStateError('already connecting')
