@@ -28,3 +28,33 @@ class ColoredFormatter(logging.Formatter):
         if self.colored and levelname in COLORS:
             record.msg = COLOR_SEQ % (30 + COLORS[levelname]) + str(record.msg) + RESET_SEQ
         return logging.Formatter.format(self, record)
+
+
+def interactiveEmit(self, record):
+    # Monkey patch Emit function to avoid new lines between records
+    try:
+        if str(record.msg).endswith('... '):
+            fs = '%s'
+        else:
+            fs = '%s\n'
+        msg = self.format(record)
+        stream = self.stream
+        if not logging._unicode:  # if no unicode support...
+            stream.write(fs % msg)
+        else:
+            try:
+                if isinstance(msg, unicode) and getattr(stream, 'encoding', None):
+                    ufs = fs.decode(stream.encoding)
+                    try:
+                        stream.write(ufs % msg)
+                    except UnicodeEncodeError:
+                        stream.write((ufs % msg).encode(stream.encoding))
+                else:
+                    stream.write(fs % msg)
+            except UnicodeError:
+                stream.write(fs % msg.encode("UTF-8"))
+        self.flush()
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except:
+        self.handleError(record)

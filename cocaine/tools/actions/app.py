@@ -66,11 +66,12 @@ class Upload(actions.Storage):
         """
         Encodes manifest and package files and (if successful) uploads them into storage
         """
+        log.info('Uploading "%s"... ', self.name)
         manifest = CocaineConfigReader.load(self.manifest)
         package = msgpack.dumps(readArchive(self.package))
         yield self.storage.write('manifests', self.name, manifest, APPS_TAGS)
         yield self.storage.write('apps', self.name, package, APPS_TAGS)
-        log.info('The application "%s" has been successfully uploaded', self.name)
+        log.info('OK')
 
 
 class Remove(actions.Storage):
@@ -188,7 +189,6 @@ class LocalUpload(actions.Storage):
                 pass
 
             packagePath = self._createPackage(repositoryPath)
-            log.info('Uploading...')
             yield Upload(self.storage, **{
                 'name': self.name,
                 'manifest': manifestPath,
@@ -216,11 +216,12 @@ class LocalUpload(actions.Storage):
         installer.install()
 
     def _createPackage(self, repositoryPath):
-        log.info('Creating package...')
+        log.info('Creating package... ')
         packagePath = os.path.join(repositoryPath, 'package.tar.gz')
         tar = tarfile.open(packagePath, mode='w:gz')
         tar.add(repositoryPath, arcname='')
         tar.close()
+        log.info('OK')
         return packagePath
 
 

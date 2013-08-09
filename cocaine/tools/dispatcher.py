@@ -1,10 +1,12 @@
 import logging
 import os
-from opster import Dispatcher
 import sys
-from cocaine.asio.service import Locator, Service
+
+from opster import Dispatcher
+
 from cocaine.exceptions import ToolsError
-from cocaine.logging.hanlders import ColoredFormatter
+from cocaine.asio.service import Locator, Service
+from cocaine.logging.hanlders import ColoredFormatter, interactiveEmit
 from cocaine.tools.cli import Executor
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -38,6 +40,8 @@ class Global(object):
             level = logging.DEBUG
 
         ch = logging.StreamHandler()
+        if debug == 'disable':
+            setattr(logging.StreamHandler, logging.StreamHandler.emit.__name__, interactiveEmit)
         ch.fileno = ch.stream.fileno
         ch.setLevel(level)
         formatter = ColoredFormatter(message, colored=color and sys.stdin.isatty())
