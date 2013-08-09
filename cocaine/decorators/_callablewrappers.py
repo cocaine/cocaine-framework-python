@@ -82,7 +82,7 @@ class _Coroutine(_Proxy):
         except StopIteration:
             pass
         except Exception as err:
-            self._logger.error(repr(err))
+            self._logger.error(repr(err), exc_info=True)
             traceback.print_stack()
             if not self._response.closed:
                 self._response.error(1, "Error in event '%s' handler %s" %

@@ -2,9 +2,11 @@ import collections
 import time
 import types
 import logging
+import sys
 from threading import Thread
 
 from tornado.ioloop import IOLoop
+from tornado.util import raise_exc_info
 
 from cocaine.exceptions import ChokeEvent
 from cocaine.asio.exceptions import TimeoutError
@@ -27,6 +29,9 @@ class FutureResult(object):
 
     def __init__(self, result):
         self.result = result
+        self._exc_info = None
+        if isinstance(result, Exception) and not (isinstance(result, ChokeEvent) or isinstance(result, StopIteration)):
+            self._exc_info = sys.exc_info()
 
     def get(self):
         """
@@ -46,6 +51,10 @@ class FutureResult(object):
 
     def _returnOrRaise(self, result):
         if isinstance(result, Exception):
+            if self._exc_info is not None:
+                exc_type, exc_value, tb = self._exc_info
+                if all([exc_type, exc_value, tb]):
+                    raise_exc_info(self._exc_info)
             raise result
         else:
             return result
@@ -254,7 +263,7 @@ class ChainItem(object):
         if self.nextChainItem:
             self.callback(error)
         else:
-            if not isinstance(error, ChokeEvent):
+            if not (isinstance(error, ChokeEvent) or isinstance(error, StopIteration)):
                 log.error(error, exc_info=True)
 
 
