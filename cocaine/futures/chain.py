@@ -14,6 +14,9 @@ from cocaine.futures import Future
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
+log = logging.getLogger('cocaine.errors')
+
+
 class FutureResult(object):
     """
     Represents future result and provides methods to obtain this result, manipulate or reset.
@@ -53,7 +56,10 @@ class PreparedFuture(Future):
 
     It is useful when you need to return already defined result from function and to use that function in some future
     context (like chain).
-    While in chain context, you don't need to use it directly - if you return something from function that meant
+
+    Specified callback or errorback will be triggered on the next event loop turn after `bind` method is invoked.
+
+    Note: While in chain context, you don't need to use it directly - if you return something from function that meant
     to be used as chain item, the result will be automatically wrapped with `PreparedFuture`.
     """
     def __init__(self, result, ioLoop=None):
@@ -233,10 +239,6 @@ class ChainItem(object):
                 future = PreparedFuture(future, ioLoop=self.ioLoop)
             self.__log.debug('%d: Binding future %s', id(self), repr(future))
             future.bind(self.callback, self.errorback)
-        except (AssertionError, AttributeError, TypeError):
-            # Rethrow programming errors
-            #todo: save and transfer stack context
-            raise
         except Exception as err:
             self.errorback(err)
 
@@ -244,12 +246,16 @@ class ChainItem(object):
         self.__log.debug('%d: ChainItem.callback - %s', id(self), repr(chunk))
         futureResult = FutureResult(chunk)
         if self.nextChainItem:
-            # Actually it does not matter if we invoke next chain item synchronously or not. But for convenience, let's
-            # do it asynchronously.
+            # Actually it does not matter if we invoke next chain item synchronously or via event loop.
+            # But for convenience, let's do it asynchronously.
             self.ioLoop.add_callback(self.nextChainItem.execute, futureResult)
 
     def errorback(self, error):
-        self.callback(error)
+        if self.nextChainItem:
+            self.callback(error)
+        else:
+            if not isinstance(error, ChokeEvent):
+                log.error(error, exc_info=True)
 
 
 class Chain(object):
