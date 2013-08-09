@@ -49,7 +49,13 @@ class FutureResult(object):
 
 
 class PreparedFuture(Future):
-    #todo: docs
+    """Represents prepared future object with in advance known result.
+
+    It is useful when you need to return already defined result from function and to use that function in some future
+    context (like chain).
+    While in chain context, you don't need to use it directly - if you return something from function that meant
+    to be used as chain item, the result will be automatically wrapped with `PreparedFuture`.
+    """
     def __init__(self, result, ioLoop=None):
         super(PreparedFuture, self).__init__()
         self.result = result
