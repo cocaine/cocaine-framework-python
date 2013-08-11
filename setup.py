@@ -73,7 +73,9 @@ setup(
         "cocaine.tools.actions",
         "cocaine.testing",
     ] + tools_packages,
-    install_requires=["msgpack_python", "tornado", "mockito"] + tools_requires,
-    scripts=["scripts/cocaine-tool"] if not without_tools else []
+    install_requires=["msgpack_python", "tornado"] + tools_requires,
+    scripts=["scripts/cocaine-tool"] if not without_tools else [],
+    tests_require=["mockito"],
+    test_suite="unittest.TestCase"
 )
 
