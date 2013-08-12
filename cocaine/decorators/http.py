@@ -64,6 +64,10 @@ class _HTTPRequest(object):
         self._request = dict((k,v[0]) for k,v in tmp.iteritems() if len(v) > 0)
 
     @property
+    def headers(self):
+        return self._headers
+
+    @property
     def body(self):
         """Return request body"""
         return self._body
