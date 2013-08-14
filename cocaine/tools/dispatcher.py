@@ -103,7 +103,7 @@ appDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
 profileDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
 runlistDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
 crashlogDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
-
+serveDispatcher = Dispatcher()
 
 @d.command()
 def info(options):
@@ -135,6 +135,7 @@ def call(options,
         'host': options.host,
         'port': options.port
     })
+
 
 @appDispatcher.command(name='list')
 def app_list(options):
@@ -453,7 +454,17 @@ def crashlog_removeall(options,
     })
 
 
+@serveDispatcher.command()
+def start():
+    """Start embedded cocaine proxy
+    """
+    executor = Executor(1.0)
+    executor.executeAction('serve:start', **{
+    })
+
+
 d.nest('app', appDispatcher, 'application commands')
 d.nest('profile', profileDispatcher, 'profile commands')
 d.nest('runlist', runlistDispatcher, 'runlist commands')
 d.nest('crashlog', crashlogDispatcher, 'crashlog commands')
+d.nest('serve', serveDispatcher, 'cocaine proxy commands')
