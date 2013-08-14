@@ -1,4 +1,10 @@
-cocaine-framework-python (0.10.6.5) lucid; urgency=low
+cocaine-framework-python (0.10.6.6) unstable; urgency=low
+
+  * Move cocaine-tornado-proxy here 
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 14 Aug 2013 14:04:00 +0400
+
+cocaine-framework-python (0.10.6.5) unstable; urgency=low
 
   * ServiceError backward compability
 

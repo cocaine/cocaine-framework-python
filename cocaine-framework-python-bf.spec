@@ -1,7 +1,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print (get_python_lib())")}
 
 Name:		cocaine-framework-python
-Version:	0.10.6.0
+Version:	0.10.6.6
 Release:	1%{?dist}
 Summary:	Cocaine - Python Framework
 
@@ -31,6 +31,16 @@ Requires:	python-opster >= 4.0
 
 %description -n cocaine-tools
 Various tools to query and manipulate running Cocaine instances.
+
+
+%package -n cocaine-tornado-proxy
+Summary:	Cocaine - HTTP proxy
+Group:		Development/Libraries
+Requires:	cocaine-framework-python = %{version}-%{release}
+
+
+%description -n cocaine-tornado-proxy
+HTPP entry point to the cloud.
 
 
 %prep 

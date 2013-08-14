@@ -7,6 +7,4 @@ include /usr/share/cdbs/1/class/python-distutils.mk
 
 install/cocaine-tools::
 	install -d $(DEB_DESTDIR)usr/bin
-	#install -m755 scripts/cocaine-tool $(DEB_DESTDIR)usr/bin/cocaine-tool
-	#install -m755 scripts/cocaine-bc-helper.py $(DEB_DESTDIR)usr/bin/cocaine-bc-helper.py
 	dh_bash-completion

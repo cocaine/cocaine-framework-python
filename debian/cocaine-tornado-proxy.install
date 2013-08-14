@@ -1,1 +1,3 @@
 usr/bin/cocaine-tornado-proxy
+etc/init.d/cocaine-tornado-proxy
+etc/cocaine/cocaine-tornado-proxy.conf

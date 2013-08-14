@@ -75,9 +75,9 @@ setup(
         "cocaine.testing",
     ] + tools_packages,
     install_requires=["msgpack_python", "tornado"] + tools_requires,
-    scripts=["scripts/cocaine-tool", "scripts/cocaine-tornado-proxy"] if not without_tools else [],
+    scripts=["scripts/cocaine-tornado-proxy", "scripts/cocaine-tool"] if not without_tools else [],
     data_files=[('/etc/cocaine/', ['init/cocaine-tornado-proxy.conf']),
-                ('/etc/init.d/',['init/cocaine-tornado-proxy'])]
+                ('/etc/init.d/',['init/cocaine-tornado-proxy'])],
     tests_require=["mockito"],
     test_suite="unittest.TestCase"
 )
