@@ -21,7 +21,16 @@ Description: Cocaine - Python Framework
 
 Package: cocaine-tools
 Architecture: any
-Depends: ${misc:Depends}, ${python:Depends}, cocaine-framework-python (>= 0.10.4-4), python-opster (>= 4.0)
+Depends: ${misc:Depends}, ${python:Depends}, cocaine-framework-python (>= 0.10.6), python-opster (>= 4.0)
 XB-Python-Version: >= 2.6
 Description: Cocaine - Toolset
  Various tools to query and manipulate running Cocaine instances.
+
+Package: cocaine-tornado-proxy
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends},
+ python-tornado,
+ python-msgpack | msgpack-python,
+ cocaine-framework-python (>=0.10.6)
+XB-Python-Version: >= 2.6
+Description: Tornado-based cocaine HTTP proxy
