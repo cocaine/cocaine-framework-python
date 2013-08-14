@@ -47,7 +47,7 @@ else:
     tools_packages = ["cocaine.tools", "cocaine.tools.helpers"]
     if 'DEB_BUILD_GNU_TYPE' in os.environ:
         tools_data = [
-                ('/etc/bash_completion.d/', ["scripts/bash_completion.d/cocaine-tool"])
+            ('/etc/bash_completion.d/', ["scripts/bash_completion.d/cocaine-tool"])
         ]
 
 
@@ -77,7 +77,7 @@ setup(
     install_requires=["msgpack_python", "tornado"] + tools_requires,
     scripts=["scripts/cocaine-tornado-proxy", "scripts/cocaine-tool"] if not without_tools else [],
     data_files=[('/etc/cocaine/', ['init/cocaine-tornado-proxy.conf']),
-                ('/etc/init.d/',['init/cocaine-tornado-proxy'])],
+                ('/etc/init.d/', ['init/cocaine-tornado-proxy'])],
     tests_require=["mockito"],
     test_suite="unittest.TestCase"
 )
