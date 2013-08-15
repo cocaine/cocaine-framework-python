@@ -56,9 +56,9 @@ class Start(object):
             with open(self.config, 'r') as fh:
                 config = json.loads(fh.read())
         except IOError as err:
-            log.error('failed to load config - %s', err)
+            log.error('failed to load config - %s. Default config will be used.', err)
         except Exception as err:
-            log.error('unexpected error occurs while loading config - %s', err)
+            log.error('unexpected error occurs while loading config - %s. Default config will be used.', err)
         finally:
             return config
 
