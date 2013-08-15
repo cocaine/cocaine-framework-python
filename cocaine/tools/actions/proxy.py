@@ -49,12 +49,20 @@ class Start(object):
                 log.error('FAIL')
                 raise Error('is already running (pid file "{0}" exists)'.format(self.pidfile))
             else:
-                log.info('OK')
+                try:
+                    with open(self.pidfile, 'w'):
+                        pass
+                    os.remove(self.pidfile)
+                    log.info('OK')
+                except IOError as err:
+                    log.error('FAIL')
+                    raise Error('failed to create pid file - {0}'.format(err))
 
             daemon = Daemon(self.pidfile)
             daemon.run = self.run
             daemon.start(config)
         else:
+            log.info('OK')
             self.run(config)
 
     def run(self, config):
@@ -70,7 +78,6 @@ class Start(object):
 class Stop(object):
     def __init__(self, pidfile):
         self.pidfile = pidfile
-        self.lockfile = self.pidfile + '.lock'
 
     def execute(self):
         log.info('Stopping cocaine proxy... ')
@@ -101,3 +108,25 @@ class Stop(object):
                 log.error('FAIL')
                 log.error(err)
                 exit(1)
+
+
+class Status(object):
+    def __init__(self, pidfile):
+        self.pidfile = pidfile
+
+    def execute(self):
+        try:
+            with file(self.pidfile, 'r') as fh:
+                pid = int(fh.read().strip())
+        except (IOError, ValueError):
+            pid = None
+
+        if not pid:
+            log.error('Stopped')
+            return
+
+        try:
+            os.kill(pid, 0)
+            log.info('Running: %d', pid)
+        except OSError as err:
+            log.error('Pid file exists, but cannot send signal to it - %s', err)

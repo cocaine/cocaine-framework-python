@@ -492,6 +492,19 @@ def stop(pidfile=('', DEFAULT_COCAINE_PROXY_PID_FILE, 'pidfile')):
         logging.getLogger('cocaine.tools').error('Cocaine tool error - %s', err)
 
 
+@proxyDispatcher.command()
+def status(pidfile=('', DEFAULT_COCAINE_PROXY_PID_FILE, 'pidfile')):
+    """Show cocaine proxy status.
+    """
+    Global.configureLog(logNames=['cocaine.tools', 'cocaine.proxy'])
+    try:
+        proxy.Status(**{
+            'pidfile': pidfile,
+        }).execute()
+    except proxy.Error as err:
+        logging.getLogger('cocaine.tools').error('Cocaine tool error - %s', err)
+
+
 d.nest('app', appDispatcher, 'application commands')
 d.nest('profile', profileDispatcher, 'profile commands')
 d.nest('runlist', runlistDispatcher, 'runlist commands')
