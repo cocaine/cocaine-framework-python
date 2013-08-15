@@ -7,7 +7,7 @@ from tornado.ioloop import IOLoop
 from cocaine.exceptions import CocaineError, ChokeEvent, ToolsError
 from cocaine.futures import chain
 from cocaine.tools import log
-from cocaine.tools.actions import common, app, profile, runlist, crashlog, serve
+from cocaine.tools.actions import common, app, profile, runlist, crashlog, proxy
 
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
@@ -195,7 +195,7 @@ class AppUploadCliAction(object):
 
 class ServeStartActionCli(object):
     def __init__(self, **config):
-        self.action = serve.Start(**config)
+        self.action = proxy.Start(**config)
 
     @chain.source
     def execute(self):
@@ -236,7 +236,7 @@ AVAILABLE_TOOLS_ACTIONS = {
     'app:restart': AwaitJsonWrapper()(app.Restart),
     'app:check': AwaitJsonWrapper()(app.Check),
     'call': CallActionCli,
-    'serve:start': ServeStartActionCli
+    'proxy:start': ServeStartActionCli
 }
 
 

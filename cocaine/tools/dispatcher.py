@@ -104,7 +104,7 @@ appDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
 profileDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
 runlistDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
 crashlogDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
-serveDispatcher = Dispatcher()
+proxyDispatcher = Dispatcher()
 
 @d.command()
 def info(options):
@@ -455,24 +455,22 @@ def crashlog_removeall(options,
     })
 
 
-@serveDispatcher.command()
+@proxyDispatcher.command()
 def start(port=('', 8080, 'server port'),
           cache=('', 5, 'service cache count'),
           config=('', '/etc/cocaine/cocaine-tornado-proxy.conf', 'path to the configuration file'),
           daemon=('', False, 'run as daemon'),
-          pidfile=('', '/var/run/tornado', 'pidfile'),
-          user=('', 'cocaine', 'run from specified user')):
+          pidfile=('', '/var/run/tornado', 'pidfile')):
     """Start embedded cocaine proxy
     """
     Global.configureLog(debug='tools', logNames=['cocaine.proxy'])
     executor = Executor()
-    executor.executeAction('serve:start', **{
+    executor.executeAction('proxy:start', **{
         'port': port,
         'cache': cache,
         'config': config,
         'daemon': daemon,
         'pidfile': pidfile,
-        'user': user
     })
 
 
@@ -480,4 +478,4 @@ d.nest('app', appDispatcher, 'application commands')
 d.nest('profile', profileDispatcher, 'profile commands')
 d.nest('runlist', runlistDispatcher, 'runlist commands')
 d.nest('crashlog', crashlogDispatcher, 'crashlog commands')
-d.nest('serve', serveDispatcher, 'cocaine proxy commands')
+d.nest('proxy', proxyDispatcher, 'cocaine proxy commands')
