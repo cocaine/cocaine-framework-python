@@ -7,6 +7,7 @@ from opster import Dispatcher
 from cocaine.exceptions import ToolsError
 from cocaine.asio.service import Locator, Service
 from cocaine.logging.hanlders import ColoredFormatter, interactiveEmit
+from cocaine.tools.actions import proxy
 from cocaine.tools.cli import Executor
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -464,14 +465,13 @@ def start(port=('', 8080, 'server port'),
     """Start embedded cocaine proxy
     """
     Global.configureLog(debug='tools', logNames=['cocaine.proxy'])
-    executor = Executor()
-    executor.executeAction('proxy:start', **{
+    proxy.Start(**{
         'port': port,
         'cache': cache,
         'config': config,
         'daemon': daemon,
         'pidfile': pidfile,
-    })
+    }).execute()
 
 
 d.nest('app', appDispatcher, 'application commands')

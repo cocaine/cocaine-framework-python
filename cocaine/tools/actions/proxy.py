@@ -1,9 +1,8 @@
 import json
 import logging
-from cocaine.futures import chain
-from cocaine.proxy.proxy import CocaineProxy
+import lockfile
 
-__author__ = 'Evgeny Safronov <division494@gmail.com>'
+from cocaine.proxy.proxy import CocaineProxy
 
 
 log = logging.getLogger(__name__)
@@ -17,7 +16,6 @@ class Start(object):
         self.daemon = daemon
         self.pidfile = pidfile
 
-    @chain.source
     def execute(self):
         config = {}
         try:
@@ -26,11 +24,24 @@ class Start(object):
         except IOError as err:
             log.error(err)
 
-        proxy = CocaineProxy(self.port, self.cache, **config)
         if self.daemon:
-            from cocaine.proxy import Daemon
-            daemon = Daemon(self.pidfile)
-            daemon.run = proxy.run
-            daemon.start()
+            import daemon
+            context = daemon.DaemonContext(
+                working_directory='.',
+                pidfile=lockfile.FileLock('/var/run/cocaine-python-proxy.pid'),
+            )
+            with context:
+                #todo: config from file or default
+                formatter = logging.Formatter('[%(asctime)s] %(name)s: %(levelname)-8s: %(message)s')
+                proxyLog = logging.getLogger('cocaine.proxy')
+                handler = logging.FileHandler('/var/log/cocaine-python-proxy.log')
+                handler.setFormatter(formatter)
+                handler.setLevel(logging.DEBUG)
+                proxyLog.addHandler(handler)
+                proxyLog.setLevel(logging.DEBUG)
+
+                proxy = CocaineProxy(self.port, self.cache, **config)
+                proxy.run()
         else:
+            proxy = CocaineProxy(self.port, self.cache, **config)
             proxy.run()

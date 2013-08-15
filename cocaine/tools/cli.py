@@ -5,9 +5,8 @@ import msgpack
 from tornado.ioloop import IOLoop
 
 from cocaine.exceptions import CocaineError, ChokeEvent, ToolsError
-from cocaine.futures import chain
 from cocaine.tools import log
-from cocaine.tools.actions import common, app, profile, runlist, crashlog, proxy
+from cocaine.tools.actions import common, app, profile, runlist, crashlog
 
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
@@ -193,22 +192,6 @@ class AppUploadCliAction(object):
             IOLoop.instance().stop()
 
 
-class ServeStartActionCli(object):
-    def __init__(self, **config):
-        self.action = proxy.Start(**config)
-
-    @chain.source
-    def execute(self):
-        try:
-            yield self.action.execute()
-        except ChokeEvent:
-            pass
-        except Exception as err:
-            log.error(err)
-        finally:
-            IOLoop.current().stop()
-
-
 AVAILABLE_TOOLS_ACTIONS = {
     'app:list': AwaitJsonWrapper()(app.List),
     'app:view': AwaitJsonWrapper(unpack=True)(app.View),
@@ -236,7 +219,6 @@ AVAILABLE_TOOLS_ACTIONS = {
     'app:restart': AwaitJsonWrapper()(app.Restart),
     'app:check': AwaitJsonWrapper()(app.Check),
     'call': CallActionCli,
-    'proxy:start': ServeStartActionCli
 }
 
 

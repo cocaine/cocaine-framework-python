@@ -23,12 +23,12 @@ import re
 import httplib
 from functools import partial
 from collections import defaultdict
+import traceback
 
 import msgpack
 import tornado.httpserver
 import tornado.options
 from tornado import ioloop
-
 
 from cocaine.services import Service
 from cocaine.exceptions import ServiceError
@@ -43,9 +43,6 @@ NEXT_REFRESH = "Next update %d after %d second"
 
 MOVE_TO_INACTIVE = "Move to inactive queue %s %s from pool with active %d"
 
-
-logger = logging.getLogger(__name__)
-io_loop = ioloop.IOLoop.instance()
 
 URL_REGEX = re.compile(r"/([^/]*)/([^/?]*)(.*)")
 
@@ -67,6 +64,9 @@ class CocaineProxy(object):
         self.refreshPeriod = config.get("refresh_timeout") or DEFAULT_REFRESH_PERIOD
         self.timeouts = config.get("timeouts", {})
 
+        self.logger = logging.getLogger('cocaine.proxy')
+        self.io_loop = ioloop.IOLoop.instance()
+
     def get_timeout(self, name):
         return self.timeouts.get(name, DEFAULT_TIMEOUT)
 
@@ -74,39 +74,39 @@ class CocaineProxy(object):
         def callback(res):
             try:
                 res.get()
-                logger.info(RECONNECT_SUCCESS, app.name, id(app), "{0}:{1}".format(*app.address))
+                self.logger.info(RECONNECT_SUCCESS, app.name, id(app), "{0}:{1}".format(*app.address))
             except Exception as err:
-                logger.warning(RECONNECT_FAIL, name, err)
+                self.logger.warning(RECONNECT_FAIL, name, err)
             finally:
                 dying[name].remove(app)
                 cache[name].append(app)
                 next_refresh = (1 + random.random()) * self.refreshPeriod
-                logger.info(NEXT_REFRESH, id(app), next_refresh)
-                io_loop.add_timeout(time.time() + next_refresh, self.move_to_inactive(app, name))
+                self.logger.info(NEXT_REFRESH, id(app), next_refresh)
+                self.io_loop.add_timeout(time.time() + next_refresh, self.move_to_inactive(app, name))
         try:
-            logger.info(RECONNECT_START, app.name)
+            self.logger.info(RECONNECT_START, app.name)
             app.reconnect(timeout=1.0, blocking=False).then(callback)
         except Exception as err:
-            logger.exception(RECONNECT_FAIL, name, err)
+            self.logger.exception(RECONNECT_FAIL, name, err)
             dying[name].remove(app)
 
     def move_to_inactive(self, app, name):
         def wrapper():
             active_apps = len(cache[name])
             if active_apps < self.serviceCacheCount:
-                io_loop.add_timeout(time.time() + self.get_timeout(name) + 1, self.move_to_inactive(app, name))
+                self.io_loop.add_timeout(time.time() + self.get_timeout(name) + 1, self.move_to_inactive(app, name))
                 return
-            logger.info(MOVE_TO_INACTIVE, app.name, "{0}:{1}".format(*app.address), active_apps)
+            self.logger.info(MOVE_TO_INACTIVE, app.name, "{0}:{1}".format(*app.address), active_apps)
             # Move service to sandbox for waiting current sessions
             try:
                 inx = cache[name].index(app)
                 # To avoid gc collect
                 dying[name].append(cache[name].pop(inx))
             except ValueError:
-                logger.error("Broken cache")
+                self.logger.error("Broken cache")
                 return
 
-            io_loop.add_timeout(time.time() + self.get_timeout(name) + 1, partial(self.async_reconnect, app, name))
+            self.io_loop.add_timeout(time.time() + self.get_timeout(name) + 1, partial(self.async_reconnect, app, name))
         return wrapper
 
     def get_service(self, name):
@@ -116,14 +116,14 @@ class CocaineProxy(object):
                 for _ in xrange(self.spoolSize - len(cache[name])):
                     app = Service(name)
                     created.append(app)
-                    logger.info("Connect to app: %s endpoint %s ", app.name, "{0}:{1}".format(*app.address))
+                    self.logger.info("Connect to app: %s endpoint %s ", app.name, "{0}:{1}".format(*app.address))
 
                 cache[name].extend(created)
                 for app in created:
                     timeout = (1 + random.random()) * self.refreshPeriod
-                    io_loop.add_timeout(time.time() + timeout, self.move_to_inactive(app, name))
+                    self.io_loop.add_timeout(time.time() + timeout, self.move_to_inactive(app, name))
             except Exception as err:
-                logger.error(str(err))
+                self.logger.error(str(err))
                 return None
 
         chosen = random.choice(cache[name])
@@ -132,12 +132,12 @@ class CocaineProxy(object):
                 fd = chosen._pipe.sock.fileno()
                 chosen._ioLoop._fd_events[fd]
             except Exception as err:
-                logger.exception("Wrong fd or missing poll event, so remove this service")
+                self.logger.exception("Wrong fd or missing poll event, so remove this service")
                 cache[name].remove(chosen)
                 return self.get_service(name)
             return chosen
         else:
-            logger.warning("Service %s disconnected %s", chosen.name, chosen.address)
+            self.logger.warning("Service %s disconnected %s", chosen.name, chosen.address)
             try:
                 chosen.reconnect(blocking=True)
                 if chosen.isConnected():
@@ -145,10 +145,10 @@ class CocaineProxy(object):
                         fd = chosen._pipe.sock.fileno()
                         chosen._ioLoop._fd_events[fd]
                     except Exception as err:
-                        logger.exception("Wrong fd or missing poll event, so remove this service")
+                        self.logger.exception("Wrong fd or missing poll event, so remove this service")
                         cache[name].remove(chosen)
                         return self.get_service(name)
-                    logger.info("Service %s has reconnected successfully", chosen.name)
+                    self.logger.info("Service %s has reconnected successfully", chosen.name)
                     return chosen
                 else:
                     return None
@@ -177,7 +177,7 @@ class CocaineProxy(object):
                 "HEADERS": headers,
                 "BODY": message}
         except ServiceError as err:
-            logger.error(str(err))
+            self.logger.error(str(err))
             message = "Application error: %s" % str(err)
             response_data = self.TEMPLATE % {
                 "VERSION": obj.version,
@@ -186,7 +186,7 @@ class CocaineProxy(object):
                 "HEADERS": 'Content-Length: %d\r\n' % len(message),
                 "BODY": message}
         except Exception as err:
-            logger.error(err)
+            self.logger.error(err)
             message = "Unknown error: %s" % str(err)
             response_data = self.TEMPLATE % {
                 "VERSION": obj.version,
@@ -265,6 +265,14 @@ class CocaineProxy(object):
         self.process(request, s, event, data)
 
     def run(self):
-        http_server = tornado.httpserver.HTTPServer(self.handle_request, no_keep_alive=False, xheaders=True)
-        http_server.listen(self.port)
-        tornado.ioloop.IOLoop.instance().start()
+        loop = tornado.ioloop.IOLoop.instance()
+        try:
+            http_server = tornado.httpserver.HTTPServer(self.handle_request, no_keep_alive=False, xheaders=True)
+            self.logger.debug(self.port)
+            http_server.listen(self.port)
+            loop.start()
+        except Exception as err:
+            self.logger.error(err)
+            traceback.print_exc(file=self.logger.handlers[1].stream)
+        finally:
+            loop.stop()
