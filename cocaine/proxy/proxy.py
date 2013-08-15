@@ -267,8 +267,8 @@ class CocaineProxy(object):
     def run(self):
         loop = tornado.ioloop.IOLoop.instance()
         try:
+            self.logger.info('Starting Cocaine Proxy at %d port', self.port)
             http_server = tornado.httpserver.HTTPServer(self.handle_request, no_keep_alive=False, xheaders=True)
-            self.logger.debug(self.port)
             http_server.listen(self.port)
             loop.start()
         except Exception as err:

@@ -455,23 +455,41 @@ def crashlog_removeall(options,
         'name': name,
     })
 
+DEFAULT_COCAINE_PROXY_PID_FILE = '/var/run/cocaine-python-proxy.pid'
+
 
 @proxyDispatcher.command()
 def start(port=('', 8080, 'server port'),
           cache=('', 5, 'service cache count'),
           config=('', '/etc/cocaine/cocaine-tornado-proxy.conf', 'path to the configuration file'),
           daemon=('', False, 'run as daemon'),
-          pidfile=('', '/var/run/tornado', 'pidfile')):
+          pidfile=('', DEFAULT_COCAINE_PROXY_PID_FILE, 'pidfile')):
     """Start embedded cocaine proxy
     """
-    Global.configureLog(debug='tools', logNames=['cocaine.proxy'])
-    proxy.Start(**{
-        'port': port,
-        'cache': cache,
-        'config': config,
-        'daemon': daemon,
-        'pidfile': pidfile,
-    }).execute()
+    Global.configureLog(logNames=['cocaine.tools', 'cocaine.proxy'])
+    try:
+        proxy.Start(**{
+            'port': port,
+            'cache': cache,
+            'config': config,
+            'daemon': daemon,
+            'pidfile': pidfile,
+        }).execute()
+    except proxy.Error as err:
+        logging.getLogger('cocaine.tools').error('Cocaine tool error - %s', err)
+
+
+@proxyDispatcher.command()
+def stop(pidfile=('', DEFAULT_COCAINE_PROXY_PID_FILE, 'pidfile')):
+    """Stop embedded cocaine proxy
+    """
+    Global.configureLog(logNames=['cocaine.tools', 'cocaine.proxy'])
+    try:
+        proxy.Stop(**{
+            'pidfile': pidfile,
+        }).execute()
+    except proxy.Error as err:
+        logging.getLogger('cocaine.tools').error('Cocaine tool error - %s', err)
 
 
 d.nest('app', appDispatcher, 'application commands')
