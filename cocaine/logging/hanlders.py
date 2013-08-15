@@ -39,7 +39,7 @@ def interactiveEmit(self, record):
             fs = '%s\n'
         msg = self.format(record)
         stream = self.stream
-        if not logging._unicode:  # if no unicode support...
+        if not hasattr(logging, '_unicode') or not logging._unicode:  # if no unicode support...
             stream.write(fs % msg)
         else:
             try:
