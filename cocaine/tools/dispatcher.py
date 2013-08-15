@@ -464,7 +464,7 @@ def start(port=('', 8080, 'server port'),
           config=('', '/etc/cocaine/cocaine-tornado-proxy.conf', 'path to the configuration file'),
           daemon=('', False, 'run as daemon'),
           pidfile=('', DEFAULT_COCAINE_PROXY_PID_FILE, 'pidfile')):
-    """Start embedded cocaine proxy
+    """Start embedded cocaine proxy.
     """
     Global.configureLog(logNames=['cocaine.tools', 'cocaine.proxy'])
     try:
@@ -481,7 +481,7 @@ def start(port=('', 8080, 'server port'),
 
 @proxyDispatcher.command()
 def stop(pidfile=('', DEFAULT_COCAINE_PROXY_PID_FILE, 'pidfile')):
-    """Stop embedded cocaine proxy
+    """Stop embedded cocaine proxy.
     """
     Global.configureLog(logNames=['cocaine.tools', 'cocaine.proxy'])
     try:
@@ -494,7 +494,7 @@ def stop(pidfile=('', DEFAULT_COCAINE_PROXY_PID_FILE, 'pidfile')):
 
 @proxyDispatcher.command()
 def status(pidfile=('', DEFAULT_COCAINE_PROXY_PID_FILE, 'pidfile')):
-    """Show cocaine proxy status.
+    """Show embedded cocaine proxy status.
     """
     Global.configureLog(logNames=['cocaine.tools', 'cocaine.proxy'])
     try:
