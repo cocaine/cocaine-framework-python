@@ -58,8 +58,8 @@ if '--with-proxy' in sys.argv:
     proxy_packages = ["cocaine.proxy"]
     proxy_scripts = ["scripts/cocaine-tornado-proxy"]
     proxy_data = [
-        ('/etc/cocaine/', ['init/cocaine-tornado-proxy.conf']),
-        ('/etc/init.d/', ['init/cocaine-tornado-proxy'])
+        ('/etc/init.d/', ['scripts/init/cocaine-tornado-proxy']),
+        ('/etc/cocaine/', ['scripts/init/cocaine-tornado-proxy.conf']),
     ]
 
 setup(
@@ -88,10 +88,8 @@ setup(
     ] + tools_packages + proxy_packages,
     install_requires=["msgpack_python", "tornado"] + tools_requires,
     scripts=tools_scripts + proxy_scripts,
-    data_files=proxy_data,
     tests_require=["mockito"],
     test_suite="unittest.TestCase",
-
     classifiers=[
         # 'Development Status :: 1 - Planning',
         # 'Development Status :: 2 - Pre-Alpha',
