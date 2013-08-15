@@ -4,10 +4,10 @@ from logging import config
 import os
 from signal import SIGTERM
 import time
-from cocaine.proxy import Daemon
 
-from cocaine.tools import log
+from cocaine.proxy import Daemon
 from cocaine.proxy.proxy import CocaineProxy
+from cocaine.tools import log
 
 
 class Error(Exception):
@@ -23,47 +23,44 @@ class Start(object):
         self.daemon = daemon
         self.pidfile = pidfile
 
-    @staticmethod
-    def configureLogging():
-        formatter = logging.Formatter('[%(asctime)s] %(levelname)-8s: %(message)s')
-        handler = logging.FileHandler('/var/log/cocaine-python-proxy.log')
-        handler.setFormatter(formatter)
-        handler.setLevel(logging.INFO)
-        proxyLog = logging.getLogger('cocaine.proxy')
-        proxyLog.addHandler(handler)
-        proxyLog.setLevel(logging.INFO)
-
     def execute(self):
         log.info('Starting cocaine proxy... ')
-        # Load config
-        config = {}
-        try:
-            with open(self.config, 'r') as fh:
-                config = json.loads(fh.read())
-        except IOError as err:
-            log.error(err)
+        config = self.loadConfig()
 
-        # Start
         if self.daemon:
-            if os.path.exists(self.pidfile):
-                log.error('FAIL')
-                raise Error('is already running (pid file "{0}" exists)'.format(self.pidfile))
-            else:
-                try:
-                    with open(self.pidfile, 'w'):
-                        pass
-                    os.remove(self.pidfile)
-                    log.info('OK')
-                except IOError as err:
-                    log.error('FAIL')
-                    raise Error('failed to create pid file - {0}'.format(err))
-
+            self.checkPermissions()
             daemon = Daemon(self.pidfile)
             daemon.run = self.run
             daemon.start(config)
         else:
             log.info('OK')
             self.run(config)
+
+    def checkPermissions(self):
+        if os.path.exists(self.pidfile):
+            log.error('FAIL')
+            raise Error('is already running (pid file "{0}" exists)'.format(self.pidfile))
+        else:
+            try:
+                with open(self.pidfile, 'w'):
+                    pass
+                os.remove(self.pidfile)
+                log.info('OK')
+            except IOError as err:
+                log.error('FAIL')
+                raise Error('failed to create pid file - {0}'.format(err))
+
+    def loadConfig(self):
+        config = {}
+        try:
+            with open(self.config, 'r') as fh:
+                config = json.loads(fh.read())
+        except IOError as err:
+            log.error('failed to load config - %s', err)
+        except Exception as err:
+            log.error('unexpected error occurs while loading config - %s', err)
+        finally:
+            return config
 
     def run(self, config):
         if 'logging' in config:
@@ -73,6 +70,16 @@ class Start(object):
 
         proxy = CocaineProxy(self.port, self.cache, **config)
         proxy.run()
+
+    @staticmethod
+    def configureLogging():
+        formatter = logging.Formatter('[%(asctime)s] %(levelname)-8s: %(message)s')
+        handler = logging.FileHandler('/var/log/cocaine-python-proxy.log')
+        handler.setFormatter(formatter)
+        handler.setLevel(logging.INFO)
+        proxyLog = logging.getLogger('cocaine.proxy')
+        proxyLog.addHandler(handler)
+        proxyLog.setLevel(logging.INFO)
 
 
 class Stop(object):
