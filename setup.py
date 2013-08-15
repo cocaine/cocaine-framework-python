@@ -34,12 +34,12 @@ try:
 except Exception:
     _version = "0.10.6.0"
 
-tools_requires = []
-tools_packages = []
-tools_scripts = []
-tools_data = []
 if "--without-tools" in sys.argv:
     sys.argv.remove("--without-tools")
+    tools_requires = []
+    tools_packages = []
+    tools_scripts = []
+    tools_data = []
 else:
     sys.argv.append('--with-proxy')
     tools_requires = ['opster >= 4.0']
@@ -49,10 +49,9 @@ else:
         tools_data = [
             ('/etc/bash_completion.d/', ["scripts/bash_completion.d/cocaine-tool"])
         ]
+    else:
+        tools_data = []
 
-proxy_packages = []
-proxy_scripts = []
-proxy_data = []
 if '--with-proxy' in sys.argv:
     sys.argv.remove('--with-proxy')
     proxy_packages = ["cocaine.proxy"]
@@ -61,6 +60,10 @@ if '--with-proxy' in sys.argv:
         ('/etc/init.d/', ['scripts/init/cocaine-tornado-proxy']),
         ('/etc/cocaine/', ['scripts/init/cocaine-tornado-proxy.conf']),
     ]
+else:
+    proxy_packages = []
+    proxy_scripts = []
+    proxy_data = []
 
 setup(
     name="cocaine",
@@ -87,6 +90,7 @@ setup(
         "cocaine.testing",
     ] + tools_packages + proxy_packages,
     install_requires=["msgpack_python", "tornado"] + tools_requires,
+    data_files=proxy_data + tools_data,
     scripts=tools_scripts + proxy_scripts,
     tests_require=["mockito"],
     test_suite="unittest.TestCase",
