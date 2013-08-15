@@ -4,8 +4,8 @@ import time
 import os
 import sys
 import json
-from functools import partial
 from signal import SIGTERM
+
 
 class Daemon(object):
 
@@ -128,7 +128,7 @@ class Daemon(object):
 
         try:
             os.kill(pid, 0)
-        except OSError as err:
+        except OSError:
             msg = "Stopped\n"
             sys.stderr.write(msg)
             sys.exit(1)
@@ -150,8 +150,8 @@ def load_config(path):
 
 
 def coroutine(func):
-    def start(*args,**kwargs):
-        cr = func(*args,**kwargs)
+    def start(*args, **kwargs):
+        cr = func(*args, **kwargs)
         cr.next()
         return cr
     return start

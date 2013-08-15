@@ -32,11 +32,16 @@ class Global(object):
         self.timeout = timeout
         self.executor = Executor(timeout)
         self._locator = None
+        self.configureLog()
 
+    @staticmethod
+    def configureLog(debug='disable', color=True, logNames=None):
+        if not logNames:
+            logNames = ['cocaine.tools']
         message = '%(message)s'
         level = logging.INFO
         if debug != 'disable':
-            message = '%(name)s: %(levelname)-8s: %(message)s'
+            message = '[%(asctime)s] %(name)s: %(levelname)-8s: %(message)s'
             level = logging.DEBUG
 
         ch = logging.StreamHandler()
@@ -46,10 +51,6 @@ class Global(object):
         ch.setLevel(level)
         formatter = ColoredFormatter(message, colored=color and sys.stdin.isatty())
         ch.setFormatter(formatter)
-
-        logNames = [
-            'cocaine.tools'
-        ]
 
         if debug == 'all':
             logNames.append('cocaine')
@@ -455,11 +456,23 @@ def crashlog_removeall(options,
 
 
 @serveDispatcher.command()
-def start():
+def start(port=('', 8080, 'server port'),
+          cache=('', 5, 'service cache count'),
+          config=('', '/etc/cocaine/cocaine-tornado-proxy.conf', 'path to the configuration file'),
+          daemon=('', False, 'run as daemon'),
+          pidfile=('', '/var/run/tornado', 'pidfile'),
+          user=('', 'cocaine', 'run from specified user')):
     """Start embedded cocaine proxy
     """
-    executor = Executor(1.0)
+    Global.configureLog(debug='tools', logNames=['cocaine.proxy'])
+    executor = Executor()
     executor.executeAction('serve:start', **{
+        'port': port,
+        'cache': cache,
+        'config': config,
+        'daemon': daemon,
+        'pidfile': pidfile,
+        'user': user
     })
 
 

@@ -8,7 +8,6 @@ from cocaine.exceptions import CocaineError, ChokeEvent, ToolsError
 from cocaine.futures import chain
 from cocaine.tools import log
 from cocaine.tools.actions import common, app, profile, runlist, crashlog, serve
-from cocaine.tools.actions.app import LocalUpload
 
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
@@ -178,7 +177,7 @@ CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
 class AppUploadCliAction(object):
     def __init__(self, storage, **config):
-        self.action = LocalUpload(storage, **config)
+        self.action = app.LocalUpload(storage, **config)
 
     def execute(self):
         self.action.execute().then(self.processResult)
@@ -245,7 +244,7 @@ class Executor(object):
     """
     This class represents abstract action executor for specified service 'serviceName' and actions pool
     """
-    def __init__(self, timeout):
+    def __init__(self, timeout=None):
         self.timeout = timeout
         self.loop = IOLoop.current()
 
@@ -261,7 +260,8 @@ class Executor(object):
             Action = AVAILABLE_TOOLS_ACTIONS[actionName]
             action = Action(**options)
             action.execute()
-            self.loop.add_timeout(time() + self.timeout, self.timeoutErrorback)
+            if self.timeout is not None:
+                self.loop.add_timeout(time() + self.timeout, self.timeoutErrorback)
             self.loop.start()
         except CocaineError as err:
             raise ToolsError(err)
