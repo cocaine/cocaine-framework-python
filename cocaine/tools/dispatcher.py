@@ -460,7 +460,7 @@ DEFAULT_COCAINE_PROXY_PID_FILE = '/var/run/cocaine-python-proxy.pid'
 
 @proxyDispatcher.command()
 def start(port=('', 8080, 'server port'),
-          cache=('', 5, 'service cache count'),
+          count=('', 0, 'server subprocess count (0 means optimal for current CPU count)'),
           config=('', '/etc/cocaine/cocaine-tornado-proxy.conf', 'path to the configuration file'),
           daemon=('', False, 'run as daemon'),
           pidfile=('', DEFAULT_COCAINE_PROXY_PID_FILE, 'pidfile')):
@@ -470,9 +470,9 @@ def start(port=('', 8080, 'server port'),
     try:
         proxy.Start(**{
             'port': port,
-            'cache': cache,
-            'config': config,
             'daemon': daemon,
+            'count': count,
+            'config': config,
             'pidfile': pidfile,
         }).execute()
     except proxy.Error as err:

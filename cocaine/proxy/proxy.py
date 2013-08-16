@@ -274,7 +274,7 @@ class CocaineProxy(object):
         data = self.pack_httprequest(request)
         self.process(request, s, event, data)
 
-    def run(self):
+    def run(self, count):
         http_server = tornado.httpserver.HTTPServer(self.handle_request, no_keep_alive=False, xheaders=True)
         pid = os.getpid()
 
@@ -289,7 +289,7 @@ class CocaineProxy(object):
         try:
             self.logger.info('Proxy will be started at %d port with %d instances', self.port, cpu_count())
             http_server.bind(self.port)
-            http_server.start(0)
+            http_server.start(count)
             tornado.ioloop.IOLoop.instance().start()
         except KeyboardInterrupt:
             self.logger.info('Received shutdown signal')

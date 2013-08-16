@@ -15,10 +15,9 @@ class Error(Exception):
 
 
 class Start(object):
-    def __init__(self, port, cache, config, daemon, pidfile):
+    def __init__(self, port, count, config, daemon, pidfile):
         self.port = port
-        self.count = 4
-        self.cache = cache
+        self.count = count
         self.config = config
         self.daemon = daemon
         self.pidfile = pidfile
@@ -51,14 +50,16 @@ class Start(object):
                 raise Error('failed to create pid file - {0}'.format(err))
 
     def loadConfig(self):
-        config = {}
+        config = {
+            'cache': 5
+        }
         try:
             with open(self.config, 'r') as fh:
                 config = json.loads(fh.read())
         except IOError as err:
-            log.error('failed to load config - %s. Default config will be used.', err)
+            log.error('Failed to load config - %s. Default config will be used.', err)
         except Exception as err:
-            log.error('unexpected error occurs while loading config - %s. Default config will be used.', err)
+            log.error('Unexpected error occurs while loading config - %s. Default config will be used.', err)
         finally:
             return config
 
@@ -68,8 +69,8 @@ class Start(object):
         else:
             self.configureLogging()
 
-        proxy = CocaineProxy(self.port, self.cache, **config)
-        proxy.run()
+        proxy = CocaineProxy(self.port, **config)
+        proxy.run(self.count)
 
     @staticmethod
     def configureLogging():
