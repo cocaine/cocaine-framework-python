@@ -33,7 +33,7 @@ class Global(object):
         self.timeout = timeout
         self.executor = Executor(timeout)
         self._locator = None
-        self.configureLog()
+        self.configureLog(debug=debug, color=color)
 
     @staticmethod
     def configureLog(debug='disable', color=True, logNames=None):

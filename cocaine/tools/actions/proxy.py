@@ -105,6 +105,9 @@ class Stop(object):
                 os.kill(pid, SIGTERM)
                 time.sleep(0.5)
                 elapsed += 0.5
+
+            if elapsed > 30.0:
+                os.kill(pid, SIGTERM)
         except OSError as err:
             err = str(err)
             if err.find('No such process') > 0:

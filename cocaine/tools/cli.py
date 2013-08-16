@@ -228,7 +228,14 @@ class Executor(object):
     """
     def __init__(self, timeout=None):
         self.timeout = timeout
-        self.loop = IOLoop.current()
+        self._loop = None
+
+    @property
+    def loop(self):
+        """Lazy event loop initialization"""
+        if self._loop:
+            return self._loop
+        return IOLoop.current()
 
     def executeAction(self, actionName, **options):
         """

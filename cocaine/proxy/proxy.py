@@ -15,20 +15,22 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-
+import collections
+import os
 import random
 import logging
 import time
 import re
 import httplib
-from functools import partial
-from collections import defaultdict
 import traceback
+import functools
 
 import msgpack
+import signal
 import tornado.httpserver
 import tornado.options
 from tornado import ioloop
+from tornado.process import cpu_count
 
 from cocaine.services import Service
 from cocaine.exceptions import ServiceError
@@ -50,8 +52,8 @@ DEFAULT_SERVICE_CACHE_COUNT = 5
 DEFAULT_REFRESH_PERIOD = 10
 DEFAULT_TIMEOUT = 1
 
-cache = defaultdict(list)  # active applications
-dying = defaultdict(list)  # application, which are waiting for reconnection
+cache = collections.defaultdict(list)  # active applications
+dying = collections.defaultdict(list)  # application, which are waiting for reconnection
 
 
 class CocaineProxy(object):
@@ -65,7 +67,14 @@ class CocaineProxy(object):
         self.timeouts = config.get("timeouts", {})
 
         self.logger = logging.getLogger('cocaine.proxy')
-        self.io_loop = ioloop.IOLoop.instance()
+        self._io_loop = None
+
+    @property
+    def io_loop(self):
+        """Lazy event loop initialization"""
+        if self._io_loop is not None:
+            return self._io_loop
+        return ioloop.IOLoop.current()
 
     def get_timeout(self, name):
         return self.timeouts.get(name, DEFAULT_TIMEOUT)
@@ -106,7 +115,8 @@ class CocaineProxy(object):
                 self.logger.error("Broken cache")
                 return
 
-            self.io_loop.add_timeout(time.time() + self.get_timeout(name) + 1, partial(self.async_reconnect, app, name))
+            self.io_loop.add_timeout(time.time() + self.get_timeout(name) + 1,
+                                     functools.partial(self.async_reconnect, app, name))
         return wrapper
 
     def get_service(self, name):
@@ -265,14 +275,26 @@ class CocaineProxy(object):
         self.process(request, s, event, data)
 
     def run(self):
-        loop = tornado.ioloop.IOLoop.instance()
+        http_server = tornado.httpserver.HTTPServer(self.handle_request, no_keep_alive=False, xheaders=True)
+        pid = os.getpid()
+
+        def terminate(signum, frame):
+            if pid == os.getpid():
+                for child in frame.f_locals['children']:
+                    os.kill(child, signal.SIGTERM)
+            else:
+                http_server.stop()
+                tornado.ioloop.IOLoop.current().stop()
+        signal.signal(signal.SIGTERM, terminate)
         try:
-            self.logger.info('Starting Cocaine Proxy at %d port', self.port)
-            http_server = tornado.httpserver.HTTPServer(self.handle_request, no_keep_alive=False, xheaders=True)
-            http_server.listen(self.port)
-            loop.start()
+            self.logger.info('Proxy will be started at %d port with %d instances', self.port, cpu_count())
+            http_server.bind(self.port)
+            http_server.start(0)
+            tornado.ioloop.IOLoop.instance().start()
+        except KeyboardInterrupt:
+            self.logger.info('Received shutdown signal')
         except Exception as err:
             self.logger.error(err)
             traceback.print_exc(file=self.logger.handlers[1].stream)
         finally:
-            loop.stop()
+            tornado.ioloop.IOLoop.current().stop()
