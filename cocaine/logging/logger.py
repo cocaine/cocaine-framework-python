@@ -19,11 +19,16 @@
 #
 
 import sys
+import threading
 
 from cocaine.asio.service import Service
 from cocaine.logging.log_message import Message
 
 __all__ = ["Logger"]
+
+
+LOCK = threading.Lock()
+
 
 VERBOSITY_LEVELS = {
     0: "ignore",
@@ -56,8 +61,9 @@ def _construct_logger_methods(cls, verbosity_level):
     def closure(_lvl):
         if _lvl <= verbosity_level:
             def func(data):
-                cls._counter += 1
-                cls._logger._writableStream.write(Message("Message", cls._counter, _lvl,  cls.target, str(data)).pack())
+                with cls._lock:
+                    cls._counter += 1
+                    cls._logger._writableStream.write(Message("Message", cls._counter, _lvl,  cls.target, str(data)).pack())
             return func
         else:
             def func(data):
@@ -79,20 +85,22 @@ class _Logger(Service):
 
 class Logger(object):
     def __new__(cls):
-        if not hasattr(cls, "_instance"):
-            instance = object.__new__(cls)
-            try:
-                _logger = _Logger()
-                for verbosity in _logger.perform_sync("verbosity"):  # only one chunk and read choke also.
-                    pass
-                setattr(instance, "_logger", _logger)
+        with LOCK:
+            cls._lock = threading.Lock()
+            if not hasattr(cls, "_instance"):
+                instance = object.__new__(cls)
                 try:
-                    setattr(instance, "target", "app/%s" % sys.argv[sys.argv.index("--app") + 1])
-                except ValueError:
-                    setattr(instance, "target", "app/%s" % "standalone")
-                _construct_logger_methods(instance, verbosity)
-            except Exception as err:
-                instance = _STDERR_Logger()
-                instance.warn("Logger init error: %s. Use stderr logger" % err)
-            cls._instance = instance
+                    _logger = _Logger()
+                    for verbosity in _logger.perform_sync("verbosity"):  # only one chunk and read choke also.
+                        pass
+                    setattr(instance, "_logger", _logger)
+                    try:
+                        setattr(instance, "target", "app/%s" % sys.argv[sys.argv.index("--app") + 1])
+                    except ValueError:
+                        setattr(instance, "target", "app/%s" % "standalone")
+                    _construct_logger_methods(instance, verbosity)
+                except Exception as err:
+                    instance = _STDERR_Logger()
+                    instance.warn("Logger init error: %s. Use stderr logger" % err)
+                cls._instance = instance
         return cls._instance
