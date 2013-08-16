@@ -8,3 +8,9 @@ include /usr/share/cdbs/1/class/python-distutils.mk
 install/cocaine-tools::
 	install -d $(DEB_DESTDIR)usr/bin
 	dh_bash-completion
+
+install/cocaine-tornado-proxy::
+	install -d $(DEB_DESTDIR)etc/init.d
+	install -m755 scripts/init/cocaine-tornado-proxy $(DEB_DESTDIR)etc/init.d/cocaine-tornado-proxy
+	install -d $(DEB_DESTDIR)etc/cocaine
+	install -m755 scripts/init/cocaine-tornado-proxy.conf $(DEB_DESTDIR)etc/cocaine/cocaine-tornado-proxy.conf

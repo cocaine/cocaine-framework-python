@@ -68,6 +68,12 @@ rm -rf %{buildroot}
 %doc README* LICENSE
 %{_bindir}/*
 
+%files -n cocaine-tornado-proxy
+%defattr(-,root,root,-)
+%doc README* LICENSE
+/etc/cocaine/cocaine-tornado-proxy.conf
+/etc/init.d/cocaine-tornado-proxy
+
 
 %changelog
 * Thu Jul 27 2013 Arkady L. Shane <ashejn@russianfedora.ru> - 0.10.5.5-1
