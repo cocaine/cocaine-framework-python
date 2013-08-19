@@ -98,6 +98,7 @@ class AbstractService(object):
         self._subscribers = {}
         self._session = 0
 
+        self.version = 0
         self.api = {}
 
     @property
@@ -147,7 +148,8 @@ class AbstractService(object):
         if timeout is not None and time() - start > timeout:
             raise ConnectionTimeoutError((host, port), timeout)
 
-        reason = 'multiple connection errors: ' + ', '.join(str(err) for err in errors)
+        prefix = 'service resolving failed. Reason:'
+        reason = '{0} [{1}]'.format(prefix, ', '.join(str(err) for err in errors))
         raise ConnectionError((host, port), reason)
 
     def _on_message(self, args):
@@ -241,8 +243,8 @@ class Locator(AbstractService):
 
     def resolve(self, name, timeout, blocking):
         if blocking:
-            (endpoint, session, api), = [chunk for chunk in self.perform_sync('resolve', name, timeout=timeout)]
-            return endpoint, session, api
+            (endpoint, version, api), = [chunk for chunk in self.perform_sync('resolve', name, timeout=timeout)]
+            return endpoint, version, api
         else:
             return self._invoke(self.RESOLVE_METHOD_ID)(name, timeout=timeout)
 
@@ -268,7 +270,7 @@ class Service(AbstractService):
 
     @strategy.coroutine
     def connectThroughLocator(self, locator, timeout=None, blocking=False):
-        endpoint, session, api = yield locator.resolve(self.name, timeout, blocking=blocking)
+        endpoint, self.version, api = yield locator.resolve(self.name, timeout, blocking=blocking)
         yield self._connectToEndpoint(*endpoint, timeout=timeout, blocking=blocking)
 
         self.api = dict((methodName, methodId) for methodId, methodName in api.items())
