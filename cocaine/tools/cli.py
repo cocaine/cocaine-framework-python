@@ -138,10 +138,8 @@ class CallActionCli(object):
             requestType = result['request']
             response = result['response']
             if requestType == 'api':
-                print('API of service "{0}": {1}'.format(
-                    result['service'],
-                    json.dumps([method for method in response.values()], indent=4))
-                )
+                log.info('Service "{0}" provides following API:'.format(self.action.serviceName))
+                log.info('\n'.join(' - {0}'.format(method) for method in response))
             elif requestType == 'invoke':
                 print(response)
         except Exception as err:
