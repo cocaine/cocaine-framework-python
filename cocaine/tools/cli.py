@@ -141,9 +141,10 @@ class CallActionCli(object):
                 log.info('Service "{0}" provides following API:'.format(self.action.serviceName))
                 log.info('\n'.join(' - {0}'.format(method) for method in response))
             elif requestType == 'invoke':
-                print(response)
+                log.info('Response:')
+                log.info(response)
         except Exception as err:
-            log.error(err)
+            log.error('Calling failed - %s', err)
         finally:
             IOLoop.instance().stop()
 
