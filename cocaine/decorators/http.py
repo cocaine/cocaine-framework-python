@@ -24,7 +24,7 @@ import urlparse
 
 from _callablewrappers import proxy_factory
 
-__all__ = ["http"]
+__all__ = ["http", "tornado"]
 
 
 class _HTTPResponse(object):
@@ -54,6 +54,8 @@ class _HTTPRequest(object):
 
     def __init__(self, data):
         method, url, version, headers, self._body = msgpack.unpackb(data)
+        with open("/tmp/request.txt", "wb") as f:
+            f.write(data)
         self._meta = dict()
         self._headers = dict(headers)
         self._meta['method'] = method
@@ -90,5 +92,24 @@ def http_request_decorator(obj):
     return obj
 
 
+#==========
+from tornado.httpserver import HTTPRequest
+
+def _tornado_request_wrapper(data):
+    method, uri, version, headers, body = msgpack.unpackb(data)
+    return HTTPRequest(method, uri, version, dict(headers), body)
+
+def tornado_request_decorator(obj):
+    def dec(func):
+        def wrapper(chunk):
+            return func(_tornado_request_wrapper(chunk))
+        return wrapper
+    obj.push = dec(obj.push)
+    return obj
+
+
 def http(func):
     return proxy_factory(func, response_handler=_HTTPResponse, request_handler=http_request_decorator)
+
+def tornado(func):
+    return proxy_factory(func, response_handler=_HTTPResponse, request_handler=tornado_request_decorator)
