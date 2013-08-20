@@ -93,7 +93,31 @@ class PreparedFuture(Future):
 
 
 class Deferred(Future):
-    #todo: docs
+    """Deferred future result.
+
+    This class represents deferred result of asynchronous operation. It is designed specially for returning from
+    function that is like to be used in Chain context.
+
+    Typical usage assumes that you create `Deferred` object, keep it somewhere, start asynchronous operation and
+    return this deferred from function. When asynchronous operation is done, just invoke `ready` and pass the result
+    (including Exceptions) into it.
+
+    Here the example of asynchronous function that starts timer and signals the deferred after 1.0 sec.
+
+    ```
+    def timer_function():
+        deferred = Deferred()
+        timeout = 1.0
+        ioloop.add_timer(time.time() + timeout, lambda: deferred.ready('Done')
+        return deferred
+    ```
+
+    Now you can use `timer_function` in Chain context:
+
+    ```
+    result = yield timer_function()
+    ```
+    """
     def __init__(self):
         super(Deferred, self).__init__()
         self.unbind()
