@@ -109,7 +109,7 @@ class Loop(object):
     def proxy(self, fd, event):
         if event & self.WRITE:
             self._callbacks[(fd, self.WRITE)]()
-        elif event & self.READ:
+        if event & self.READ:
             self._callbacks[(fd, self.READ)]()
 
     @property
