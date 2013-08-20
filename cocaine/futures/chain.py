@@ -256,7 +256,7 @@ class ChainItem(object):
     def __init__(self, func, ioLoop=None):
         self.func = func
         self.ioLoop = ioLoop or IOLoop.instance()
-        self.nextChainItem = None
+        self.next = None
         self.__log = logging.getLogger(self.__module__ + '.' + self.__class__.__name__)
 
     def execute(self, *args, **kwargs):
@@ -278,13 +278,13 @@ class ChainItem(object):
     def callback(self, chunk):
         self.__log.debug('%d: ChainItem.callback - %s', id(self), repr(chunk))
         futureResult = FutureResult(chunk)
-        if self.nextChainItem:
+        if self.next:
             # Actually it does not matter if we invoke next chain item synchronously or via event loop.
             # But for convenience, let's do it asynchronously.
-            self.ioLoop.add_callback(self.nextChainItem.execute, futureResult)
+            self.ioLoop.add_callback(self.next.execute, futureResult)
 
     def errorback(self, error):
-        if self.nextChainItem:
+        if self.next:
             self.callback(error)
         else:
             if not (isinstance(error, ChokeEvent) or isinstance(error, StopIteration)):
@@ -319,11 +319,11 @@ class Chain(object):
             functions = []
         self.ioLoop = ioLoop or IOLoop.instance()
         self.__log = logging.getLogger(self.__module__ + '.' + self.__class__.__name__)
-        self.chainItems = []
+        self.items = []
         for func in functions:
             self.then(func)
 
-        self._lastResults = []
+        self._pending = []
 
     def then(self, func):
         """
@@ -339,16 +339,16 @@ class Chain(object):
                      method) than there is no parameters must be provided in function signature.
         """
         self.__log.debug('Adding function "%s" to the chain', repr(func))
-        chainItem = ChainItem(func, self.ioLoop)
+        item = ChainItem(func, self.ioLoop)
 
-        if len(self.chainItems) == 0:
-            self.__log.debug('Executing first chain item asynchronously - %s ...', repr(chainItem))
-            self.ioLoop.add_callback(chainItem.execute)
+        if len(self.items) == 0:
+            self.__log.debug('Executing first chain item asynchronously - %s ...', repr(item))
+            self.ioLoop.add_callback(item.execute)
         else:
-            self.__log.debug('Coupling %s to %s', repr(chainItem), repr(self.chainItems[-1]))
-            self.chainItems[-1].nextChainItem = chainItem
+            self.__log.debug('Coupling %s to %s', repr(item), repr(self.items[-1]))
+            self.items[-1].next = item
 
-        self.chainItems.append(chainItem)
+        self.items.append(item)
         return self
 
     def run(self):
@@ -364,7 +364,7 @@ class Chain(object):
         """
         Provides information if chain object has pending result that can be taken from it.
         """
-        return len(self._lastResults) > 0
+        return len(self._pending) > 0
 
     def get(self, timeout=None):
         """
@@ -450,26 +450,26 @@ class Chain(object):
             self.then(self._saveLastResult)
 
     def _removeTrackingLastResult(self):
-        if len(self.chainItems) > 1:
-            index = len(self.chainItems) - 1
-            self.chainItems[index - 1].nextChainItem = None
-            self.chainItems.pop(index)
+        if len(self.items) > 1:
+            index = len(self.items) - 1
+            self.items[index - 1].rnext = None
+            self.items.pop(index)
 
     def _saveLastResult(self, result):
-        self._lastResults.append(result)
+        self._pending.append(result)
         self.ioLoop.stop()
 
     def _isTrackingForLastResult(self):
-        return self.chainItems[-1].func == self._saveLastResult
+        return self.items[-1].func == self._saveLastResult
 
     def _getLastResult(self):
-        assert len(self._lastResults) > 0
+        assert len(self._pending) > 0
 
-        lastResult = self._lastResults[0]
+        lastResult = self._pending[0]
         if isinstance(lastResult.result, ChokeEvent):
             return lastResult.get()
         else:
-            self._lastResults.pop(0)
+            self._pending.pop(0)
             return lastResult.get()
 
 
