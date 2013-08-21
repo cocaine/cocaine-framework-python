@@ -180,7 +180,12 @@ class LocalUpload(actions.Storage):
     def execute(self):
         try:
             repositoryPath = self._createRepository()
-            manifestPath = self.manifest or _locateFile(self.path, 'manifest.json')
+            if self.manifest:
+                manifestPath = self.manifest
+            else:
+                log.info('Locating manifest... ')
+                manifestPath = _locateFile(self.path, 'manifest.json')
+                log.info('OK - %s', manifestPath)
             Installer = venvFactory[self.virtualEnvironmentType]
             if Installer:
                 yield self._createVirtualEnvironment(repositoryPath, manifestPath, Installer)
