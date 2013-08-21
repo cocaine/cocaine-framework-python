@@ -392,7 +392,11 @@ class Chain(object):
         if timeout:
             self.ioLoop.add_timeout(time.time() + timeout,
                                     lambda: self._saveLastResult(FutureResult(TimeoutError(timeout))))
+        isLoopRunning = self.ioLoop._running
         self.ioLoop.start()
+        if isLoopRunning:
+            self.ioLoop._running = True
+            self.ioLoop._stopped = False
         self._removeTrackingLastResult()
         return self._getLastResult()
 
@@ -452,7 +456,7 @@ class Chain(object):
     def _removeTrackingLastResult(self):
         if len(self.items) > 1:
             index = len(self.items) - 1
-            self.items[index - 1].rnext = None
+            self.items[index - 1].next = None
             self.items.pop(index)
 
     def _saveLastResult(self, result):
