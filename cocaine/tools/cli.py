@@ -5,6 +5,7 @@ import msgpack
 from tornado.ioloop import IOLoop
 
 from cocaine.exceptions import CocaineError, ChokeEvent, ToolsError
+from cocaine.futures import chain
 from cocaine.tools import log
 from cocaine.tools.actions import common, app, profile, runlist, crashlog
 
@@ -173,29 +174,9 @@ CRASHLOG_REMOVE_SUCCESS = 'Crashlog for app "{0}" has been removed'
 CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
 
-class AppUploadCliAction(object):
-    def __init__(self, storage, **config):
-        self.action = app.LocalUpload(storage, **config)
-
-    def execute(self):
-        self.action.execute().then(self.processResult)
-
-    def processResult(self, chunk):
-        try:
-            chunk.get()
-        except ChokeEvent:
-            pass
-        except Exception as err:
-            log.error(err)
-        finally:
-            IOLoop.instance().stop()
-
-
 AVAILABLE_TOOLS_ACTIONS = {
     'app:list': AwaitJsonWrapper()(app.List),
     'app:view': AwaitJsonWrapper(unpack=True)(app.View),
-    'app:upload-manual': AwaitDoneWrapper()(app.Upload),
-    'app:upload': AppUploadCliAction,
     'app:remove': AwaitDoneWrapper(APP_REMOVE_SUCCESS, APP_REMOVE_FAIL)(app.Remove),
     'profile:list': AwaitJsonWrapper()(profile.List),
     'profile:view': AwaitJsonWrapper(unpack=True)(profile.View),
@@ -218,6 +199,28 @@ AVAILABLE_TOOLS_ACTIONS = {
     'app:restart': AwaitJsonWrapper()(app.Restart),
     'app:check': AwaitJsonWrapper()(app.Check),
     'call': CallActionCli,
+}
+
+
+class Proxy(object):
+    def __init__(self, Action):
+        self._Action = Action
+
+    @chain.source
+    def execute(self, **config):
+        try:
+            action = self._Action(**config)
+            yield action.execute()
+        except ChokeEvent:
+            pass
+        except Exception as err:
+            log.error(err)
+        finally:
+            IOLoop.instance().stop()
+
+NG_ACTIONS = {
+    'app:upload-manual': Proxy(app.Upload),
+    'app:upload': Proxy(app.LocalUpload),
 }
 
 
@@ -245,9 +248,13 @@ class Executor(object):
         :param options: various action configuration
         """
         try:
-            Action = AVAILABLE_TOOLS_ACTIONS[actionName]
-            action = Action(**options)
-            action.execute()
+            if actionName in NG_ACTIONS:
+                action = NG_ACTIONS[actionName]
+                action.execute(**options)
+            else:
+                Action = AVAILABLE_TOOLS_ACTIONS[actionName]
+                action = Action(**options)
+                action.execute()
             if self.timeout is not None:
                 self.loop.add_timeout(time() + self.timeout, self.timeoutErrorback)
             self.loop.start()
