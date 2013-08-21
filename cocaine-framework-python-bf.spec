@@ -54,6 +54,11 @@ rm -rf %{buildroot}
 
 python setup.py install --root=%{buildroot}
 
+mkdir -p %{buildroot}/etc/init.d
+install -m755 scripts/init/cocaine-tornado-proxy %{buildroot}/etc/init.d/cocaine-tornado-proxy
+mkdir -p %{buildroot}/etc/cocaine
+install -m644 scripts/init/cocaine-tornado-proxy.conf %{buildroot}/etc/cocaine/cocaine-tornado-proxy.conf
+
 
 %clean
 rm -rf %{buildroot}
