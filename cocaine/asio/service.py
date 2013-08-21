@@ -162,6 +162,7 @@ class AbstractService(object):
                 self._subscribers[msg.session].callback(msgpack.unpackb(msg.data))
             elif msg.id == message.RPC_CHOKE:
                 future = self._subscribers.pop(msg.session, None)
+                assert future is not None, 'one of subscribers has suddenly disappeared'
                 if future is not None:
                     future.close()
             elif msg.id == message.RPC_ERROR:
