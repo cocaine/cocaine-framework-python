@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cloud Applications</title>
+</head>
+<body>
+    <span>Available applications:</span>
+    <ul>
+    {% for app in apps %}
+        <li>{{ app }}</li>
+    {% endfor %}
+    </ul>
+</body>
+</html>
