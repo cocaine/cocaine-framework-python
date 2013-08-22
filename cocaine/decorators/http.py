@@ -67,6 +67,11 @@ class _HTTPRequest(object):
         tmp = urlparse.parse_qs(urlparse.urlparse(url).query)
         self._request = dict((k, v[0]) for k, v in tmp.iteritems() if len(v) > 0)
         self._files = None
+        args = dict()
+        files = dict()
+        parse_body_arguments(self._headers.get("Content-Type", ""), self._body, args, files)
+        self._request.update(dict((k, v[0]) for k, v in args.iteritems() if len(v) > 0))
+        self._files = files
 
     @property
     def headers(self):
@@ -87,14 +92,7 @@ class _HTTPRequest(object):
 
     @property
     def files(self):
-        if self._files is not None:
-            return self._files
-        else:
-            args = dict()
-            files = dict()
-            parse_body_arguments(self._headers.get("Content-Type", ""), self._body, args, files)
-            self._files = files
-            return self._files
+        return self._files
 
 
 def http_request_decorator(obj):
