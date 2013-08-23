@@ -229,7 +229,11 @@ class GeneratorFutureMock(Future):
             future = result
         elif isinstance(result, Chain):
             deferred = Deferred()
-            result.then(lambda r: deferred.ready(r))
+
+            def cleanPending(r):
+                deferred.ready(r)
+                result.items[-1].pending = []
+            result.then(cleanPending)
             future = deferred
         elif hasattr(result, 'add_done_callback'):
             # Meant to be tornado.concurrent._DummyFuture or python 3.3 concurrent.future.Future
@@ -260,6 +264,10 @@ class ChainItem(object):
         self.__log = logging.getLogger(self.__module__ + '.' + self.__class__.__name__)
         self.pending = []
 
+    def setNext(self, item):
+        self.next = item
+        self.pending = []
+
     def execute(self, *args, **kwargs):
         try:
             self.__log.debug('%d: Executing "%s" with "%s" ...', id(self), self.func, repr(args))
@@ -279,11 +287,12 @@ class ChainItem(object):
     def callback(self, chunk):
         self.__log.debug('%d: ChainItem.callback - %s', id(self), repr(chunk))
         futureResult = FutureResult(chunk)
-        self.pending.append(futureResult)
         if self.next:
             # Actually it does not matter if we invoke next chain item synchronously or via event loop.
             # But for convenience, let's do it asynchronously.
             self.ioLoop.add_callback(self.next.execute, futureResult)
+        else:
+            self.pending.append(futureResult)
 
     def errorback(self, error):
         self.callback(error)
@@ -344,7 +353,7 @@ class Chain(object):
             self.ioLoop.add_callback(item.execute)
         else:
             self.__log.debug('Coupling %s to %s', repr(item), repr(self.items[-1]))
-            self.items[-1].next = item
+            self.items[-1].setNext(item)
 
         self.items.append(item)
         return self
