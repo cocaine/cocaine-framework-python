@@ -258,6 +258,7 @@ class ChainItem(object):
         self.ioLoop = ioLoop or IOLoop.instance()
         self.next = None
         self.__log = logging.getLogger(self.__module__ + '.' + self.__class__.__name__)
+        self.pending = []
 
     def execute(self, *args, **kwargs):
         try:
@@ -278,17 +279,16 @@ class ChainItem(object):
     def callback(self, chunk):
         self.__log.debug('%d: ChainItem.callback - %s', id(self), repr(chunk))
         futureResult = FutureResult(chunk)
+        self.pending.append(futureResult)
         if self.next:
             # Actually it does not matter if we invoke next chain item synchronously or via event loop.
             # But for convenience, let's do it asynchronously.
             self.ioLoop.add_callback(self.next.execute, futureResult)
 
     def errorback(self, error):
-        if self.next:
-            self.callback(error)
-        else:
-            if not (isinstance(error, ChokeEvent) or isinstance(error, StopIteration)):
-                log.error(error, exc_info=True)
+        self.callback(error)
+        if not self.next and not (isinstance(error, ChokeEvent) or isinstance(error, StopIteration)):
+            log.error(error, exc_info=True)
 
 
 class Chain(object):
@@ -322,8 +322,6 @@ class Chain(object):
         self.items = []
         for func in functions:
             self.then(func)
-
-        self._pending = []
 
     def then(self, func):
         """
@@ -390,8 +388,11 @@ class Chain(object):
         self._trackLastResult()
 
         if timeout:
-            self.ioLoop.add_timeout(time.time() + timeout,
-                                    lambda: self._saveLastResult(FutureResult(TimeoutError(timeout))))
+            def fire():
+                setattr(self, '__timeout', timeout)
+                self.ioLoop.stop()
+            self.ioLoop.add_timeout(time.time() + timeout, fire)
+
         isLoopRunning = self.ioLoop._running
         self.ioLoop.start()
         if isLoopRunning:
@@ -445,28 +446,42 @@ class Chain(object):
         except ChokeEvent:
             raise StopIteration
 
+    @property
+    def _pending(self):
+        return self.items[-1].pending if self.items else []
+
     def _checkTimeout(self, timeout):
         if timeout is not None and timeout < 0.001:
             raise ValueError('timeout can not be less then 1 ms')
 
     def _trackLastResult(self):
         if not self._isTrackingForLastResult():
-            self.then(self._saveLastResult)
+            def patch(func):
+                def wrapper(*args, **kwargs):
+                    try:
+                        func(*args, **kwargs)
+                    finally:
+                        self.ioLoop.stop()
+                return wrapper
+
+            self.__callback = self.items[-1].callback
+            self.items[-1].callback = patch(self.__callback)
+            setattr(self, '__tracked', True)
 
     def _removeTrackingLastResult(self):
-        if len(self.items) > 1:
-            index = len(self.items) - 1
-            self.items[index - 1].next = None
-            self.items.pop(index)
-
-    def _saveLastResult(self, result):
-        self._pending.append(result)
-        self.ioLoop.stop()
+        if self._isTrackingForLastResult():
+            self.items[-1].callback = self.__callback
+            delattr(self, '__tracked')
 
     def _isTrackingForLastResult(self):
-        return self.items[-1].func == self._saveLastResult
+        return hasattr(self, '__tracked')
 
     def _getLastResult(self):
+        if hasattr(self, '__timeout'):
+            timeout = getattr(self, '__timeout')
+            delattr(self, '__timeout')
+            raise TimeoutError(timeout)
+
         assert len(self._pending) > 0
 
         lastResult = self._pending[0]

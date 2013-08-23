@@ -670,10 +670,10 @@ class SynchronousApiTestCase(AsyncTestCase):
         self.assertFalse(len(f._pending) == 0)
 
     def test_Generator(self):
-        f = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
+        chain = ServiceMock(chunks=[1, 2, 3], T=self.T, ioLoop=self.io_loop).execute()
         collect = []
-        for r in f:
-            collect.append(r)
+        for result in chain:
+            collect.append(result)
         self.assertEqual([1, 2, 3], collect)
 
     def test_PartialGenerator(self):
@@ -683,6 +683,11 @@ class SynchronousApiTestCase(AsyncTestCase):
             collect.append(r)
         self.assertEqual([1, 2, 3], collect)
 
+    def test_GetMultipleChunksDeferredly(self):
+        f1 = ServiceMock(chunks=[1], T=self.T, ioLoop=self.io_loop).execute()
+        f2 = ServiceMock(chunks=[2], T=self.T, ioLoop=self.io_loop).execute()
+        self.assertEqual(2, f2.get())
+        self.assertEqual(1, f1.get())
 
 if __name__ == '__main__':
     unittest.main()

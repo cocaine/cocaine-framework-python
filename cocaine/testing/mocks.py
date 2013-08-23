@@ -68,7 +68,7 @@ class ServiceMock(object):
         if chunks is None:
             chunks = []
         self.chunks = chunks
-        self.ioLoop = ioLoop or IOLoop.instance()
+        self.ioLoop = ioLoop or IOLoop.instance()  # TODO: -> current
         self.T = T
         self.interval = interval
 
