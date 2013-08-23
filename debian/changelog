@@ -1,3 +1,15 @@
+cocaine-framework-python (0.10.6.8) lucid; urgency=low
+
+  * fix parsing of arguments in POST
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Thu, 22 Aug 2013 23:29:03 +0400
+
+cocaine-framework-python (0.10.6.7) unstable; urgency=low
+
+  * fix opster dep
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Thu, 22 Aug 2013 22:42:52 +0400
+
 cocaine-framework-python (0.10.6.6) unstable; urgency=low
 
   * Move cocaine-tornado-proxy here 

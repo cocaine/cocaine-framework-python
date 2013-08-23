@@ -22,7 +22,10 @@
 import msgpack
 import urlparse
 
+from tornado.httputil import parse_body_arguments
+
 from _callablewrappers import proxy_factory
+
 
 __all__ = ["http", "tornado"]
 
@@ -54,16 +57,21 @@ class _HTTPRequest(object):
 
     def __init__(self, data):
         method, url, version, headers, self._body = msgpack.unpackb(data)
-        with open("/tmp/request.txt", "wb") as f:
-            f.write(data)
         self._meta = dict()
         self._headers = dict(headers)
         self._meta['method'] = method
         self._meta['version'] = version
-        self._meta['host'] = self._headers.get('Host', '')
+        self._meta['host'] = self._headers.get('Host') or self._headers.get('host', '')
+        self._meta['remote_addr'] = self._headers.get('X-Real-IP') or self._headers.get('X-Forwarded-For', '')
         self._meta['query_string'] = urlparse.urlparse(url).query
         tmp = urlparse.parse_qs(urlparse.urlparse(url).query)
-        self._request = dict((k,v[0]) for k,v in tmp.iteritems() if len(v) > 0)
+        self._request = dict((k, v[0]) for k, v in tmp.iteritems() if len(v) > 0)
+        self._files = None
+        args = dict()
+        files = dict()
+        parse_body_arguments(self._headers.get("Content-Type", ""), self._body, args, files)
+        self._request.update(dict((k, v[0]) for k, v in args.iteritems() if len(v) > 0))
+        self._files = files
 
     @property
     def headers(self):
@@ -81,6 +89,10 @@ class _HTTPRequest(object):
     @property
     def request(self):
         return self._request
+
+    @property
+    def files(self):
+        return self._files
 
 
 def http_request_decorator(obj):
