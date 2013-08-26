@@ -534,12 +534,38 @@ def source(func):
 
 
 class All(object):
+    """Represents yieldable object for asynchronous future grouping.
+
+    This class provides ability to yield multiple yieldable objects in chain context. Program control returns after
+    all of them completed. Future results will be placed in the list in original order.
+
+    Typical usage:
+
+    >>> from cocaine.services import Service
+    >>> from cocaine.futures import chain
+    >>> @chain.source
+    >>> def func():
+    >>>     r1, r2 = yield chain.All([s1.execute(), s2.execute()])
+    >>> s1 = Service('s1')
+    >>> s2 = Service('s2')
+    >>> func()
+
+    If you have specified deferred, you can invoke `execute` method and pass that deferred to it. This will have the
+    same effect as yielding.
+
+    .. note:: You can yield this class's objects only in chain context.
+    .. note:: All methods in this class are reentrant. None of them are thread-safe.
+    """
     def __init__(self, futures):
         self._futures = futures
         self._results = [None] * len(self._futures)
         self._counter = 0
 
     def execute(self, deferred):
+        """Executes asynchronous grouped future invocation and binds `deferred` to the completion event.
+
+        :param deferred: deferred, which will be invoked after all of futures are completed.
+        """
         for id_, future in enumerate(self._futures):
             Chain([functools.partial(self._waitFuture, future)]).then(functools.partial(self._collect, id_, deferred))
 
