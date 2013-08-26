@@ -1,3 +1,12 @@
+cocaine-framework-python (0.10.6.9) lucid; urgency=low
+
+  * Asynchronous grouped future invocation implemented.
+  * Chain API performance increased approximately by 16%.
+  * Data loss bug fixed.
+  * Extra memory consumption fixed.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 26 Aug 2013 15:14:50 +0400
+
 cocaine-framework-python (0.10.6.8) lucid; urgency=low
 
   * fix parsing of arguments in POST
