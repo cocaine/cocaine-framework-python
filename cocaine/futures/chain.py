@@ -1,4 +1,5 @@
 import collections
+import threading
 import time
 import types
 import logging
@@ -25,6 +26,9 @@ class FutureResult(object):
 
     The result itself can be any object or exception. If some exception is stored, then it will be thrown after user
     invokes `get` method.
+
+    .. note:: All methods in this class are thread safe.
+
     """
 
     def __init__(self, result):
@@ -68,24 +72,30 @@ class PreparedFuture(Future):
 
     Specified callback or errorback will be triggered on the next event loop turn after `bind` method is invoked.
 
-    Note: While in chain context, you don't need to use it directly - if you return something from function that meant
-    to be used as chain item, the result will be automatically wrapped with `PreparedFuture`.
+    .. note:: While in chain context, you don't need to use it directly - if you return something from function that
+              meant to be used as chain item, the result will be automatically wrapped with `PreparedFuture`.
+
+    .. note:: All methods in this class are thread safe.
     """
     def __init__(self, result, ioLoop=None):
         super(PreparedFuture, self).__init__()
         self.result = result
         self._ioLoop = ioLoop or IOLoop.current()
         self._bound = False
+        self._lock = threading.Lock()
 
     def bind(self, callback, errorback=None, on_done=None):
-        self._bound = True
+        with self._lock:
+            self._bound = True
+
         try:
             self._ioLoop.add_callback(callback, self.result)
         except Exception as err:
             self._ioLoop.add_callback(errorback, err)
 
     def isBound(self):
-        return self._bound
+        with self._lock:
+            return self._bound
 
     def unbind(self):
         return
@@ -103,19 +113,16 @@ class Deferred(Future):
 
     Here the example of asynchronous function that starts timer and signals the deferred after 1.0 sec.
 
-    ```
-    def timer_function():
-        deferred = Deferred()
-        timeout = 1.0
-        ioloop.add_timer(time.time() + timeout, lambda: deferred.ready('Done')
-        return deferred
-    ```
+    >>> from tornado.ioloop import IOLoop
+    >>> def timer_function():
+    >>>     deferred = Deferred()
+    >>>     timeout = 1.0
+    >>>     IOLoop.current().add_timer(time.time() + timeout, lambda: deferred.ready('Done')
+    >>>     return deferred
 
     Now you can use `timer_function` in Chain context:
 
-    ```
-    result = yield timer_function()
-    ```
+    >>> result = yield timer_function()
     """
     def __init__(self):
         super(Deferred, self).__init__()
