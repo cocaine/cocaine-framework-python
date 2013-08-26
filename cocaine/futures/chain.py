@@ -1,4 +1,5 @@
 import collections
+import functools
 import threading
 import time
 import types
@@ -254,6 +255,10 @@ class GeneratorFutureMock(Future):
         elif isinstance(result, ConcurrentWorker):
             deferred = Deferred()
             result.runBackground(lambda r: deferred.ready(r))
+            future = deferred
+        elif isinstance(result, All):
+            deferred = Deferred()
+            result.execute(deferred)
             future = deferred
         else:
             future = PreparedFuture(result, ioLoop=self._ioLoop)
@@ -526,3 +531,38 @@ def source(func):
     def wrapper(*args, **kwargs):
         return Chain([lambda: func(*args, **kwargs)])
     return wrapper
+
+
+class All(object):
+    def __init__(self, futures):
+        self._futures = futures
+        self._results = [None] * len(self._futures)
+        self._counter = 0
+
+    def execute(self, deferred):
+        for id_, future in enumerate(self._futures):
+            Chain([functools.partial(self._waitFuture, future)]).then(functools.partial(self._collect, id_, deferred))
+
+    def _waitFuture(self, future):
+        chunk = yield future
+        chunks = []
+        try:
+            while True:
+                rr = yield
+                chunks.append(rr)
+        except ChokeEvent:
+            pass
+        if chunks:
+            chunks.insert(0, chunk)
+            yield chunks
+        else:
+            yield chunk
+
+    def _collect(self, id_, deferred, result):
+        try:
+            self._results[id_] = result.get()
+            self._counter += 1
+            if self._counter == len(self._results):
+                deferred.ready(self._results)
+        except Exception as err:
+            deferred.ready(err)

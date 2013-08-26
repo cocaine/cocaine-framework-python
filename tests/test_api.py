@@ -3,6 +3,7 @@ import unittest
 import logging
 
 from tornado.testing import AsyncTestCase
+from cocaine.futures import chain
 
 from cocaine.futures.chain import Chain
 from cocaine.testing.mocks import ServiceMock, checker
@@ -523,6 +524,38 @@ class AsynchronousApiTestCase(AsyncTestCase):
         s.then(firstStep).then(secondStep).then(check)
         self.wait()
         self.assertTrue(len(expected) == 0)
+
+    def test_All(self):
+        completed = [False]
+
+        @chain.source
+        def func():
+            r1, r2 = yield chain.All([s1.execute(), s2.execute()])
+            self.assertEqual([r1, r2], ['1', '2'])
+            completed[0] = True
+            self.stop()
+
+        s1 = ServiceMock(chunks=['1'], T=self.T, ioLoop=self.io_loop)
+        s2 = ServiceMock(chunks=['2'], T=self.T, ioLoop=self.io_loop)
+        func()
+        self.wait()
+        self.assertTrue(completed[0])
+
+    def test_ComplexAll(self):
+        completed = [False]
+
+        @chain.source
+        def func():
+            r1, r2 = yield chain.All([s1.execute(), s2.execute()])
+            self.assertEqual([r1, r2], ['1', ['2', '3']])
+            completed[0] = True
+            self.stop()
+
+        s1 = ServiceMock(chunks=['1'], T=self.T, ioLoop=self.io_loop)
+        s2 = ServiceMock(chunks=['2', '3'], T=self.T, ioLoop=self.io_loop)
+        func()
+        self.wait()
+        self.assertTrue(completed[0])
 
 
 class SynchronousApiTestCase(AsyncTestCase):
