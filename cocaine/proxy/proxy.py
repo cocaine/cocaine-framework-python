@@ -287,7 +287,7 @@ class CocaineProxy(object):
                 tornado.ioloop.IOLoop.current().stop()
         signal.signal(signal.SIGTERM, terminate)
         try:
-            self.logger.info('Proxy will be started at %d port with %d instances', self.port, cpu_count())
+            self.logger.info('Proxy will be started at %d port with %d instances', self.port, count)
             http_server.bind(self.port)
             http_server.start(count)
             tornado.ioloop.IOLoop.instance().start()
