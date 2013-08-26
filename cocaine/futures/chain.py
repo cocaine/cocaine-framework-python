@@ -11,7 +11,7 @@ from tornado.ioloop import IOLoop
 from tornado.util import raise_exc_info
 
 from cocaine.exceptions import ChokeEvent
-from cocaine.asio.exceptions import TimeoutError
+from cocaine.asio.exceptions import TimeoutError, IllegalStateError
 from cocaine.futures import Future
 
 
@@ -553,42 +553,52 @@ class All(object):
     If you have specified deferred, you can invoke `execute` method and pass that deferred to it. This will have the
     same effect as yielding.
 
-    .. note:: You can yield this class's objects only in chain context.
-    .. note:: All methods in this class are reentrant. None of them are thread-safe.
+    .. note:: You can yield this class's objects only in chain context and only once. Think about this class as some
+              kind of single-shot.
+    .. note:: All methods in this class are thread-safe.
     """
     def __init__(self, futures):
         self._futures = futures
-        self._results = [None] * len(self._futures)
-        self._counter = 0
+        self._results = [None] * len(futures)
+        self._activated = False
+        self._counter = len(futures)
+        self._lock = threading.Lock()
 
     def execute(self, deferred):
         """Executes asynchronous grouped future invocation and binds `deferred` to the completion event.
 
         :param deferred: deferred, which will be invoked after all of futures are completed.
         """
-        for id_, future in enumerate(self._futures):
-            Chain([functools.partial(self._waitFuture, future)]).then(functools.partial(self._collect, id_, deferred))
+        with self._lock:
+            if self._activated:
+                raise IllegalStateError('already activated')
+
+            for id_, future in enumerate(self._futures):
+                wait = functools.partial(self._waitFuture, future)
+                collect = functools.partial(self._collect, id_, deferred)
+                Chain([wait, collect])
 
     def _waitFuture(self, future):
-        chunk = yield future
+        first = yield future
         chunks = []
         try:
             while True:
-                rr = yield
-                chunks.append(rr)
+                other = yield
+                chunks.append(other)
         except ChokeEvent:
             pass
+
         if chunks:
-            chunks.insert(0, chunk)
+            chunks.insert(0, first)
             yield chunks
         else:
-            yield chunk
+            yield first
 
     def _collect(self, id_, deferred, result):
         try:
             self._results[id_] = result.get()
-            self._counter += 1
-            if self._counter == len(self._results):
+            self._counter -= 1
+            if self._counter == 0:
                 deferred.ready(self._results)
         except Exception as err:
             deferred.ready(err)
