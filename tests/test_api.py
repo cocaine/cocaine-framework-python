@@ -14,7 +14,7 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('[%(name)s (%(funcName)s %(lineno)d)]: %(levelname)-8s: %(message)s')
+formatter = logging.Formatter('%(name)-23s: %(levelname)-8s: %(message)s')
 ch.setFormatter(formatter)
 
 logNames = [
@@ -446,7 +446,6 @@ class AsynchronousApiTestCase(AsyncTestCase):
 
         def firstStep():
             r1 = yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=0.002).execute()
-            print(r1)
             yield 'Ok'
 
         f = Chain([firstStep], ioLoop=self.io_loop)

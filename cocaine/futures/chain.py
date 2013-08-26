@@ -198,19 +198,19 @@ class GeneratorFutureMock(Future):
             future = self._wrapFuture(result)
 
             if result is not None:
-                log.debug('binding future %s instead of %s', repr(future), repr(self._currentFuture))
+                log.debug('binding future %r instead of %r', future, self._currentFuture)
                 future.bind(self._advance, self._advance)
                 if self._currentFuture:
                     self._currentFuture.unbind()
                 self._currentFuture = future
         except StopIteration:
-            log.debug('StopIteration caught, value: %s', repr(value))
+            log.debug('StopIteration caught, value: %r', value)
             self.callback(value)
         except ChokeEvent as err:
-            log.debug('ChokeEvent caught, value: %s', repr(value))
+            log.debug('ChokeEvent caught, value: %r', value)
             self.errorback(err)
         except Exception as err:
-            log.debug('Exception caught, value: %s, error: %s', repr(value), repr(err))
+            log.debug('Exception caught, value: %r, error: %r', value, err)
             if self._currentFuture and self._currentFuture.isBound():
                 self._currentFuture.unbind()
             self.errorback(err)
@@ -226,7 +226,7 @@ class GeneratorFutureMock(Future):
         else:
             result = self._coroutine.send(value)
         self._results.append(result)
-        log.debug('exchanging values with caller: %s -> %s', repr(value), repr(result))
+        log.debug('exchanging values with caller: %r -> %r', value, result)
         return result
 
     def _wrapFuture(self, result):
@@ -257,7 +257,7 @@ class GeneratorFutureMock(Future):
             future = deferred
         else:
             future = PreparedFuture(result, ioLoop=self._ioLoop)
-        log.debug('wrapping result into future: %s -> %s', repr(result), repr(future))
+        log.debug('wrapping result into future: %r -> %r', result, future)
         return future
 
 
@@ -276,20 +276,20 @@ class ChainItem(object):
         try:
             log.debug('executing "%d" "%s" with "%r" ...', id(self), self.func, args)
             future = self.func(*args, **kwargs)
-            log.debug('-- received: %s', repr(future))
+            log.debug('-- received: %r', future)
             if isinstance(future, Future):
                 pass
             elif isinstance(future, types.GeneratorType):
                 future = GeneratorFutureMock(future, ioLoop=self._ioLoop)
             else:
                 future = PreparedFuture(future, ioLoop=self._ioLoop)
-            log.debug('-- binding future: %s', repr(future))
+            log.debug('-- binding future: %r', future)
             future.bind(self.callback, self.errorback)
         except Exception as err:
             self.errorback(err)
 
     def callback(self, chunk):
-        log.debug('callback "%d" called with %s', id(self), repr(chunk))
+        log.debug('callback "%d" called with %r', id(self), chunk)
         futureResult = FutureResult(chunk)
         if self.next:
             # Actually it does not matter if we invoke next chain item synchronously or via event loop.
@@ -348,14 +348,14 @@ class Chain(object):
                      if specified function is not the chunk source. If function is chunk source (i.e. service execution
                      method) than there is no parameters must be provided in function signature.
         """
-        log.debug('adding function "%s" to the chain', repr(func))
+        log.debug('adding function "%r" to the chain', func)
         item = ChainItem(func, self._ioLoop)
 
         if len(self.items) == 0:
-            log.debug('-- executing first chain item asynchronously: %s ...', repr(item))
+            log.debug('-- executing first chain item asynchronously: %r ...', item)
             self._ioLoop.add_callback(item.execute)
         else:
-            log.debug('-- coupling %s with %s', repr(item), repr(self.items[-1]))
+            log.debug('-- coupling %r with %r', item, self.items[-1])
             self.items[-1].couple(item)
 
         self.items.append(item)
