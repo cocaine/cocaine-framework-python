@@ -14,7 +14,7 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(name)s: %(levelname)-8s: %(message)s')
+formatter = logging.Formatter('[%(name)s (%(funcName)s %(lineno)d)]: %(levelname)-8s: %(message)s')
 ch.setFormatter(formatter)
 
 logNames = [
