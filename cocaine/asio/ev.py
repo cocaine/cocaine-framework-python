@@ -28,17 +28,20 @@ from tornado import ioloop as ev
 class Loop(object):
     """ Event loop wrapper"""
 
-    _instance_lock = Lock() # Lock for instance method
+    _instance_lock = Lock()  # Lock for instance method
 
     def __init__(self, ioloop=None):
-        self._ioloop = ioloop or ev.IOLoop.instance()
+        self._ioloop = ioloop or ev.IOLoop.current()
 
         self._callbacks = dict()
         self._fd_events = dict()
+
         # Tornado ERROR = epoll._ERROR | epoll._EPOLLHUP
         self.READ = self._ioloop.READ
         self.ERROR = self._ioloop.ERROR
         self.WRITE = self._ioloop.WRITE
+
+        # Aliases
         self.add_handler = self._ioloop.add_handler
         self.add_timeout = self._ioloop.add_timeout
         self.remove_timeout = self._ioloop.remove_timeout

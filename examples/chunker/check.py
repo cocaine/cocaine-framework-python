@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-# coding=utf-8
 import os
 import msgpack
 import sys
+
+from cocaine.exceptions import ChokeEvent
 from cocaine.futures.chain import Chain
 from cocaine.services import Service
 
@@ -16,18 +17,21 @@ if __name__ == '__main__':
 
     def fetchAll():
         chunk = yield service.enqueue('chunkMe', str(sys.argv[1]))
-        chunk = msgpack.loads(chunk)
-        size = len(chunk)
-        counter = 0
+        # chunk = msgpack.loads(chunk)
+        # size = len(chunk)
+        # counter = 0
         while True:
             ch = yield
-            chunk = msgpack.loads(ch)
-            size += len(chunk)
-            counter += 1
-            print(counter, len(chunk), size)
-            if chunk == 'Done':
-                break
+            # chunk = msgpack.loads(ch)
+            # size += len(chunk)
+            # counter += 1
+            # print(counter, len(chunk), size)
+            # if chunk == 'Done':
+            #     break
 
     service = Service('Chunker')
     c = Chain([fetchAll])
-    c.get()
+    try:
+        c.get()
+    except ChokeEvent:
+        print('Done')

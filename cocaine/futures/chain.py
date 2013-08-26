@@ -74,16 +74,15 @@ class PreparedFuture(Future):
     def __init__(self, result, ioLoop=None):
         super(PreparedFuture, self).__init__()
         self.result = result
-        self.ioLoop = ioLoop or IOLoop.instance()
+        self._ioLoop = ioLoop or IOLoop.current()
         self._bound = False
 
     def bind(self, callback, errorback=None, on_done=None):
+        self._bound = True
         try:
-            self.ioLoop.add_callback(callback, self.result)
+            self._ioLoop.add_callback(callback, self.result)
         except Exception as err:
-            self.ioLoop.add_callback(errorback, err)
-        finally:
-            self._bound = True
+            self._ioLoop.add_callback(errorback, err)
 
     def isBound(self):
         return self._bound
@@ -150,50 +149,50 @@ class Deferred(Future):
 
 class ConcurrentWorker(object):
     def __init__(self, func, ioLoop=None, args=(), kwargs=None):
-        self.func = func
-        self.ioLoop = ioLoop or IOLoop.instance()
-        self.args = args
-        self.kwargs = kwargs or {}
+        self._func = func
+        self._ioLoop = ioLoop or IOLoop.current()
+        self._args = args
+        self._kwargs = kwargs or {}
 
-        self.worker = Thread(target=self._run)
-        self.worker.setDaemon(True)
-        self.callback = None
+        self._worker = Thread(target=self._run)
+        self._worker.setDaemon(True)
+        self._callback = None
 
     def _run(self):
         try:
-            result = self.func(*self.args, **self.kwargs)
-            self.callback(result)
+            result = self._func(*self._args, **self._kwargs)
+            self._callback(result)
         except Exception as err:
-            self.callback(err)
+            self._callback(err)
 
     def runBackground(self, callback):
         def onDone(result):
-            self.ioLoop.add_callback(lambda: callback(FutureResult(result)))
-        self.callback = onDone
-        self.worker.start()
+            self._ioLoop.add_callback(lambda: callback(FutureResult(result)))
+        self._callback = onDone
+        self._worker.start()
 
 
 class GeneratorFutureMock(Future):
     def __init__(self, coroutine, ioLoop=None):
         super(GeneratorFutureMock, self).__init__()
-        self.coroutine = coroutine
-        self.ioLoop = ioLoop or IOLoop.instance()
+        self._coroutine = coroutine
+        self._ioLoop = ioLoop or IOLoop.current()
         self._currentFuture = None
         self._results = collections.deque(maxlen=1)
 
     def bind(self, callback, errorback=None, on_done=None):
         self.callback = callback
         self.errorback = errorback
-        self.advance()
+        self._advance()
 
-    def advance(self, value=None):
+    def _advance(self, value=None):
         try:
             result = self._next(value)
             future = self._wrapFuture(result)
 
             if result is not None:
                 log.debug('binding future %s instead of %s', repr(future), repr(self._currentFuture))
-                future.bind(self.advance, self.advance)
+                future.bind(self._advance, self._advance)
                 if self._currentFuture:
                     self._currentFuture.unbind()
                 self._currentFuture = future
@@ -212,13 +211,13 @@ class GeneratorFutureMock(Future):
     def _next(self, value):
         if isinstance(value, ChokeEvent):
             if self._results and self._results.pop() is None:
-                result = self.coroutine.throw(ChokeEvent())
+                result = self._coroutine.throw(ChokeEvent())
             else:
-                result = self.coroutine.send(None)
+                result = self._coroutine.send(None)
         elif isinstance(value, Exception):
-            result = self.coroutine.throw(value)
+            result = self._coroutine.throw(value)
         else:
-            result = self.coroutine.send(value)
+            result = self._coroutine.send(value)
         self._results.append(result)
         log.debug('exchanging values with caller: %s -> %s', repr(value), repr(result))
         return result
@@ -250,7 +249,7 @@ class GeneratorFutureMock(Future):
             result.runBackground(lambda r: deferred.ready(r))
             future = deferred
         else:
-            future = PreparedFuture(result, ioLoop=self.ioLoop)
+            future = PreparedFuture(result, ioLoop=self._ioLoop)
         log.debug('wrapping result into future: %s -> %s', repr(result), repr(future))
         return future
 
@@ -258,25 +257,25 @@ class GeneratorFutureMock(Future):
 class ChainItem(object):
     def __init__(self, func, ioLoop=None):
         self.func = func
-        self.ioLoop = ioLoop or IOLoop.instance()
+        self._ioLoop = ioLoop or IOLoop.current()
         self.next = None
         self.pending = []
 
-    def setNext(self, item):
+    def couple(self, item):
         self.next = item
         self.pending = []
 
     def execute(self, *args, **kwargs):
         try:
-            log.debug('executing "%d" "%s" with "%s" ...', id(self), self.func, repr(args))
+            log.debug('executing "%d" "%s" with "%r" ...', id(self), self.func, args)
             future = self.func(*args, **kwargs)
             log.debug('-- received: %s', repr(future))
             if isinstance(future, Future):
                 pass
             elif isinstance(future, types.GeneratorType):
-                future = GeneratorFutureMock(future, ioLoop=self.ioLoop)
+                future = GeneratorFutureMock(future, ioLoop=self._ioLoop)
             else:
-                future = PreparedFuture(future, ioLoop=self.ioLoop)
+                future = PreparedFuture(future, ioLoop=self._ioLoop)
             log.debug('-- binding future: %s', repr(future))
             future.bind(self.callback, self.errorback)
         except Exception as err:
@@ -288,7 +287,7 @@ class ChainItem(object):
         if self.next:
             # Actually it does not matter if we invoke next chain item synchronously or via event loop.
             # But for convenience, let's do it asynchronously.
-            self.ioLoop.add_callback(self.next.execute, futureResult)
+            self._ioLoop.add_callback(self.next.execute, futureResult)
         else:
             self.pending.append(futureResult)
 
@@ -324,7 +323,7 @@ class Chain(object):
         """
         if not functions:
             functions = []
-        self.ioLoop = ioLoop or IOLoop.instance()
+        self._ioLoop = ioLoop or IOLoop.current()
         self.items = []
         for func in functions:
             self.then(func)
@@ -343,14 +342,14 @@ class Chain(object):
                      method) than there is no parameters must be provided in function signature.
         """
         log.debug('adding function "%s" to the chain', repr(func))
-        item = ChainItem(func, self.ioLoop)
+        item = ChainItem(func, self._ioLoop)
 
         if len(self.items) == 0:
             log.debug('-- executing first chain item asynchronously: %s ...', repr(item))
-            self.ioLoop.add_callback(item.execute)
+            self._ioLoop.add_callback(item.execute)
         else:
             log.debug('-- coupling %s with %s', repr(item), repr(self.items[-1]))
-            self.items[-1].setNext(item)
+            self.items[-1].couple(item)
 
         self.items.append(item)
         return self
@@ -396,14 +395,14 @@ class Chain(object):
         if timeout:
             def fire():
                 setattr(self, '__timeout', timeout)
-                self.ioLoop.stop()
-            self.ioLoop.add_timeout(time.time() + timeout, fire)
+                self._ioLoop.stop()
+            self._ioLoop.add_timeout(time.time() + timeout, fire)
 
-        isLoopRunning = self.ioLoop._running
-        self.ioLoop.start()
-        if isLoopRunning:
-            self.ioLoop._running = True
-            self.ioLoop._stopped = False
+        ran = self._ioLoop._running
+        self._ioLoop.start()
+        if ran:
+            self._ioLoop._running = True
+            self._ioLoop._stopped = False
         self._removeTrackingLastResult()
         return self._getLastResult()
 
@@ -427,8 +426,8 @@ class Chain(object):
             return
         self._trackLastResult()
         if timeout:
-            self.ioLoop.add_timeout(time.time() + timeout, lambda: self.ioLoop.stop())
-        self.ioLoop.start()
+            self._ioLoop.add_timeout(time.time() + timeout, lambda: self._ioLoop.stop())
+        self._ioLoop.start()
         self._removeTrackingLastResult()
 
     def __iter__(self):
@@ -467,7 +466,7 @@ class Chain(object):
                     try:
                         func(*args, **kwargs)
                     finally:
-                        self.ioLoop.stop()
+                        self._ioLoop.stop()
                 return wrapper
 
             self.__callback = self.items[-1].callback
