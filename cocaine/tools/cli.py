@@ -177,7 +177,6 @@ CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 AVAILABLE_TOOLS_ACTIONS = {
     'app:list': AwaitJsonWrapper()(app.List),
     'app:view': AwaitJsonWrapper(unpack=True)(app.View),
-    'app:remove': AwaitDoneWrapper(APP_REMOVE_SUCCESS, APP_REMOVE_FAIL)(app.Remove),
     'profile:list': AwaitJsonWrapper()(profile.List),
     'profile:view': AwaitJsonWrapper(unpack=True)(profile.View),
     'profile:upload': AwaitDoneWrapper(PROFILE_UPLOAD_SUCCESS, PROFILE_UPLOAD_FAIL)(profile.Upload),
@@ -226,6 +225,7 @@ class Tools(object):
 NG_ACTIONS = {
     'app:upload-manual': Tools(app.Upload),
     'app:upload': Tools(app.LocalUpload),
+    'app:remove': Tools(app.Remove)
 }
 
 

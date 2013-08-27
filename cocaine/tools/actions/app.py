@@ -87,9 +87,13 @@ class Remove(actions.Storage):
 
     @chain.source
     def execute(self):
+        log.info('Removing "%s"... ', self.name)
+        apps = yield List(self.storage).execute()
+        if self.name not in apps:
+            raise ToolsError('application "{0}" does not exist'.format(self.name))
         yield self.storage.remove('manifests', self.name)
         yield self.storage.remove('apps', self.name)
-        yield 'Done'
+        log.info('OK')
 
 
 class Start(common.Node):
