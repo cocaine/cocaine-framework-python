@@ -202,7 +202,7 @@ AVAILABLE_TOOLS_ACTIONS = {
 }
 
 
-class Proxy(object):
+class Tools(object):
     def __init__(self, Action):
         self._Action = Action
 
@@ -210,7 +210,8 @@ class Proxy(object):
     def execute(self, **config):
         try:
             action = self._Action(**config)
-            yield action.execute()
+            result = yield action.execute()
+            self._processResult(result)
         except ChokeEvent:
             pass
         except Exception as err:
@@ -218,9 +219,13 @@ class Proxy(object):
         finally:
             IOLoop.instance().stop()
 
+    def _processResult(self, result):
+        pass
+
+
 NG_ACTIONS = {
-    'app:upload-manual': Proxy(app.Upload),
-    'app:upload': Proxy(app.LocalUpload),
+    'app:upload-manual': Tools(app.Upload),
+    'app:upload': Tools(app.LocalUpload),
 }
 
 
