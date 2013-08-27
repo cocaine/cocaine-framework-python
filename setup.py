@@ -27,12 +27,6 @@ import re
 from setuptools import setup
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-try:
-    with open("%s/debian/changelog" % BASE_DIR, 'r') as f:
-        _version = re.findall(r"\(([^)]*)\)", f.readline())[0]
-        print("Found version %s in debian/changelog" % _version)
-except Exception:
-    _version = "0.10.6.0"
 
 if "--without-tools" in sys.argv:
     sys.argv.remove("--without-tools")
@@ -64,7 +58,7 @@ else:
 
 setup(
     name="cocaine",
-    version=_version,
+    version="0.10.6.9",
     author="Anton Tyurin",
     author_email="noxiouz@yandex.ru",
     maintainer='Evgeny Safronov',
