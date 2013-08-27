@@ -557,6 +557,22 @@ class AsynchronousApiTestCase(AsyncTestCase):
         self.wait()
         self.assertTrue(completed[0])
 
+    def test_AllWithNones(self):
+        completed = [False]
+
+        @chain.source
+        def func():
+            r1, r2 = yield chain.All([s1.execute(), s2.execute()])
+            self.assertEqual([r1, r2], [None, None])
+            completed[0] = True
+            self.stop()
+
+        s1 = ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop)
+        s2 = ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop)
+        func()
+        self.wait()
+        self.assertTrue(completed[0])
+
 
 class SynchronousApiTestCase(AsyncTestCase):
     T = Chain
