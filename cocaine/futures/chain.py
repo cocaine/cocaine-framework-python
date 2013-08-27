@@ -546,6 +546,7 @@ class All(object):
     >>> @chain.source
     >>> def func():
     >>>     r1, r2 = yield chain.All([s1.execute(), s2.execute()])
+    >>>     print(r1, r2)
     >>> s1 = Service('s1')
     >>> s2 = Service('s2')
     >>> func()
