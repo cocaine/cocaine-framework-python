@@ -196,7 +196,6 @@ AVAILABLE_TOOLS_ACTIONS = {
     'app:pause': AwaitJsonWrapper()(app.Stop),
     'app:stop': AwaitJsonWrapper()(app.Stop),
     'app:restart': AwaitJsonWrapper()(app.Restart),
-    'app:check': AwaitJsonWrapper()(app.Check),
     'call': CallActionCli,
 }
 
@@ -211,7 +210,7 @@ class Tools(object):
             action = self._Action(**config)
             result = yield action.execute()
             self._processResult(result)
-        except ChokeEvent:
+        except (ChokeEvent, StopIteration):
             pass
         except Exception as err:
             log.error(err)
@@ -225,7 +224,8 @@ class Tools(object):
 NG_ACTIONS = {
     'app:upload-manual': Tools(app.Upload),
     'app:upload': Tools(app.LocalUpload),
-    'app:remove': Tools(app.Remove)
+    'app:remove': Tools(app.Remove),
+    'app:check': Tools(app.Check),
 }
 
 

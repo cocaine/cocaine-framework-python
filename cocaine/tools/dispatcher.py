@@ -295,6 +295,7 @@ def check(options,
     """Checks application status."""
     options.executor.executeAction('app:check', **{
         'node': options.getService('node'),
+        'storage': options.getService('storage'),
         'locator': options.locator,
         'name': name,
     })

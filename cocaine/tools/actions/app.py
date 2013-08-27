@@ -5,8 +5,9 @@ import shutil
 import tarfile
 import tempfile
 import msgpack
+from cocaine.asio.service import Service
 
-from cocaine.exceptions import ToolsError
+from cocaine.exceptions import ToolsError, ServiceError
 from cocaine.futures import chain
 from cocaine.tools import actions, log
 from cocaine.tools.actions import common, readArchive, CocaineConfigReader
@@ -148,24 +149,28 @@ class Restart(common.Node):
 
 
 class Check(common.Node):
-    def __init__(self, node, locator, name):
+    def __init__(self, node, storage, locator, name):
         super(Check, self).__init__(node)
         self.name = name
+        self.storage = storage
         self.locator = locator
         if not self.name:
             raise ValueError('Please specify application name')
 
     @chain.source
     def execute(self):
-        state = 'stopped or missing'
+        log.info('Checking "%s"... ', self.name)
+        apps = yield List(self.storage).execute()
+        if self.name not in apps:
+            raise ToolsError('not available')
+
+        app = Service(self.name, blockingConnect=False)
         try:
-            info = yield NodeInfo(self.node, self.locator).execute()
-            apps = info['apps']
-            app = apps[self.name]
-            state = app['state']
-        except KeyError:
-            pass
-        yield {self.name: state}
+            yield app.connectThroughLocator(self.locator)
+            info = yield app.info()
+            log.info(info['state'])
+        except ServiceError:
+            raise ToolsError('stopped')
 
 
 class LocalUpload(actions.Storage):
