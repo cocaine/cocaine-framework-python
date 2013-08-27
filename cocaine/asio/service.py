@@ -84,6 +84,14 @@ class scope(object):
 
 
 class AbstractService(object):
+    """Represents abstract cocaine service.
+
+    It provides basic service operations like getting its actual network address, determining if the service is
+    connecting or connected.
+
+    There is no other useful public methods, so the main aim of this class - is to provide superclass for inheriting
+    for actual services or service-like objects (i.e. Locator).
+    """
     def __init__(self, name):
         self.name = name
 
@@ -103,15 +111,29 @@ class AbstractService(object):
 
     @property
     def address(self):
+        """Return actual network address (`sockaddr`) of the current service if it is connected.
+
+        Returned `sockaddr` is a tuple describing a socket address, whose format depends on the returned
+        family `(address, port)` 2-tuple for AF_INET, or `(address, port, flow info, scope id)` 4-tuple for AF_INET6),
+        and is meant to be passed to the socket.connect() method.
+
+        It the service is not connected this method returns tuple `('NOT_CONNECTED', 0)`.
+        """
         return self._pipe.address if self.isConnected() else ('NOT_CONNECTED', 0)
 
     def isConnecting(self):
+        """Return true if the service is in connecting state."""
         return self._pipe is not None and self._pipe.isConnecting()
 
     def isConnected(self):
+        """Return true if the service is in connected state."""
         return self._pipe is not None and self._pipe.isConnected()
 
     def disconnect(self):
+        """Disconnect service from its endpoint and destroys all communications between them.
+
+        .. note:: This method does nothing if the service is not connected.
+        """
         if not self._pipe:
             return
         self._pipe.close()
@@ -194,9 +216,17 @@ class AbstractService(object):
         return wrapper
 
     def perform_sync(self, method, *args, **kwargs):
-        """Performs synchronous method invocation.
+        """Performs synchronous method invocation via direct socket usage without the participation of the event loop.
 
-        Note: Left for backward compatibility.
+        Returns generator of chunks.
+
+        :param method: method name.
+        :param args: method arguments.
+        :param kwargs: method keyword arguments. You can specify `timeout` keyword to set socket timeout.
+
+        .. note:: Left for backward compatibility, tests and other stuff. Indiscriminate using of this method can lead
+                  to the summoning of Satan.
+        .. warning:: Do not mix synchronous and asynchronous usage of service!
         """
         if not self.isConnected():
             raise IllegalStateError('service "{0}" is not connected'.format(self.name))
@@ -229,6 +259,13 @@ class AbstractService(object):
 
 
 class Locator(AbstractService):
+    """Represents locator service.
+
+    Locator is the special service which can resolve other services in the cloud by name.
+
+    .. note:: Normally, you shouldn't use this class directly - it is using behind the scene for resolving other
+              services endpoints.
+    """
     RESOLVE_METHOD_ID, SYNC_METHOD_ID, REPORTS_METHOD_ID = range(3)
 
     def __init__(self):
@@ -240,9 +277,33 @@ class Locator(AbstractService):
         }
 
     def connect(self, host, port, timeout, blocking):
+        """Connects to the locator at specified host and port.
+
+        The locator itself always runs on a well-known host and port.
+
+        :param host: locator hostname.
+        :param port: locator port.
+        :param timeout: connection timeout.
+        :param blocking: strategy of the connection. If flag `blocking` is set to `True`, direct blocking socket
+                         connection will be used. Otherwise this method returns `cocaine.futures.chain.Chain` object,
+                         which is normally requires event loop running.
+        """
         return self._connectToEndpoint(host, port, timeout, blocking=blocking)
 
     def resolve(self, name, timeout, blocking):
+        """Resolve service by its `name`.
+
+        Returned tuple is describing resolved service information - `(endpoint, version, api)`:
+         * `endpoint` - a 2-tuple containing `(host, port)` information about service endpoint.
+         * `version` - an integer number showing actual service version.
+         * `api` - a dict of number -> string structure, describing service's api.
+
+        :param name: service name.
+        :param timeout: resolving timeout.
+        :param blocking: strategy of the resolving. If flag `blocking` is set to `True`, direct blocking socket
+                         usage will be selected. Otherwise this method returns `cocaine.futures.chain.Chain` object,
+                         which is normally requires event loop running.
+        """
         if blocking:
             (endpoint, version, api), = [chunk for chunk in self.perform_sync('resolve', name, timeout=timeout)]
             return endpoint, version, api
@@ -251,6 +312,47 @@ class Locator(AbstractService):
 
 
 class Service(AbstractService):
+    """Represents cocaine services or applications and provides API to communicate with them.
+
+    This is the main class you will use to manage cocaine services in python. Let's start with the simple example:
+
+    >>> from cocaine.services import Service
+    >>> node = Service('node')
+
+    We just created `node` service object by passing its name to the `cocaine.services.Service` initialization method.
+    If no errors occurred, you can use it right now.
+
+    If the service is not available, you will see something like that:
+
+    >>> from cocaine.services import Service
+    >>> node = Service('WAT?')
+    Traceback (most recent call last):
+    ...
+    cocaine.exceptions.ServiceError: error in service "locator" - the specified service is not available [1]
+
+    Behind the scene it has synchronously connected to the locator, resolved service's API and connected to the
+    service's endpoint obtained by resolving. This is the normal usage of services.
+
+    If you don't want immediate blocking service initialization, you can set `blockingConnect` argument to `False`
+    and then to connect manually:
+
+    >>> from cocaine.services import Service
+    >>> node = Service('node', blockingConnect=False)
+    >>> node.connect()
+
+    You can also specify locator's address by passing `host` and `port` parameters like this:
+
+    >>> from cocaine.services import Service
+    >>> node = Service('node', host='localhost', port=666)
+
+    .. note:: If you refused service connection-at-initialization, you shouldn't pass locator endpoint information,
+              because this is mutual exclusive information. Specify them later when `connect` while method invoking.
+
+    .. note:: If you don't want to create connection to the locator each time you create service, you can use
+              `connectThroughLocator` method, which is specially designed for that cases.
+
+    .. note:: Actual service's API is building dynamically. Sorry, IDE users, there is no autocompletion :(
+    """
     def __init__(self, name, blockingConnect=True, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT):
         super(Service, self).__init__(name)
 
@@ -262,6 +364,15 @@ class Service(AbstractService):
 
     @strategy.coroutine
     def connect(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, timeout=None, blocking=False):
+        """Connect to the service through locator and initialize its API.
+
+        Before service is connected to its endpoint there is no any API (cause it's provided by locator). Any usage of
+        uninitialized service results in `IllegalStateError`.
+
+        .. note:: Note, that locator connection is created (and destroyed) each time you invoke this method.
+                  If you don't want to create connection to the locator each time you create service, you can use
+                  `connectThroughLocator` method, which is specially designed for that cases.
+        """
         locator = Locator()
         try:
             yield locator.connect(host, port, timeout, blocking=blocking)

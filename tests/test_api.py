@@ -570,7 +570,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
         s1 = ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop)
         s2 = ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop)
         func()
-        self.wait()
+        self.wait(timeout=0.5)
         self.assertTrue(completed[0])
 
 
