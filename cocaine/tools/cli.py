@@ -129,9 +129,9 @@ def makePrettyCrashlogRemove(cls, onDoneMessage=None):
 
 
 class CallActionCli(object):
-    def __init__(self, **config):
-        self.action = common.Call(**config)
-        self.config = config
+    def __init__(self, command, host, port, pretty=False):
+        self.action = common.Call(command, host, port)
+        self.pretty = pretty
 
     def execute(self):
         try:
@@ -143,6 +143,11 @@ class CallActionCli(object):
                 log.info('\n'.join(' - {0}'.format(method) for method in response))
             elif requestType == 'invoke':
                 log.info('Response:')
+                if self.pretty:
+                    try:
+                        response = json.dumps(response, indent=4)
+                    except ValueError:
+                        log.error('Not valid json')
                 log.info(response)
         except Exception as err:
             log.error('Calling failed - %s', err)

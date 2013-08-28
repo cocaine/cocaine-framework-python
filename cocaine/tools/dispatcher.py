@@ -121,7 +121,8 @@ def info(options):
 
 @d.command(usage='SERVICE [METHOD ["ARGS"]]')
 def call(options,
-         service, method='', args=''):
+         service, method='', args='',
+         pretty=('', False, 'make pretty output if output is json')):
     """Invoke specified method from service.
 
     Performs method invocation from specified service. Service name should be correct string and must be correctly
@@ -135,7 +136,8 @@ def call(options,
     options.executor.executeAction('call', **{
         'command': command,
         'host': options.host,
-        'port': options.port
+        'port': options.port,
+        'pretty': pretty
     })
 
 
