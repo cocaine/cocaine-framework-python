@@ -18,13 +18,19 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
+import os
 
 import sys
+import logging
+import types
+from threading import Lock
 from functools import partial
 
 from tornado.wsgi import WSGIContainer
 
 from cocaine.decorators.http import tornado
+from cocaine.futures import chain
+from cocaine.futures.chain import Chain
 
 
 def start_response(func, status, response_headers, exc_info=None):
@@ -47,172 +53,170 @@ def wsgi(application):
     return wrapper
 
 
-def django(log=None):
-    import logging
-    import types
-    from threading import Lock
+def django(root, settings, async=False, log=None):
+    sys.path.append(root)
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', settings)
 
-    from cocaine.futures import chain
-    from cocaine.futures.chain import Chain
-    try:
-        from django import http
-        from django.core import signals
-        from django.core.handlers import base
-        from django.core.urlresolvers import set_script_prefix
-        from django.core.handlers.wsgi import WSGIRequest, STATUS_CODE_TEXT
-        from django.utils.encoding import force_str
-        from django.conf import settings
-        from django.core import exceptions
-        from django.core import urlresolvers
-        from django.views import debug
-    except ImportError as err:
-        raise err
-    else:
-        if log is None:
-            log = logging.getLogger(__name__)
+    if not async:
+        from django.core.wsgi import get_wsgi_application
+        return wsgi(get_wsgi_application())
 
-        class WSGIHandler(base.BaseHandler):
-            initLock = Lock()
-            request_class = WSGIRequest
+    from django import http
+    from django.core import signals
+    from django.core.handlers import base
+    from django.core.urlresolvers import set_script_prefix
+    from django.core.handlers.wsgi import WSGIRequest, STATUS_CODE_TEXT
+    from django.utils.encoding import force_str
+    from django.conf import settings
+    from django.core import exceptions
+    from django.core import urlresolvers
+    from django.views import debug
 
-            @chain.source
-            def __call__(self, environ, start_response):
-                if self._request_middleware is None:
-                    with self.initLock:
-                        try:
-                            if self._request_middleware is None:
-                                self.load_middleware()
-                        except:
-                            self._request_middleware = None
-                            raise
+    if log is None:
+        log = logging.getLogger(__name__)
 
-                set_script_prefix(base.get_script_name(environ))
-                signals.request_started.send(sender=self.__class__)
-                try:
-                    request = self.request_class(environ)
-                except UnicodeDecodeError:
-                    log.warning('Bad Request (UnicodeDecodeError)', exc_info=sys.exc_info(), extra={'status_code': 400, })
-                    response = http.HttpResponseBadRequest()
-                else:
-                    response = yield self.get_response(request)
+    class WSGIHandler(base.BaseHandler):
+        initLock = Lock()
+        request_class = WSGIRequest
 
-                response._handler_class = self.__class__
-
-                try:
-                    status_text = STATUS_CODE_TEXT[response.status_code]
-                except KeyError:
-                    status_text = 'UNKNOWN STATUS CODE'
-                status = '%s %s' % (response.status_code, status_text)
-                response_headers = [(str(k), str(v)) for k, v in response.items()]
-                for c in response.cookies.values():
-                    response_headers.append((str('Set-Cookie'), str(c.output(header=''))))
-                start_response(force_str(status), response_headers)
-                yield response
-
-            @chain.source
-            def get_response(self, request):
-                try:
-                    urlconf = settings.ROOT_URLCONF
-                    urlresolvers.set_urlconf(urlconf)
-                    resolver = urlresolvers.RegexURLResolver(r'^/', urlconf)
+        @chain.source
+        def __call__(self, environ, start_response):
+            if self._request_middleware is None:
+                with self.initLock:
                     try:
-                        response = None
-                        for middleware_method in self._request_middleware:
-                            response = middleware_method(request)
+                        if self._request_middleware is None:
+                            self.load_middleware()
+                    except:
+                        self._request_middleware = None
+                        raise
+
+            set_script_prefix(base.get_script_name(environ))
+            signals.request_started.send(sender=self.__class__)
+            try:
+                request = self.request_class(environ)
+            except UnicodeDecodeError:
+                log.warning('Bad Request (UnicodeDecodeError)', exc_info=sys.exc_info(), extra={'status_code': 400, })
+                response = http.HttpResponseBadRequest()
+            else:
+                response = yield self.get_response(request)
+
+            response._handler_class = self.__class__
+
+            try:
+                status_text = STATUS_CODE_TEXT[response.status_code]
+            except KeyError:
+                status_text = 'UNKNOWN STATUS CODE'
+            status = '%s %s' % (response.status_code, status_text)
+            response_headers = [(str(k), str(v)) for k, v in response.items()]
+            for c in response.cookies.values():
+                response_headers.append((str('Set-Cookie'), str(c.output(header=''))))
+            start_response(force_str(status), response_headers)
+            yield response
+
+        @chain.source
+        def get_response(self, request):
+            try:
+                urlconf = settings.ROOT_URLCONF
+                urlresolvers.set_urlconf(urlconf)
+                resolver = urlresolvers.RegexURLResolver(r'^/', urlconf)
+                try:
+                    response = None
+                    for middleware_method in self._request_middleware:
+                        response = middleware_method(request)
+                        if response:
+                            break
+
+                    if response is None:
+                        if hasattr(request, 'urlconf'):
+                            urlconf = request.urlconf
+                            urlresolvers.set_urlconf(urlconf)
+                            resolver = urlresolvers.RegexURLResolver(r'^/', urlconf)
+
+                        resolver_match = resolver.resolve(request.path_info)
+                        callback, callback_args, callback_kwargs = resolver_match
+                        request.resolver_match = resolver_match
+
+                        for middleware_method in self._view_middleware:
+                            response = middleware_method(request, callback, callback_args, callback_kwargs)
                             if response:
                                 break
 
-                        if response is None:
-                            if hasattr(request, 'urlconf'):
-                                urlconf = request.urlconf
-                                urlresolvers.set_urlconf(urlconf)
-                                resolver = urlresolvers.RegexURLResolver(r'^/', urlconf)
-
-                            resolver_match = resolver.resolve(request.path_info)
-                            callback, callback_args, callback_kwargs = resolver_match
-                            request.resolver_match = resolver_match
-
-                            for middleware_method in self._view_middleware:
-                                response = middleware_method(request, callback, callback_args, callback_kwargs)
+                    if response is None:
+                        try:
+                            response = yield Chain([lambda: callback(request, *callback_args, **callback_kwargs)])
+                        except Exception as e:
+                            for middleware_method in self._exception_middleware:
+                                response = middleware_method(request, e)
                                 if response:
                                     break
+                            if response is None:
+                                raise
 
-                        if response is None:
-                            try:
-                                response = yield Chain([lambda: callback(request, *callback_args, **callback_kwargs)])
-                            except Exception as e:
-                                for middleware_method in self._exception_middleware:
-                                    response = middleware_method(request, e)
-                                    if response:
-                                        break
-                                if response is None:
-                                    raise
+                    if response is None:
+                        if isinstance(callback, types.FunctionType):    # FBV
+                            view_name = callback.__name__
+                        else:                                           # CBV
+                            view_name = callback.__class__.__name__ + '.__call__'
+                        raise ValueError("The view %s.%s didn't return an HttpResponse object." % (callback.__module__,
+                                                                                                   view_name))
+                    if hasattr(response, 'render') and callable(response.render):
+                        for middleware_method in self._template_response_middleware:
+                            response = middleware_method(request, response)
+                        response = response.render()
 
-                        if response is None:
-                            if isinstance(callback, types.FunctionType):    # FBV
-                                view_name = callback.__name__
-                            else:                                           # CBV
-                                view_name = callback.__class__.__name__ + '.__call__'
-                            raise ValueError("The view %s.%s didn't return an HttpResponse object." % (callback.__module__,
-                                                                                                       view_name))
-                        if hasattr(response, 'render') and callable(response.render):
-                            for middleware_method in self._template_response_middleware:
-                                response = middleware_method(request, response)
-                            response = response.render()
-
-                    except http.Http404 as e:
-                        log.warning('Not Found: %s', request.path,
-                                    extra={
-                                        'status_code': 404,
-                                        'request': request
-                                    })
-                        if settings.DEBUG:
-                            response = debug.technical_404_response(request, e)
-                        else:
-                            try:
-                                callback, param_dict = resolver.resolve404()
-                                response = callback(request, **param_dict)
-                            except:
-                                signals.got_request_exception.send(sender=self.__class__, request=request)
-                                response = self.handle_uncaught_exception(request, resolver, sys.exc_info())
-                    except exceptions.PermissionDenied:
-                        log.warning(
-                            'Forbidden (Permission denied): %s', request.path,
-                            extra={
-                                'status_code': 403,
-                                'request': request
-                            })
+                except http.Http404 as e:
+                    log.warning('Not Found: %s', request.path,
+                                extra={
+                                    'status_code': 404,
+                                    'request': request
+                                })
+                    if settings.DEBUG:
+                        response = debug.technical_404_response(request, e)
+                    else:
                         try:
-                            callback, param_dict = resolver.resolve403()
+                            callback, param_dict = resolver.resolve404()
                             response = callback(request, **param_dict)
                         except:
                             signals.got_request_exception.send(sender=self.__class__, request=request)
                             response = self.handle_uncaught_exception(request, resolver, sys.exc_info())
-                    except SystemExit:
-                        raise
+                except exceptions.PermissionDenied:
+                    log.warning(
+                        'Forbidden (Permission denied): %s', request.path,
+                        extra={
+                            'status_code': 403,
+                            'request': request
+                        })
+                    try:
+                        callback, param_dict = resolver.resolve403()
+                        response = callback(request, **param_dict)
                     except:
                         signals.got_request_exception.send(sender=self.__class__, request=request)
                         response = self.handle_uncaught_exception(request, resolver, sys.exc_info())
-                finally:
-                    urlresolvers.set_urlconf(None)
-
-                try:
-                    for middleware_method in self._response_middleware:
-                        response = middleware_method(request, response)
-                    response = self.apply_response_fixes(request, response)
+                except SystemExit:
+                    raise
                 except:
                     signals.got_request_exception.send(sender=self.__class__, request=request)
                     response = self.handle_uncaught_exception(request, resolver, sys.exc_info())
+            finally:
+                urlresolvers.set_urlconf(None)
 
-                yield response
+            try:
+                for middleware_method in self._response_middleware:
+                    response = middleware_method(request, response)
+                response = self.apply_response_fixes(request, response)
+            except:
+                signals.got_request_exception.send(sender=self.__class__, request=request)
+                response = self.handle_uncaught_exception(request, resolver, sys.exc_info())
 
-        application = WSGIHandler()
+            yield response
 
-        @tornado
-        def wrapper(request, response):
-            req = yield request.read()
-            datas = yield application(WSGIContainer.environ(req), partial(start_response, response))
-            for data in datas:
-                response.write(data)
-            response.close()
-        return wrapper
+    application = WSGIHandler()
+
+    @tornado
+    def wrapper(request, response):
+        req = yield request.read()
+        datas = yield application(WSGIContainer.environ(req), partial(start_response, response))
+        for data in datas:
+            response.write(data)
+        response.close()
+    return wrapper

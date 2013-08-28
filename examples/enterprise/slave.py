@@ -2,7 +2,6 @@
 
 import logging
 import os
-import sys
 
 from cocaine.decorators.wsgi import django
 from cocaine.logging import LoggerHandler
@@ -15,14 +14,14 @@ log = logging.getLogger(__name__)
 cocaineHandler = LoggerHandler()
 log.addHandler(cocaineHandler)
 
-dn = os.path.dirname
-PROJECT_ROOT = os.path.abspath(dn(__file__))
-DJANGO_PROJECT_ROOT = os.path.join(PROJECT_ROOT, 'enterprise')
-sys.path.append(DJANGO_PROJECT_ROOT)
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "enterprise.settings")
-
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
 worker = Worker()
 worker.run({
-    'work':  django()
+    'work':  django(**{
+        'root': os.path.join(PROJECT_ROOT, 'enterprise'),
+        'settings': 'enterprise.settings',
+        'async': True,
+        'log': log
+    })
 })
