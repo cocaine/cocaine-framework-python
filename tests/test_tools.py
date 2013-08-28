@@ -134,7 +134,9 @@ class AppTestCase(AsyncTestCase):
 
     def test_AppCheckAction(self):
         node = mock()
-        action = app.Check(node, **{'name': 'AppName'})
+        storage = mock()
+        locator = mock()
+        action = app.Check(node, storage, locator, 'AppName')
         mockInfo = {
             'apps': {
                 'AppName': {

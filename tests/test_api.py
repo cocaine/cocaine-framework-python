@@ -15,7 +15,7 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(name)-23s: %(levelname)-8s: %(message)s')
+formatter = logging.Formatter('%(levelname)-8s: %(message)s')
 ch.setFormatter(formatter)
 
 logNames = [
@@ -30,9 +30,46 @@ for logName in logNames:
     log.propagate = False
     log.addHandler(ch)
 
+log = logging.getLogger(__name__)
+
+
+class HotTestCase(AsyncTestCase):
+    T = Chain
+
+    def test_NoChunks_MultipleYield(self):
+        completed = [0]
+
+        @chain.source
+        def compare(s):
+            c = yield s.execute()
+            log.info('%r', c)
+            try:
+                completed[0] += 1
+                yield
+            except ChokeEvent:
+                completed[0] += 1
+            self.stop()
+        s = ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop)
+        compare(s)
+        self.wait(timeout=0.5)
+        self.assertEqual(completed[0], 2)
+
 
 class AsynchronousApiTestCase(AsyncTestCase):
     T = Chain
+
+    def test_NoChunks_Yield(self):
+        completed = [False]
+
+        @chain.source
+        def compare(s):
+            yield s.execute()
+            completed[0] = True
+            self.stop()
+        s = ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop)
+        compare(s)
+        self.wait()
+        self.assertTrue(completed[0])
 
     def test_SingleChunk_SingleThen(self):
         expected = [

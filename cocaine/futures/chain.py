@@ -208,7 +208,7 @@ class GeneratorFutureMock(Future):
             log.debug('StopIteration caught, value: %r', value)
             self.callback(value)
         except ChokeEvent as err:
-            log.debug('ChokeEvent caught, value: %r', value)
+            log.debug('ChokeEvent caught')
             self.errorback(err)
         except Exception as err:
             log.debug('Exception caught, value: %r, error: %r', value, err)
@@ -217,9 +217,10 @@ class GeneratorFutureMock(Future):
             self.errorback(err)
 
     def _next(self, value):
+        log.debug('<- sending "%r" to the caller', value if self._results and self._results[0] is None else None)
         if isinstance(value, ChokeEvent):
             if self._results and self._results.pop() is None:
-                result = self._coroutine.throw(ChokeEvent())
+                result = self._coroutine.throw(value)
             else:
                 result = self._coroutine.send(None)
         elif isinstance(value, Exception):
@@ -227,7 +228,12 @@ class GeneratorFutureMock(Future):
         else:
             result = self._coroutine.send(value)
         self._results.append(result)
-        log.debug('exchanging values with caller: %r -> %r', value, result)
+        log.debug('-> received "%r" from the caller', result)
+
+        if isinstance(value, ChokeEvent) and result is None:
+            log.debug('exhausted generator detected')
+            self._coroutine.throw(value)
+            raise value
         return result
 
     def _wrapFuture(self, result):
@@ -294,7 +300,7 @@ class ChainItem(object):
             self.errorback(err)
 
     def callback(self, chunk):
-        log.debug('callback "%d" called with %r', id(self), chunk)
+        log.debug('callback "%d" called with %r. Next chain item: %r', id(self), chunk, self.next)
         futureResult = FutureResult(chunk)
         if self.next:
             # Actually it does not matter if we invoke next chain item synchronously or via event loop.
