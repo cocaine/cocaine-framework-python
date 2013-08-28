@@ -14,7 +14,7 @@ XS-Python-Version: >= 2.6
 
 Package: cocaine-framework-python
 Architecture: any
-Depends: ${misc:Depends}, ${python:Depends}, python-msgpack | msgpack-python, python-tornado
+Depends: ${misc:Depends}, ${python:Depends}, python-msgpack | msgpack-python, python-tornado (> 3.1)
 XB-Python-Version: >= 2.6
 Description: Cocaine - Python Framework
  A simple framework to ease the developing of Cocaine apps.
