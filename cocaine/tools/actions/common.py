@@ -32,7 +32,7 @@ class NodeInfo(Node):
                 yield app.connectThroughLocator(self.locator)
                 info = yield app.info()
             except Exception as err:
-                info = err
+                info = str(err)
             finally:
                 appInfoList[appName] = info
         result = {
