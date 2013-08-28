@@ -1,3 +1,10 @@
+cocaine-framework-python (0.10.6.10) lucid; urgency=low
+
+  * Documentation added.
+  * Bugs fixed.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 28 Aug 2013 15:38:00 +0400
+
 cocaine-framework-python (0.10.6.9) lucid; urgency=low
 
   * Asynchronous grouped future invocation implemented.

@@ -58,7 +58,7 @@ else:
 
 setup(
     name="cocaine",
-    version="0.10.6.9",
+    version="0.10.6.10",
     author="Anton Tyurin",
     author_email="noxiouz@yandex.ru",
     maintainer='Evgeny Safronov',
