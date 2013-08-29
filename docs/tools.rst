@@ -142,8 +142,10 @@ Upload application with its environment (directory) into the storage.
     You can control process of creating and uploading application by specifying `--debug=tools` option. This is helpful
     when some errors occurred.
 
-    Warning: creating virtual environment may take a long time and can cause timeout. You can increase timeout by
+    .. warning:: Creating virtual environment may take a long time and can cause timeout. You can increase timeout by
     specifying `--timeout` option.
+
+    .. warning:: This is experimental feature.
 
     :path: path to the application root.
     :name: application name. If it is not specified, application will be named as its directory name.

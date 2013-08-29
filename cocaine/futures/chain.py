@@ -396,7 +396,7 @@ class Chain(object):
         It is correct to call this method multiple times to receive multiple chain results until you exactly know
         how much chunks there will be. A `ChokeEvent` will be raised if there is no more chunks to process.
 
-        Warning: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
+        .. warning:: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
 
         :param timeout: Timeout in seconds after which TimeoutError will be raised. If timeout is not set (default) it
                         means forever waiting.
@@ -432,7 +432,7 @@ class Chain(object):
         stopped after getting final chain result or after timeout expired. Unlike `get` method there will be no
         exception raised if timeout is occurred while chaining execution running.
 
-        Warning: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
+        .. warning:: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
 
         :param timeout: Timeout in seconds after which event loop will be stopped. If timeout is not set (default) it
                         means forever waiting.
@@ -452,7 +452,7 @@ class Chain(object):
         Traits chain object as iterator. Note, that iterator can be used only once. Normally, you should not use this
         method directly - python uses it automatically in the `for` loop.
 
-        Warning: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
+        .. warning:: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
         """
         return self
 
@@ -461,7 +461,7 @@ class Chain(object):
         Gets next chain result. Normally, you should not use this method directly - python uses it automatically in
         the `for` loop.
 
-        Warning: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
+        .. warning:: This is synchronous usage of chain object. Do not mix asynchronous and synchronous chain usage!
         """
         try:
             return self.get()

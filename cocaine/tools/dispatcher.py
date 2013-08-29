@@ -190,8 +190,10 @@ def app_upload(options,
     You can control process of creating and uploading application by specifying `--debug=tools` option. This is helpful
     when some errors occurred.
 
-    Warning: creating virtual environment may take a long time and can cause timeout. You can increase timeout by
+    .. warning:: Creating virtual environment may take a long time and can cause timeout. You can increase timeout by
     specifying `--timeout` option.
+
+    .. warning: This is experimental feature.
     """
     if path and package:
         print('Wrong usage: option PATH and --package are mutual exclusive, you can only force one')
