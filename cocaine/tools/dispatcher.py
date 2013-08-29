@@ -191,7 +191,7 @@ def app_upload(options,
     when some errors occurred.
 
     .. warning:: Creating virtual environment may take a long time and can cause timeout. You can increase timeout by
-    specifying `--timeout` option.
+                 specifying `--timeout` option.
 
     .. warning: This is experimental feature.
     """

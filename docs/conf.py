@@ -15,8 +15,8 @@ master_doc = 'index'
 # General information about the project.
 project = u'cocaine-framework-python'
 copyright = u'2013, Evgeny Safronov <division494@gmail.com>'
-version = '0.10.5'
-release = '5'
+version = '0.10.6'
+release = '10'
 
 exclude_trees = ['_build']
 exclude_patterns = []
