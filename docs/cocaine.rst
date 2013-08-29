@@ -1,11 +1,14 @@
-Package cocaine
+Packages
 ====================================
+
+Package cocaine
+------------------------------------
 .. automodule:: cocaine.exceptions
    :members:
    :noindex:
 
 Package cocaine.asio
-====================================
+------------------------------------
 .. automodule:: cocaine.asio.ev
    :members:
    :noindex:
@@ -22,7 +25,7 @@ Package cocaine.asio
 
 
 Package cocaine.futures
-====================================
+------------------------------------
 .. automodule:: cocaine.futures.chain
    :members:
    :noindex:
@@ -44,12 +47,12 @@ Method `get`
 
 
 **Example**
-    Let's get all application names from `node` service and print them:
+    Let's get all application names from `node` service and print them::
 
-    >>> from cocaine.services import Service
-    >>> node = Service('node')
-    >>> apps = node.list().get()
-    >>> print(apps)
+        from cocaine.services import Service
+        node = Service('node')
+        apps = node.list().get()
+        print(apps)
 
 
 **Comments**
@@ -82,49 +85,50 @@ Yield statement
 
 **Example**
     Let's get all application names from `node` service and print them while event loop is running (maybe in
-    `Worker` context or in some other asynchronous event):
+    `Worker` context or in some other asynchronous event)::
 
-    >>> from tornado.ioloop import IOLoop
-    >>> from cocaine.futures import chain
-    >>> from cocaine.services import Service
-    >>> node = Service('node')
-    >>>
-    >>> @chain.source
-    >>> def magic():
-    >>>     apps = yield node.list()
-    >>>     print(apps)
-    >>>
-    >>> magic()
-    >>> IOLoop.current().start()
+        from tornado.ioloop import IOLoop
+        from cocaine.futures import chain
+        from cocaine.services import Service
+
+        node = Service('node')
+
+        @chain.source
+        def magic():
+            apps = yield node.list()
+            print(apps)
+
+        magic()
+        IOLoop.current().start()
 
     You can also use tornado and python 3.3 futures in `Chain` context. Let's download list of pages simultaneously
-    and print response time of each:
+    and print response time of each::
 
-    >>> from tornado.ioloop import IOLoop
-    >>> from tornado.httpclient import AsyncHTTPClient
-    >>> from cocaine.futures import chain
-    >>> client = AsyncHTTPClient()
-    >>>
-    >>> @chain.source
-    >>> def downloadInternet(url):
-    >>>     response = yield client.fetch(url)
-    >>>     print(response.request.url, response.request_time)
-    >>>
-    >>> urls = [
-    >>>     'http://yandex.ru',
-    >>>     'http://www.google.ru',
-    >>>     'http://www.google.com',
-    >>>     'https://cocaine.readthedocs.org/en/latest/',
-    >>>     'https://github.com/cocaine/cocaine-core',
-    >>>     'https://github.com/cocaine/cocaine-framework-native',
-    >>>     'https://github.com/cocaine/cocaine-framework-python',
-    >>>     'https://github.com/cocaine/cocaine-plugins',
-    >>>     'http://www.tornadoweb.org/en/stable/httpclient.html',
-    >>> ]
-    >>>
-    >>> for url in urls:
-    >>>     downloadInternet(url)
-    >>> IOLoop.current().start()
+        from tornado.ioloop import IOLoop
+        from tornado.httpclient import AsyncHTTPClient
+        from cocaine.futures import chain
+        client = AsyncHTTPClient()
+
+        @chain.source
+        def downloadInternet(url):
+            response = yield client.fetch(url)
+            print(response.request.url, response.request_time)
+
+        urls = [
+            'http://yandex.ru',
+            'http://www.google.ru',
+            'http://www.google.com',
+            'https://cocaine.readthedocs.org/en/latest/',
+            'https://github.com/cocaine/cocaine-core',
+            'https://github.com/cocaine/cocaine-framework-native',
+            'https://github.com/cocaine/cocaine-framework-python',
+            'https://github.com/cocaine/cocaine-plugins',
+            'http://www.tornadoweb.org/en/stable/httpclient.html',
+        ]
+
+        for url in urls:
+            downloadInternet(url)
+        IOLoop.current().start()
 
     When it is done, there will be sorted list of urls with its response time printed. Note, that the order of urls in
     the result list is not equal with `urls` list.

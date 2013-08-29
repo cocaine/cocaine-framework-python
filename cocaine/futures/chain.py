@@ -111,18 +111,18 @@ class Deferred(Future):
     return this deferred from function. When asynchronous operation is done, just invoke `ready` and pass the result
     (including Exceptions) into it.
 
-    Here the example of asynchronous function that starts timer and signals the deferred after 1.0 sec.
+    Here the example of asynchronous function that starts timer and signals the deferred after 1.0 sec.::
 
-    >>> from tornado.ioloop import IOLoop
-    >>> def timer_function():
-    >>>     deferred = Deferred()
-    >>>     timeout = 1.0
-    >>>     IOLoop.current().add_timer(time.time() + timeout, lambda: deferred.ready('Done')
-    >>>     return deferred
+        from tornado.ioloop import IOLoop
+        def timer_function():
+            deferred = Deferred()
+            timeout = 1.0
+            IOLoop.current().add_timer(time.time() + timeout, lambda: deferred.ready('Done')
+            return deferred
 
-    Now you can use `timer_function` in Chain context:
+    Now you can use `timer_function` in Chain context::
 
-    >>> result = yield timer_function()
+        result = yield timer_function()
     """
     def __init__(self):
         super(Deferred, self).__init__()
@@ -544,17 +544,17 @@ class All(object):
     This class provides ability to yield multiple yieldable objects in chain context. Program control returns after
     all of them completed. Future results will be placed in the list in original order.
 
-    Typical usage:
+    Typical usage::
 
-    >>> from cocaine.services import Service
-    >>> from cocaine.futures import chain
-    >>> @chain.source
-    >>> def func():
-    >>>     r1, r2 = yield chain.All([s1.execute(), s2.execute()])
-    >>>     print(r1, r2)
-    >>> s1 = Service('s1')
-    >>> s2 = Service('s2')
-    >>> func()
+        from cocaine.services import Service
+        from cocaine.futures import chain
+        @chain.source
+        def func():
+            r1, r2 = yield chain.All([s1.execute(), s2.execute()])
+            print(r1, r2)
+        s1 = Service('s1')
+        s2 = Service('s2')
+        func()
 
     If you have specified deferred, you can invoke `execute` method and pass that deferred to it. This will have the
     same effect as yielding.

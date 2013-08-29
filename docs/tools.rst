@@ -1,3 +1,9 @@
+Cocaine Tools Command Line Interface
+====================================
+This part describes cocaine command line tools.
+It is useful for management your cocaine cloud, uploading applications, profiles and other stuff.
+
+
 Common tools
 ------------------------------------
 This part describes common tools.
