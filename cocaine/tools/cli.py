@@ -133,9 +133,10 @@ class CallActionCli(object):
         self.action = common.Call(command, host, port)
         self.pretty = pretty
 
+    @chain.source
     def execute(self):
         try:
-            result = self.action.execute().get(timeout=1.0)  # todo: make timeout configurable!
+            result = yield self.action.execute()
             requestType = result['request']
             response = result['response']
             if requestType == 'api':
