@@ -212,7 +212,7 @@ class AbstractService(object):
             self._session += 1
             self._writableStream.write([methodId, self._session, args])
             self._subscribers[self._session] = future
-            return Chain([lambda: future])
+            return Chain([lambda: future], ioLoop=self._ioLoop)
         return wrapper
 
     def perform_sync(self, method, *args, **kwargs):
