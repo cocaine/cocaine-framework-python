@@ -20,6 +20,9 @@ class Client(object):
     def info(self):
         return Info(self.url, self.version, self._io_loop).execute()
 
+    def images(self):
+        return Images(self.url, self.version, self._io_loop).execute()
+
     def build(self, path, tag=None, quiet=False, streaming=None, timeout=120.0):
         return Build(path, tag, quiet, streaming, timeout, self.url, self.version, self._io_loop).execute()
 
@@ -47,6 +50,13 @@ class Info(Action):
     @chain.source
     def execute(self):
         response = yield self._http_client.fetch(self._url('/info'))
+        yield response.body
+
+
+class Images(Action):
+    @chain.source
+    def execute(self):
+        response = yield self._http_client.fetch(self._url('/images/json'))
         yield response.body
 
 
