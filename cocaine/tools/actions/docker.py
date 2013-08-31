@@ -1,5 +1,6 @@
 import tarfile
 import StringIO
+import urllib
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.ioloop import IOLoop
@@ -42,21 +43,25 @@ class Action(object):
     def execute(self):
         raise NotImplementedError
 
-    def _url(self, path):
-        return '{0}{1}'.format(self._base_url, path)
+    def _make_url(self, path, query=None):
+        if query is not None:
+            query = dict((k, v) for k, v, in query.iteritems() if v is not None)
+            return '{0}{1}?{2}'.format(self._base_url, path, urllib.urlencode(query))
+        else:
+            return '{0}{1}'.format(self._base_url, path)
 
 
 class Info(Action):
     @chain.source
     def execute(self):
-        response = yield self._http_client.fetch(self._url('/info'))
+        response = yield self._http_client.fetch(self._make_url('/info'))
         yield response.body
 
 
 class Images(Action):
     @chain.source
     def execute(self):
-        response = yield self._http_client.fetch(self._url('/images/json'))
+        response = yield self._http_client.fetch(self._make_url('/images/json'))
         yield response.body
 
 
@@ -86,8 +91,8 @@ class Build(Action):
             data = self._tar(self._path)
             log.info('OK')
 
-        query = {'tag': self._tag, 'remote': remote, 'q': self._quiet}
-        url = self._url('/build')
+        query = {'t': self._tag, 'remote': remote, 'q': self._quiet}
+        url = self._make_url('/build', query)
         log.info('Building "%s" ...', url)
         request = HTTPRequest(url, method='POST', headers=headers, body=data, request_timeout=self._timeout)
         if self._streaming is not None:
