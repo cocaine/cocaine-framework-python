@@ -75,7 +75,6 @@ class Stream(object):
         if self._m_state is not None:
             self.worker.send_chunk(self.session, chunk)
             return
-        assert (self._m_state is not None)
         traceback.print_stack()
 
     def close(self):
@@ -83,7 +82,6 @@ class Stream(object):
             self.worker.send_choke(self.session)
             self._m_state = None
             return
-        assert (self._m_state is None)
         traceback.print_stack()
 
     def error(self, code, message):
