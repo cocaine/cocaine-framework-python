@@ -1,74 +1,69 @@
-from __future__ import absolute_import
-from time import time
+import threading
+
 from cocaine.exceptions import ChokeEvent
-from tornado import ioloop
+
+
+CLOSED_STATE_MESSAGE = 'invalid future object state - triggered while in closed state. Fix your code'
 
 
 class Future(object):
+    UNITIALIZED, BOUND, CLOSED = range(3)
 
     def __init__(self):
-        self._clbk = None
-        self._errbk = None
-        self._on_done = None
-        self._errmsg = None
-        self.cache = list()
-        self._state = 1
-        self._is_raised_error = False  # Flag for on_done callback
-        self._is_received_chunk = False  #
-        self._done = False  #
+        self._callback = None
+        self._chunks = []
 
-    def callback(self, chunk):
-        self._is_received_chunk = True
-        if self._clbk is None:
-            self.cache.append(chunk)
-        else:
-            temp = self._clbk
-            #self._clbk = None
-            temp(chunk)
+        self._errorback = None
+        self._errors = []
 
-    def error(self, err):
-        self._is_raised_error = True  # Flag for on_done callback
-        if self._errbk is None:
-            self._errmsg = err
-        else:
-            temp = self._errbk
-            #self._errbk = None
-            temp(err)
+        self.state = self.UNITIALIZED
 
-    def default_errorback(self, err):
-        print "Can't throw error without errorback %s" % str(err)
+        self._lock = threading.Lock()
+        self._print_lock = threading.Lock()
 
-    def default_on_done(self):
-        pass
+    def bind(self, callback, errorback=None):
+        with self._lock:
+            assert self.state in (self.UNITIALIZED, self.CLOSED), 'double bind is prohibited by design'
+            if errorback is None:
+                errorback = self._default_errorback
+
+            while self._chunks:
+                callback(self._chunks.pop(0))
+            while self._errors:
+                errorback(self._errors.pop(0))
+
+            if self.state == self.UNITIALIZED:
+                self._callback = callback
+                self._errorback = errorback
+                self.state = self.BOUND
 
     def close(self):
-        self._state = None
-        if self._clbk is None and self._errbk is None:
-            self.cache.append(ChokeEvent())
-            return
+        with self._lock:
+            if self._errorback is None:
+                self._errors.append(ChokeEvent())
+            self._callback = None
+            self._errorback = None
+            self.state = self.CLOSED
 
-        if not self._is_raised_error:
-            self._errbk(ChokeEvent())
-            self._done = True
-
-    def bind(self, callback, errorback=None, on_done=None):
-        if len(self.cache) > 0:  # There are some chunks in cache - return immediately
-            self._clbk = callback
-            self._errbk = errorback
-            callback(self.cache.pop(0))
-        elif self._errmsg is not None:  # Error has been received - raise it
-            if errorback is not None:
-                temp = self._errmsg
-                self._errmsg = None
-                errorback(temp)  # translate error into worker
+    def trigger(self, chunk):
+        with self._lock:
+            assert self.state in (self.UNITIALIZED, self.BOUND), CLOSED_STATE_MESSAGE
+            if self._callback is None:
+                self._chunks.append(chunk)
             else:
-                self.default_errorback(self._errmsg)
-        elif self._state is not None:  # There is no data yet - attach callbacks
-            self._clbk = callback
-            self._errbk = errorback or self.default_errorback
-            self._on_done = on_done or self.default_on_done
-        elif self._done:  # No chunks, but choke has been received
-            on_done()
+                self._callback(chunk)
+
+    def error(self, err):
+        with self._lock:
+            assert self.state in (self.UNITIALIZED, self.BOUND), CLOSED_STATE_MESSAGE
+            if self._errorback is None:
+                self._errors.append(err)
+            else:
+                self._errorback(err)
+
+    def _default_errorback(self, err):
+        with self._print_lock:
+            print('Can\'t throw error without errorback %s' % str(err))
 
 
 class Sleep(object):

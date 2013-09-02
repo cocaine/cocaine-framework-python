@@ -84,7 +84,7 @@ class PreparedFuture(Future):
         self._bound = False
         self._lock = threading.Lock()
 
-    def bind(self, callback, errorback=None, on_done=None):
+    def bind(self, callback, errorback=None):
         with self._lock:
             self._bound = True
 
@@ -128,7 +128,7 @@ class Deferred(Future):
         super(Deferred, self).__init__()
         self.unbind()
 
-    def bind(self, callback, errorback=None, on_done=None):
+    def bind(self, callback, errorback=None):
         self.callback = callback
         self.errorback = errorback
 
@@ -187,7 +187,7 @@ class GeneratorFutureMock(Future):
         self._currentFuture = None
         self._results = collections.deque(maxlen=1)
 
-    def bind(self, callback, errorback=None, on_done=None):
+    def bind(self, callback, errorback=None):
         self.callback = callback
         self.errorback = errorback
         self._advance()
