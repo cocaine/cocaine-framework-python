@@ -58,9 +58,9 @@ class Loop(object):
     def run(self):
         self._ioloop.start()
 
-    def run_for_time(self, _timeout):
+    def run_for_time(self, timeout):
         from time import time
-        self._ioloop.add_timeout(time()+_timeout, self._on_timeout)
+        self._ioloop.add_timeout(time() + timeout, self._on_timeout)
         self.run()
 
     def stop(self):
