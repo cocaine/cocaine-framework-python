@@ -34,6 +34,9 @@ class Client(object):
     def images(self):
         return Images(**self.config).execute()
 
+    def containers(self):
+        return Containers(**self.config).execute()
+
     def build(self, path, tag=None, quiet=False, streaming=None):
         return Build(path, tag, quiet, streaming, **self.config).execute()
 
@@ -77,6 +80,13 @@ class Images(Action):
     def execute(self):
         response = yield self._http_client.fetch(self._make_url('/images/json'))
         yield response.body
+
+
+class Containers(Action):
+    @chain.source
+    def execute(self):
+        response = yield self._http_client.fetch(self._make_url('/containers/json'))
+        yield json.loads(response.body)
 
 
 class Build(Action):
