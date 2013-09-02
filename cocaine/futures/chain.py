@@ -81,24 +81,12 @@ class PreparedFuture(Future):
         super(PreparedFuture, self).__init__()
         self.result = result
         self._ioLoop = ioLoop or IOLoop.current()
-        self._bound = False
-        self._lock = threading.Lock()
 
     def bind(self, callback, errorback=None):
-        with self._lock:
-            self._bound = True
-
         try:
             self._ioLoop.add_callback(callback, self.result)
         except Exception as err:
             self._ioLoop.add_callback(errorback, err)
-
-    def isBound(self):
-        with self._lock:
-            return self._bound
-
-    def unbind(self):
-        return
 
 
 class Deferred(Future):
@@ -126,32 +114,18 @@ class Deferred(Future):
     """
     def __init__(self):
         super(Deferred, self).__init__()
-        self.unbind()
-
-    def bind(self, callback, errorback=None):
-        self.callback = callback
-        self.errorback = errorback
-
-    def unbind(self):
-        self.callback = None
-        self.errorback = None
-
-    def isBound(self):
-        return any([self.callback, self.errorback])
 
     def ready(self, result=None):
-        if not self.isBound():
+        if not self.is_bound():
             return
 
         if not isinstance(result, FutureResult):
             result = FutureResult(result)
 
         try:
-            result = result.get()
-            self.callback(result)
+            self.trigger(result.get())
         except Exception as err:
-            if self.errorback:
-                self.errorback(err)
+            self.error(err)
 
 
 class ConcurrentWorker(object):
@@ -201,7 +175,7 @@ class GeneratorFutureMock(Future):
                 if __debug__: log.debug('binding future %r instead of %r', future, self._currentFuture)
                 future.bind(self._advance, self._advance)
                 if self._currentFuture:
-                    self._currentFuture.unbind()
+                    self._currentFuture.close()
                 self._currentFuture = future
         except StopIteration:
             if __debug__: log.debug('StopIteration caught, value: %r', value)
@@ -211,8 +185,8 @@ class GeneratorFutureMock(Future):
             self.errorback(err)
         except Exception as err:
             if __debug__: log.debug('Exception caught, value: %r, error: %r', value, err)
-            if self._currentFuture and self._currentFuture.isBound():
-                self._currentFuture.unbind()
+            if self._currentFuture and self._currentFuture.is_bound():
+                self._currentFuture.close()
             self.errorback(err)
 
     def _next(self, value):

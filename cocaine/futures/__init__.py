@@ -18,8 +18,12 @@ class Future(object):
 
         self.state = self.UNITIALIZED
 
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._print_lock = threading.Lock()
+
+    def is_bound(self):
+        with self._lock:
+            return self.state == self.BOUND
 
     def bind(self, callback, errorback=None):
         with self._lock:
@@ -39,6 +43,8 @@ class Future(object):
 
     def close(self):
         with self._lock:
+            if self.state == self.CLOSED:
+                return
             if self._errorback is None:
                 self._errors.append(ChokeEvent())
             self._callback = None
