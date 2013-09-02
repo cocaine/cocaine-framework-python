@@ -109,7 +109,7 @@ class Build(Action):
             log.info('Remote url detected: "%s"', self._path)
             remote = self._path
         else:
-            log.info('Local path detected. Creating archive "%s" ...', self._path)
+            log.info('Local path detected. Creating archive "%s"... ', self._path)
             headers = {'Content-Type': 'application/tar'}
             body = self._tar(self._path)
             log.info('OK')
