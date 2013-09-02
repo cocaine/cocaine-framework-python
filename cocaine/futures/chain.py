@@ -240,22 +240,12 @@ class GeneratorFutureMock(Future):
             future = result
         elif isinstance(result, Chain):
             deferred = Deferred()
-
-            def cleanPending(r):
-                deferred.ready(r)
-                result.items[-1].pending = []
-            result.then(cleanPending)
+            self._wrap_chain(result, deferred)
             future = deferred
         elif hasattr(result, 'add_done_callback'):
             # Meant to be tornado.concurrent._DummyFuture or python 3.3 concurrent.future.Future
             deferred = Deferred()
-
-            def unwrapResult(result):
-                try:
-                    deferred.ready(result.result())
-                except Exception as err:
-                    deferred.ready(err)
-            result.add_done_callback(unwrapResult)
+            self._wrap_python_future(result, deferred)
             future = deferred
         elif isinstance(result, ConcurrentWorker):
             deferred = Deferred()
@@ -269,6 +259,20 @@ class GeneratorFutureMock(Future):
             future = PreparedFuture(result, ioLoop=self._ioLoop)
         if __debug__: log.debug('wrapping result into future: %r -> %r', result, future)
         return future
+
+    def _wrap_chain(self, result, deferred):
+        def cleanPending(r):
+            deferred.ready(r)
+            result.items[-1].pending = []
+        result.then(cleanPending)
+
+    def _wrap_python_future(self, result, deferred):
+        def unwrapResult(result):
+            try:
+                deferred.ready(result.result())
+            except Exception as err:
+                deferred.ready(err)
+        result.add_done_callback(unwrapResult)
 
 
 class ChainItem(object):
