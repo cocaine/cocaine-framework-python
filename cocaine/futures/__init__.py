@@ -41,12 +41,16 @@ class Future(object):
                 self._errorback = errorback
                 self.state = self.BOUND
 
-    def close(self):
+    def close(self, silent=False):
         with self._lock:
             if self.state == self.CLOSED:
                 return
-            if self._errorback is None:
-                self._errors.append(ChokeEvent())
+
+            if not silent:
+                if self._errorback is None:
+                    self._errors.append(ChokeEvent())
+                else:
+                    self._errorback(ChokeEvent())
             self._callback = None
             self._errorback = None
             self.state = self.CLOSED

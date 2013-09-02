@@ -175,7 +175,7 @@ class GeneratorFutureMock(Future):
                 if __debug__: log.debug('binding future %r instead of %r', future, self._currentFuture)
                 future.bind(self._advance, self._advance)
                 if self._currentFuture:
-                    self._currentFuture.close()
+                    self._currentFuture.close(silent=True)
                 self._currentFuture = future
         except StopIteration:
             if __debug__: log.debug('StopIteration caught, value: %r', value)
@@ -186,7 +186,7 @@ class GeneratorFutureMock(Future):
         except Exception as err:
             if __debug__: log.debug('Exception caught, value: %r, error: %r', value, err)
             if self._currentFuture and self._currentFuture.is_bound():
-                self._currentFuture.close()
+                self._currentFuture.close(silent=True)
             self.errorback(err)
 
     def _next(self, value):
