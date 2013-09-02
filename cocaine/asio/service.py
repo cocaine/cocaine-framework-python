@@ -382,7 +382,11 @@ class Service(AbstractService):
 
     @strategy.coroutine
     def connectThroughLocator(self, locator, timeout=None, blocking=False):
-        endpoint, self.version, api = yield locator.resolve(self.name, timeout, blocking=blocking)
+        try:
+            endpoint, self.version, api = yield locator.resolve(self.name, timeout, blocking=blocking)
+        except ServiceError as err:
+            raise LocatorResolveError(self.name, locator.address, err)
+
         yield self._connectToEndpoint(*endpoint, timeout=timeout, blocking=blocking)
 
         self.api = dict((methodName, methodId) for methodId, methodName in api.items())
