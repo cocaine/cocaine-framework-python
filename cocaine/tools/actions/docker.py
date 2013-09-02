@@ -1,3 +1,4 @@
+import json
 import tarfile
 import StringIO
 import urllib
@@ -11,27 +12,40 @@ from cocaine.tools.helpers._unix import AsyncUnixHTTPClient
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
+DEFAULT_TIMEOUT = 120.0
+
 
 class Client(object):
-    def __init__(self, url='unix://var/run/docker.sock', version='1.4', io_loop=None):
+    def __init__(self, url='unix://var/run/docker.sock', version='1.4', timeout=DEFAULT_TIMEOUT, io_loop=None):
         self.url = url
         self.version = version
+        self.timeout = timeout
         self._io_loop = io_loop
+        self.config = {
+            'url': url,
+            'version': version,
+            'timeout': timeout,
+            'io_loop': io_loop
+        }
 
     def info(self):
-        return Info(self.url, self.version, self._io_loop).execute()
+        return Info(**self.config).execute()
 
     def images(self):
-        return Images(self.url, self.version, self._io_loop).execute()
+        return Images(**self.config).execute()
 
-    def build(self, path, tag=None, quiet=False, streaming=None, timeout=120.0):
-        return Build(path, tag, quiet, streaming, timeout, self.url, self.version, self._io_loop).execute()
+    def build(self, path, tag=None, quiet=False, streaming=None):
+        return Build(path, tag, quiet, streaming, **self.config).execute()
+
+    def push(self, name, auth, registry=None, streaming=None):
+        return Push(name, auth, registry, streaming, **self.config).execute()
 
 
 class Action(object):
-    def __init__(self, url, version, io_loop=None):
+    def __init__(self, url, version, timeout=DEFAULT_TIMEOUT, io_loop=None):
         self._unix = url.startswith('unix://')
         self._version = version
+        self.timeout = timeout
         self._io_loop = io_loop
         if self._unix:
             self._base_url = url
@@ -66,20 +80,19 @@ class Images(Action):
 
 
 class Build(Action):
-    def __init__(self, path, tag=None, quiet=False, streaming=None, timeout=120.0, url='unix://var/run/docker.sock',
-                 version='1.4', io_loop=None):
-        super(Build, self).__init__(url, version, io_loop)
+    def __init__(self, path, tag=None, quiet=False, streaming=None,
+                 url='unix://var/run/docker.sock', version='1.4', timeout=DEFAULT_TIMEOUT, io_loop=None):
+        super(Build, self).__init__(url, version, timeout, io_loop)
         self._path = path
         self._tag = tag
         self._quiet = quiet
         self._streaming = streaming
-        self._timeout = timeout
         self._io_loop = io_loop or IOLoop.current()
 
     @chain.source
     def execute(self):
         headers = None
-        data = None
+        body = None
         remote = None
 
         if any(map(self._path.startswith, ['http://', 'https://', 'git://', 'github.com/'])):
@@ -88,15 +101,16 @@ class Build(Action):
         else:
             log.info('Local path detected. Creating archive "%s" ...', self._path)
             headers = {'Content-Type': 'application/tar'}
-            data = self._tar(self._path)
+            body = self._tar(self._path)
             log.info('OK')
 
         query = {'t': self._tag, 'remote': remote, 'q': self._quiet}
         url = self._make_url('/build', query)
-        log.info('Building "%s" ...', url)
-        request = HTTPRequest(url, method='POST', headers=headers, body=data, request_timeout=self._timeout)
-        if self._streaming is not None:
-            request.streaming_callback = self._streaming
+        log.info('Building "%s"... ', url)
+        request = HTTPRequest(url,
+                              method='POST', headers=headers, body=body,
+                              request_timeout=self.timeout,
+                              streaming_callback=self._streaming)
         try:
             yield self._http_client.fetch(request)
             log.info('OK')
@@ -112,3 +126,35 @@ class Build(Action):
             return stream.getvalue()
         finally:
             stream.close()
+
+
+class Push(Action):
+    def __init__(self, name, auth, registry=None, streaming=None,
+                 url='unix://var/run/docker.sock', version='1.4', timeout=DEFAULT_TIMEOUT, io_loop=None):
+        self.name = name
+        self.auth = auth
+        self.registry = registry
+        self._streaming = streaming
+        super(Push, self).__init__(url, version, timeout, io_loop)
+
+    @chain.source
+    def execute(self):
+        query = {'registry': self.registry}
+        url = self._make_url('/images/{0}/push'.format(self.name), query)
+        body = json.dumps(self.auth)
+        log.info('Pushing "%s" info "%s"... ', self.name, self.registry if self.registry is not None else 'default')
+        request = HTTPRequest(url, method='POST', body=body,
+                              request_timeout=self.timeout,
+                              streaming_callback=self._on_body)
+        try:
+            yield self._http_client.fetch(request)
+            log.info('OK')
+        except Exception as err:
+            log.error('FAIL - %s', err)
+            raise err
+
+    def _on_body(self, data):
+        try:
+            self._streaming(json.loads(data)['status'])
+        except Exception as err:
+            self._streaming(str(err))
