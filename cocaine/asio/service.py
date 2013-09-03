@@ -181,7 +181,7 @@ class AbstractService(object):
 
         try:
             if msg.id == message.RPC_CHUNK:
-                self._subscribers[msg.session].callback(msgpack.unpackb(msg.data))
+                self._subscribers[msg.session].trigger(msgpack.unpackb(msg.data))
             elif msg.id == message.RPC_CHOKE:
                 future = self._subscribers.pop(msg.session, None)
                 assert future is not None, 'one of subscribers has suddenly disappeared'
@@ -195,9 +195,6 @@ class AbstractService(object):
 
     def _invoke(self, methodId):
         def wrapper(*args, **kwargs):
-            if not self.isConnected():
-                raise IllegalStateError('service "{0}" is not connected'.format(self.name))
-
             future = Future()
             timeout = kwargs.get('timeout', None)
             if timeout is not None:
@@ -212,7 +209,7 @@ class AbstractService(object):
             self._session += 1
             self._writableStream.write([methodId, self._session, args])
             self._subscribers[self._session] = future
-            return Chain([lambda: future])
+            return Chain([lambda: future], ioLoop=self._ioLoop)
         return wrapper
 
     def perform_sync(self, method, *args, **kwargs):
@@ -353,6 +350,8 @@ class Service(AbstractService):
 
     .. note:: Actual service's API is building dynamically. Sorry, IDE users, there is no autocompletion :(
     """
+    _locator_cache = {}
+
     def __init__(self, name, blockingConnect=True, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT):
         super(Service, self).__init__(name)
 
@@ -373,21 +372,52 @@ class Service(AbstractService):
                   If you don't want to create connection to the locator each time you create service, you can use
                   `connectThroughLocator` method, which is specially designed for that cases.
         """
-        locator = Locator()
+        if (host, port) not in self._locator_cache:
+            locator = Locator()
+            self._locator_cache[(host, port)] = locator
+        else:
+            locator = self._locator_cache[(host, port)]
+
         try:
-            yield locator.connect(host, port, timeout, blocking=blocking)
+            if not locator.isConnected():
+                yield locator.connect(host, port, timeout, blocking=blocking)
             yield self.connectThroughLocator(locator, timeout, blocking=blocking)
         finally:
-            locator.disconnect()
+            pass
+            # locator.disconnect()
 
     @strategy.coroutine
     def connectThroughLocator(self, locator, timeout=None, blocking=False):
-        endpoint, self.version, api = yield locator.resolve(self.name, timeout, blocking=blocking)
+        try:
+            endpoint, self.version, api = yield locator.resolve(self.name, timeout, blocking=blocking)
+        except ServiceError as err:
+            raise LocatorResolveError(self.name, locator.address, err)
+
         yield self._connectToEndpoint(*endpoint, timeout=timeout, blocking=blocking)
 
         self.api = dict((methodName, methodId) for methodId, methodName in api.items())
         for methodId, methodName in api.items():
-            setattr(self, methodName, self._invoke(methodId))
+            invoke = self._invoke(methodId)
+
+            def decorate(func):
+                @strategy.coroutine
+                def wrapper(*args, **kwargs):
+                    if not self.isConnected():
+                        yield self.connectThroughLocator(locator)
+
+                    try:
+                        yield func(*args, **kwargs)
+                    except KeyError as fd:
+                        log.warn('broken pipe detected, fd: %s', str(fd))
+                        log.info('reconnecting... ')
+                        yield self.disconnect()
+                        yield self.connectThroughLocator(locator)
+                        yield func(*args, **kwargs)
+                        log.info('service has been successfully reconnected')
+
+                return wrapper
+            invoke = decorate(invoke)
+            setattr(self, methodName, invoke)
 
     @strategy.coroutine
     def reconnect(self, timeout=None, blocking=False):

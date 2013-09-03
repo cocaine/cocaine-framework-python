@@ -8,6 +8,6 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 def gen_test(func):
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
-        Chain([lambda: func(self, *args, **kwargs), lambda result: self.ioLoop.stop()])
-        self.ioLoop.start()
+        Chain([lambda: func(self, *args, **kwargs), lambda result: self.io_loop.stop()])
+        self.io_loop.start()
     return wrapper

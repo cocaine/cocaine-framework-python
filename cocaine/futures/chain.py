@@ -81,24 +81,12 @@ class PreparedFuture(Future):
         super(PreparedFuture, self).__init__()
         self.result = result
         self._ioLoop = ioLoop or IOLoop.current()
-        self._bound = False
-        self._lock = threading.Lock()
 
-    def bind(self, callback, errorback=None, on_done=None):
-        with self._lock:
-            self._bound = True
-
+    def bind(self, callback, errorback=None):
         try:
             self._ioLoop.add_callback(callback, self.result)
         except Exception as err:
             self._ioLoop.add_callback(errorback, err)
-
-    def isBound(self):
-        with self._lock:
-            return self._bound
-
-    def unbind(self):
-        return
 
 
 class Deferred(Future):
@@ -126,32 +114,15 @@ class Deferred(Future):
     """
     def __init__(self):
         super(Deferred, self).__init__()
-        self.unbind()
-
-    def bind(self, callback, errorback=None, on_done=None):
-        self.callback = callback
-        self.errorback = errorback
-
-    def unbind(self):
-        self.callback = None
-        self.errorback = None
-
-    def isBound(self):
-        return any([self.callback, self.errorback])
 
     def ready(self, result=None):
-        if not self.isBound():
-            return
-
         if not isinstance(result, FutureResult):
             result = FutureResult(result)
 
         try:
-            result = result.get()
-            self.callback(result)
+            self.trigger(result.get())
         except Exception as err:
-            if self.errorback:
-                self.errorback(err)
+            self.error(err)
 
 
 class ConcurrentWorker(object):
@@ -187,7 +158,7 @@ class GeneratorFutureMock(Future):
         self._currentFuture = None
         self._results = collections.deque(maxlen=1)
 
-    def bind(self, callback, errorback=None, on_done=None):
+    def bind(self, callback, errorback=None):
         self.callback = callback
         self.errorback = errorback
         self._advance()
@@ -211,7 +182,7 @@ class GeneratorFutureMock(Future):
             self.errorback(err)
         except Exception as err:
             if __debug__: log.debug('Exception caught, value: %r, error: %r', value, err)
-            if self._currentFuture and self._currentFuture.isBound():
+            if self._currentFuture:
                 self._currentFuture.unbind()
             self.errorback(err)
 
@@ -240,22 +211,12 @@ class GeneratorFutureMock(Future):
             future = result
         elif isinstance(result, Chain):
             deferred = Deferred()
-
-            def cleanPending(r):
-                deferred.ready(r)
-                result.items[-1].pending = []
-            result.then(cleanPending)
+            self._wrap_chain(result, deferred)
             future = deferred
         elif hasattr(result, 'add_done_callback'):
             # Meant to be tornado.concurrent._DummyFuture or python 3.3 concurrent.future.Future
             deferred = Deferred()
-
-            def unwrapResult(result):
-                try:
-                    deferred.ready(result.result())
-                except Exception as err:
-                    deferred.ready(err)
-            result.add_done_callback(unwrapResult)
+            self._wrap_python_future(result, deferred)
             future = deferred
         elif isinstance(result, ConcurrentWorker):
             deferred = Deferred()
@@ -269,6 +230,20 @@ class GeneratorFutureMock(Future):
             future = PreparedFuture(result, ioLoop=self._ioLoop)
         if __debug__: log.debug('wrapping result into future: %r -> %r', result, future)
         return future
+
+    def _wrap_chain(self, result, deferred):
+        def cleanPending(r):
+            deferred.ready(r)
+            result.items[-1].pending = []
+        result.then(cleanPending)
+
+    def _wrap_python_future(self, result, deferred):
+        def unwrapResult(result):
+            try:
+                deferred.ready(result.result())
+            except Exception as err:
+                deferred.ready(err)
+        result.add_done_callback(unwrapResult)
 
 
 class ChainItem(object):
