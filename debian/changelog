@@ -1,3 +1,10 @@
+cocaine-framework-python (0.10.6.12) lucid; urgency=low
+
+  * Automatic service reconnect implemented.
+  * Basic Docker support.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 03 Sep 2013 16:35:00 +0400
+
 cocaine-framework-python (0.10.6.11) lucid; urgency=low
 
   * Thread safety for streams.
