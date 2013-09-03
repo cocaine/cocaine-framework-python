@@ -21,10 +21,6 @@ class Future(object):
         self._lock = threading.RLock()
         self._print_lock = threading.Lock()
 
-    def is_bound(self):
-        with self._lock:
-            return self.state == self.BOUND
-
     def bind(self, callback, errorback=None):
         with self._lock:
             assert self.state in (self.UNITIALIZED, self.CLOSED), 'double bind is prohibited by design'

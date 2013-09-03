@@ -116,9 +116,6 @@ class Deferred(Future):
         super(Deferred, self).__init__()
 
     def ready(self, result=None):
-        if not self.is_bound():
-            return
-
         if not isinstance(result, FutureResult):
             result = FutureResult(result)
 
@@ -185,7 +182,7 @@ class GeneratorFutureMock(Future):
             self.errorback(err)
         except Exception as err:
             if __debug__: log.debug('Exception caught, value: %r, error: %r', value, err)
-            if self._currentFuture and self._currentFuture.is_bound():
+            if self._currentFuture:
                 self._currentFuture.close(silent=True)
             self.errorback(err)
 
