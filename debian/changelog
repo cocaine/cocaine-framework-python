@@ -1,11 +1,17 @@
-cocaine-framework-python (0.10.6.12) lucid; urgency=low
+cocaine-framework-python (0.10.6.13) unstable; urgency=low
+
+  * Fix proxy init script: mkdir directory for pidfile
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 03 Sep 2013 19:26:24 +0400
+
+cocaine-framework-python (0.10.6.12) unstable; urgency=low
 
   * Automatic service reconnect implemented.
   * Basic Docker support.
 
  -- Evgeny Safronov <division494@gmail.com>  Tue, 03 Sep 2013 16:35:00 +0400
 
-cocaine-framework-python (0.10.6.11) lucid; urgency=low
+cocaine-framework-python (0.10.6.11) unstable; urgency=low
 
   * Thread safety for streams.
   * Bugs fixed.
@@ -13,14 +19,14 @@ cocaine-framework-python (0.10.6.11) lucid; urgency=low
 
  -- Evgeny Safronov <division494@gmail.com>  Wed, 29 Aug 2013 17:40:20 +0400
 
-cocaine-framework-python (0.10.6.10) lucid; urgency=low
+cocaine-framework-python (0.10.6.10) unstable; urgency=low
 
   * Documentation added.
   * Bugs fixed.
 
  -- Evgeny Safronov <division494@gmail.com>  Wed, 28 Aug 2013 15:38:00 +0400
 
-cocaine-framework-python (0.10.6.9) lucid; urgency=low
+cocaine-framework-python (0.10.6.9) unstable; urgency=low
 
   * Asynchronous grouped future invocation implemented.
   * Chain API performance increased approximately by 16%.
@@ -29,7 +35,7 @@ cocaine-framework-python (0.10.6.9) lucid; urgency=low
 
  -- Evgeny Safronov <division494@gmail.com>  Mon, 26 Aug 2013 15:14:50 +0400
 
-cocaine-framework-python (0.10.6.8) lucid; urgency=low
+cocaine-framework-python (0.10.6.8) unstable; urgency=low
 
   * fix parsing of arguments in POST
 
