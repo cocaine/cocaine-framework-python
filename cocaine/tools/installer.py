@@ -144,7 +144,7 @@ class PythonModuleInstaller(ModuleInstaller):
             log.debug(COCAINE_DOWNLOAD_START.format(COCAINE_PYTHON_FRAMEWORK_URL, path))
             downloader.download(COCAINE_PYTHON_FRAMEWORK_URL, path)
         except RepositoryDownloadError as err:
-            raise ModuleInstallError(err.message)
+            raise ModuleInstallError(err)
 
         log.debug(COCAINE_INSTALL_START)
         python = os.path.join(self.virtualEnvironmentPath, 'bin', 'python')
