@@ -37,6 +37,11 @@ class Future(object):
                 self._errorback = errorback
                 self.state = self.BOUND
 
+    def unbind(self):
+        self._callback = None
+        self._errorback = None
+        self.state = self.UNITIALIZED
+
     def close(self, silent=False):
         with self._lock:
             if self.state == self.CLOSED:
