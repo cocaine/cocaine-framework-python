@@ -37,6 +37,7 @@ from cocaine.services import Service
 from cocaine.exceptions import ServiceError
 from cocaine.exceptions import CocaineError
 from cocaine.exceptions import ChokeEvent
+from cocaine.asio.exceptions import TimeoutError
 from cocaine.futures import chain
 
 from cocaine.proxy import Daemon
@@ -132,7 +133,7 @@ def move_to_inactive(app, name):
     def wrapper():
         active_apps = len(cache[name])
         if active_apps < SERVICE_CACHE_COUNT:
-            io_loop.add_timeout(time.time() + get_timeout(name) + 1, move_to_inactive(app, name))
+            io_loop.add_timeout(time.time() + get_timeout(name) + 100, move_to_inactive(app, name))
             return
         logger.info(MOVE_TO_INACTIVE, app.name, "{0}:{1}".format(*app.address), active_apps)
         # Move service to sandbox for waiting current sessions
@@ -199,12 +200,11 @@ def get_service(name):
 
 TEMPLATE = "%(VERSION)s %(CODE)d %(STATUS)s\r\n%(HEADERS)s\r\n%(BODY)s"
 
-
 @chain.source
 def process(obj, service, event, data):
     message_parts = []
     try:
-        chunk = yield service.enqueue(event, msgpack.packb(data))
+        chunk = yield service.enqueue(event, msgpack.packb(data), timeout=get_timeout(service.name))
         while True:
             body = yield
             message_parts.append(str(body))
@@ -222,8 +222,17 @@ def process(obj, service, event, data):
             "HEADERS": headers,
             "BODY": message}
     except ServiceError as err:
-        logger.error(str(err))
-        message = "Application error: %s" % str(err)
+        logger.error("Application %s timeout %s", service.name, str(err))
+        message = "Application %s error: %s" % (service.name, str(err))
+        response_data = TEMPLATE % {
+            "VERSION": obj.version,
+            "CODE": 502,
+            "STATUS": httplib.responses[502],
+            "HEADERS": 'Content-Length: %d\r\n' % len(message),
+            "BODY": message}
+    except TimeoutError as err:
+        logger.error("Application %s timeout %s", service.name, str(err))
+        message = "Application %s timeout: %s" % (service.name, str(err))
         response_data = TEMPLATE % {
             "VERSION": obj.version,
             "CODE": 502,
@@ -235,8 +244,8 @@ def process(obj, service, event, data):
         message = "Unknown error: %s" % str(err)
         response_data = TEMPLATE % {
             "VERSION": obj.version,
-            "CODE": 502,
-            "STATUS": httplib.responses[502],
+            "CODE": 520,
+            "STATUS": httplib.responses[520],
             "HEADERS": 'Content-Length: %d\r\n' % len(message),
             "BODY": message}
     if obj._finish_time is None:
@@ -249,16 +258,6 @@ def pack_httprequest(request):
     headers.extend(request.headers.iteritems())
     d = request.method, request.uri, request.version, headers, request.body
     return d
-
-
-# Disabled now
-def on_deadline_response(response, req_uri):
-    if response._finish_time is None:
-        logger.error("Deadline has reached for %s", req_uri)
-        message = "Maximum time to wait for a response has reached"
-        response.write("%s 504 Gateway Timeout\r\nContent-Length: %d\r\n\r\n%s" % (
-            response.version, len(message), message))
-        response.finish()
 
 
 def generate_info():
@@ -320,7 +319,6 @@ def handle_request(request):
         return
         
     data = pack_httprequest(request)
-    #fut = s.enqueue(event, msgpack.packb(data))
     process(request, s, event, data)
 
 

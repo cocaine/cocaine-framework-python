@@ -28,6 +28,12 @@ if [ $2 ]; then
     TORNADO_COUNT=$2
 fi
 
+if [ ! -d "$PID_PATH" ]; then
+  # Control will enter here if $DIRECTORY exists.
+  echo "Create $PID_PATH"
+  mkdir -p $PID_PATH
+fi
+
 do_start()
 {   
     echo "Start $TORNADO_COUNT tornadoes with $APPS_COUNT endpoints per cocaine application"
