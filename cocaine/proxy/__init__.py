@@ -2,6 +2,7 @@ import atexit
 import pwd
 import time
 import os
+import os.path
 import sys
 import json
 from signal import SIGTERM
@@ -67,14 +68,7 @@ class Daemon(object):
         Start  the daemon
         """
 
-        try:
-            pf = file(self.pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
-        except IOError:
-            pid = None
-
-        if pid:
+        if os.path.exists(self.pidfile):
             msg = "pidfile %s exists. Exit.\n"
             sys.stderr.write(msg % self.pidfile)
             sys.exit(1)

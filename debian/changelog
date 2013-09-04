@@ -1,3 +1,9 @@
+cocaine-framework-python (0.10.6.14) lucid; urgency=low
+
+  * fix bug in proxy with IOError on pidfile
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 04 Sep 2013 15:13:58 +0400
+
 cocaine-framework-python (0.10.6.13) unstable; urgency=low
 
   * Fix proxy init script: mkdir directory for pidfile

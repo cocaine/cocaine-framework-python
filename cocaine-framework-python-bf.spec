@@ -1,7 +1,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print (get_python_lib())")}
 
 Name:		cocaine-framework-python
-Version:	0.10.6.13
+Version:	0.10.6.14
 Release:	1%{?dist}
 Summary:	Cocaine - Python Framework
 
