@@ -60,7 +60,8 @@ class AsyncConnectionError(ConnectionError):
 
 ############ PROTOCOL ############
 class ChokeEvent(Exception):
-    pass
+    def __str__(self):
+        return 'ChokeEvent'
 
 
 ############ COCAINE TOOL ERRORS ############
