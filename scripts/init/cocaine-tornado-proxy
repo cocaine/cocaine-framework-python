@@ -36,6 +36,7 @@ fi
 
 do_start()
 {   
+    export PYTHONOPTIMIZE=x
     echo "Start $TORNADO_COUNT tornadoes with $APPS_COUNT endpoints per cocaine application"
     for (( i=1; i<=$TORNADO_COUNT; i++ ))
     do
