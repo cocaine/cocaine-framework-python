@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 import unittest
 import logging
+import sys
 
 from tornado.testing import AsyncTestCase
 from cocaine.futures import chain
@@ -13,9 +14,9 @@ from cocaine.asio.exceptions import TimeoutError
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(levelname)-8s: %(message)s')
+ch = logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.DEBUG)
 ch.setFormatter(formatter)
 
 logNames = [
