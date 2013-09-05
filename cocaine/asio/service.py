@@ -1,7 +1,8 @@
-import logging
+import sys
 import socket
+import logging
 from time import time
-from contextlib import contextmanager
+import contextlib
 
 import msgpack
 
@@ -22,6 +23,12 @@ log = logging.getLogger(__name__)
 
 LOCATOR_DEFAULT_HOST = '127.0.0.1'
 LOCATOR_DEFAULT_PORT = 10053
+
+if '--locator' in sys.argv:
+    index = sys.argv.index('--locator') + 1
+    host, separator, port = sys.argv[index].partition(':')
+    LOCATOR_DEFAULT_HOST = host or LOCATOR_DEFAULT_HOST
+    LOCATOR_DEFAULT_PORT = port or LOCATOR_DEFAULT_PORT
 
 
 class strategy:
@@ -53,7 +60,7 @@ class strategy:
         return chain.source(func)
 
 
-@contextmanager
+@contextlib.contextmanager
 def cumulative(timeout):
     start = time()
 
@@ -65,7 +72,7 @@ def cumulative(timeout):
 class scope(object):
     class socket(object):
         @classmethod
-        @contextmanager
+        @contextlib.contextmanager
         def blocking(cls, sock):
             try:
                 sock.setblocking(True)
@@ -74,7 +81,7 @@ class scope(object):
                 sock.setblocking(False)
 
         @classmethod
-        @contextmanager
+        @contextlib.contextmanager
         def timeout(cls, sock, timeout):
             try:
                 sock.settimeout(timeout)
