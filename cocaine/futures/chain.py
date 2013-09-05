@@ -17,7 +17,8 @@ from cocaine.futures import Future
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
-if __debug__: log = logging.getLogger(__name__)
+ENABLE_LOG = False
+log = logging.getLogger(__name__)
 
 
 class FutureResult(object):
@@ -169,25 +170,25 @@ class GeneratorFutureMock(Future):
             future = self._wrapFuture(result)
 
             if result is not None:
-                if __debug__: log.debug('binding future %r instead of %r', future, self._currentFuture)
+                if ENABLE_LOG: log.debug('binding future %r instead of %r', future, self._currentFuture)
                 future.bind(self._advance, self._advance)
                 if self._currentFuture:
                     self._currentFuture.unbind()
                 self._currentFuture = future
         except StopIteration:
-            if __debug__: log.debug('StopIteration caught, value: %r', value)
+            if ENABLE_LOG: log.debug('StopIteration caught, value: %r', value)
             self.callback(value)
         except ChokeEvent as err:
-            if __debug__: log.debug('ChokeEvent caught')
+            if ENABLE_LOG: log.debug('ChokeEvent caught')
             self.errorback(err)
         except Exception as err:
-            if __debug__: log.debug('Exception caught, value: %r, error: %r', value, err)
+            if ENABLE_LOG: log.debug('Exception caught, value: %r, error: %r', value, err)
             if self._currentFuture:
                 self._currentFuture.unbind()
             self.errorback(err)
 
     def _next(self, value):
-        if __debug__: log.debug('<- sending "%r" to the caller', value if self._results and self._results[0] is None else None)
+        if ENABLE_LOG: log.debug('<- sending "%r" to the caller', value if self._results and self._results[0] is None else None)
         if isinstance(value, ChokeEvent):
             if self._results and self._results.pop() is None:
                 result = self._coroutine.throw(value)
@@ -198,10 +199,10 @@ class GeneratorFutureMock(Future):
         else:
             result = self._coroutine.send(value)
         self._results.append(result)
-        if __debug__: log.debug('-> received "%r" from the caller', result)
+        if ENABLE_LOG: log.debug('-> received "%r" from the caller', result)
 
         if isinstance(value, ChokeEvent) and result is None:
-            if __debug__: log.debug('exhausted generator detected')
+            if ENABLE_LOG: log.debug('exhausted generator detected')
             self._coroutine.throw(value)
             raise value
         return result
@@ -228,7 +229,7 @@ class GeneratorFutureMock(Future):
             future = deferred
         else:
             future = PreparedFuture(result, ioLoop=self._ioLoop)
-        if __debug__: log.debug('wrapping result into future: %r -> %r', result, future)
+        if ENABLE_LOG: log.debug('wrapping result into future: %r -> %r', result, future)
         return future
 
     def _wrap_chain(self, result, deferred):
@@ -259,22 +260,22 @@ class ChainItem(object):
 
     def execute(self, *args, **kwargs):
         try:
-            if __debug__: log.debug('executing "%d" "%s" with "%r" ...', id(self), self.func, args)
+            if ENABLE_LOG: log.debug('executing "%d" "%s" with "%r" ...', id(self), self.func, args)
             future = self.func(*args, **kwargs)
-            if __debug__: log.debug('-- received: %r', future)
+            if ENABLE_LOG: log.debug('-- received: %r', future)
             if isinstance(future, Future):
                 pass
             elif isinstance(future, types.GeneratorType):
                 future = GeneratorFutureMock(future, ioLoop=self._ioLoop)
             else:
                 future = PreparedFuture(future, ioLoop=self._ioLoop)
-            if __debug__: log.debug('-- binding future: %r', future)
+            if ENABLE_LOG: log.debug('-- binding future: %r', future)
             future.bind(self.callback, self.errorback)
         except Exception as err:
             self.errorback(err)
 
     def callback(self, chunk):
-        if __debug__: log.debug('callback "%d" called with %r. Next chain item: %r', id(self), chunk, self.next)
+        if ENABLE_LOG: log.debug('callback "%d" called with %r. Next chain item: %r', id(self), chunk, self.next)
         futureResult = FutureResult(chunk)
         if self.next:
             # Actually it does not matter if we invoke next chain item synchronously or via event loop.
@@ -333,14 +334,14 @@ class Chain(object):
                      if specified function is not the chunk source. If function is chunk source (i.e. service execution
                      method) than there is no parameters must be provided in function signature.
         """
-        if __debug__: log.debug('adding function "%r" to the chain', func)
+        if ENABLE_LOG: log.debug('adding function "%r" to the chain', func)
         item = ChainItem(func, self._ioLoop)
 
         if len(self.items) == 0:
-            if __debug__: log.debug('-- executing first chain item asynchronously: %r ...', item)
+            if ENABLE_LOG: log.debug('-- executing first chain item asynchronously: %r ...', item)
             self._ioLoop.add_callback(item.execute)
         else:
-            if __debug__: log.debug('-- coupling %r with %r', item, self.items[-1])
+            if ENABLE_LOG: log.debug('-- coupling %r with %r', item, self.items[-1])
             self.items[-1].couple(item)
 
         self.items.append(item)
