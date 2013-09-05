@@ -1,5 +1,3 @@
-import threading
-
 from cocaine.exceptions import ChokeEvent
 
 
@@ -18,24 +16,20 @@ class Future(object):
 
         self.state = self.UNITIALIZED
 
-        self._lock = threading.RLock()
-        self._print_lock = threading.Lock()
-
     def bind(self, callback, errorback=None):
-        with self._lock:
-            assert self.state in (self.UNITIALIZED, self.CLOSED), 'double bind is prohibited by design'
-            if errorback is None:
-                errorback = self._default_errorback
+        assert self.state in (self.UNITIALIZED, self.CLOSED), 'double bind is prohibited by design'
+        if errorback is None:
+            errorback = self._default_errorback
 
-            while self._chunks:
-                callback(self._chunks.pop(0))
-            while self._errors:
-                errorback(self._errors.pop(0))
+        while self._chunks:
+            callback(self._chunks.pop(0))
+        while self._errors:
+            errorback(self._errors.pop(0))
 
-            if self.state == self.UNITIALIZED:
-                self._callback = callback
-                self._errorback = errorback
-                self.state = self.BOUND
+        if self.state == self.UNITIALIZED:
+            self._callback = callback
+            self._errorback = errorback
+            self.state = self.BOUND
 
     def unbind(self):
         self._callback = None
@@ -43,38 +37,34 @@ class Future(object):
         self.state = self.UNITIALIZED
 
     def close(self, silent=False):
-        with self._lock:
-            if self.state == self.CLOSED:
-                return
+        if self.state == self.CLOSED:
+            return
 
-            if not silent:
-                if self._errorback is None:
-                    self._errors.append(ChokeEvent())
-                else:
-                    self._errorback(ChokeEvent())
-            self._callback = None
-            self._errorback = None
-            self.state = self.CLOSED
+        if not silent:
+            if self._errorback is None:
+                self._errors.append(ChokeEvent())
+            else:
+                self._errorback(ChokeEvent())
+        self._callback = None
+        self._errorback = None
+        self.state = self.CLOSED
 
     def trigger(self, chunk):
-        with self._lock:
-            assert self.state in (self.UNITIALIZED, self.BOUND), CLOSED_STATE_MESSAGE
-            if self._callback is None:
-                self._chunks.append(chunk)
-            else:
-                self._callback(chunk)
+        assert self.state in (self.UNITIALIZED, self.BOUND), CLOSED_STATE_MESSAGE
+        if self._callback is None:
+            self._chunks.append(chunk)
+        else:
+            self._callback(chunk)
 
     def error(self, err):
-        with self._lock:
-            assert self.state in (self.UNITIALIZED, self.BOUND), CLOSED_STATE_MESSAGE
-            if self._errorback is None:
-                self._errors.append(err)
-            else:
-                self._errorback(err)
+        assert self.state in (self.UNITIALIZED, self.BOUND), CLOSED_STATE_MESSAGE
+        if self._errorback is None:
+            self._errors.append(err)
+        else:
+            self._errorback(err)
 
     def _default_errorback(self, err):
-        with self._print_lock:
-            print('Can\'t throw error without errorback %s' % str(err))
+        print('Can\'t throw error without errorback %s' % str(err))
 
 
 class Sleep(object):
