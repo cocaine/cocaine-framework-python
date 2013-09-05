@@ -477,7 +477,6 @@ class AsynchronousApiTestCase(AsyncTestCase):
         self.assertTrue(len(expected) == 0)
 
     def test_Chain_YieldEmptyServiceInside(self):
-        log.info(1)
         expected = [
             lambda r: self.assertEqual('Ok', r.get()),
         ]
