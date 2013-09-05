@@ -53,7 +53,7 @@ class ReadableStream(object):
 
     .. note:: All methods in this class are thread safe.
     """
-    START_CHUNK_SIZE = 10240
+    START_CHUNK_SIZE = 4096
 
     def __init__(self, loop, pipe):
         self._loop = loop
