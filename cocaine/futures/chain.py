@@ -302,7 +302,7 @@ class Chain(object):
         """
         if not functions:
             functions = []
-        self._ioLoop = ioLoop or IOLoop.current()
+        self._io_loop = ioLoop or IOLoop.current()
         self.items = []
         for func in functions:
             self.then(func)
@@ -325,7 +325,7 @@ class Chain(object):
 
         if len(self.items) == 0:
             if __debug__: log.debug('~  executing first chain item asynchronously: %s ...', item)
-            self._ioLoop.add_callback(item.execute)
+            self._io_loop.add_callback(item.execute)
         else:
             if __debug__: log.debug('~  coupling %s with %s', item, self.items[-1])
             self.items[-1].couple(item)
@@ -374,14 +374,14 @@ class Chain(object):
         if timeout:
             def fire():
                 setattr(self, '__timeout', timeout)
-                self._ioLoop.stop()
-            self._ioLoop.add_timeout(time.time() + timeout, fire)
+                self._io_loop.stop()
+            self._io_loop.add_timeout(time.time() + timeout, fire)
 
-        ran = self._ioLoop._running
-        self._ioLoop.start()
+        ran = self._io_loop._running
+        self._io_loop.start()
         if ran:
-            self._ioLoop._running = True
-            self._ioLoop._stopped = False
+            self._io_loop._running = True
+            self._io_loop._stopped = False
         self._removeTrackingLastResult()
         return self._getLastResult()
 
@@ -405,8 +405,8 @@ class Chain(object):
             return
         self._trackLastResult()
         if timeout:
-            self._ioLoop.add_timeout(time.time() + timeout, lambda: self._ioLoop.stop())
-        self._ioLoop.start()
+            self._io_loop.add_timeout(time.time() + timeout, lambda: self._io_loop.stop())
+        self._io_loop.start()
         self._removeTrackingLastResult()
 
     def __iter__(self):
@@ -445,7 +445,7 @@ class Chain(object):
                     try:
                         func(*args, **kwargs)
                     finally:
-                        self._ioLoop.stop()
+                        self._io_loop.stop()
                 return wrapper
 
             self.__callback = self.items[-1].callback
