@@ -71,16 +71,12 @@ class PreparedFuture(Future):
 
     .. note:: All methods in this class are thread safe.
     """
-    def __init__(self, result, ioLoop=None):
+    def __init__(self, result):
         super(PreparedFuture, self).__init__()
         self.result = result
-        self._ioLoop = ioLoop or IOLoop.current()
 
     def bind(self, callback, errorback=None):
-        try:
-            self._ioLoop.add_callback(callback, self.result)
-        except Exception as err:
-            self._ioLoop.add_callback(errorback, err)
+        callback(self.result)
 
 
 class Deferred(Future):
@@ -221,7 +217,7 @@ class GeneratorFutureMock(Future):
             result.execute(deferred)
             future = deferred
         else:
-            future = PreparedFuture(result, ioLoop=self._ioLoop)
+            future = PreparedFuture(result)
         if __debug__: log.debug('== wrapping %s -> %s', result, future)
         return future
 
@@ -262,7 +258,7 @@ class ChainItem(object):
             elif isinstance(future, types.GeneratorType):
                 future = GeneratorFutureMock(future, ioLoop=self._ioLoop)
             else:
-                future = PreparedFuture(future, ioLoop=self._ioLoop)
+                future = PreparedFuture(future)
             future.bind(self.callback, self.errorback)
         except Exception as err:
             if __debug__: log.debug('~~> received: %r', err)
