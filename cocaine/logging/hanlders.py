@@ -1,5 +1,7 @@
 import logging
 
+from cocaine.logging.logger import Logger
+
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
@@ -58,3 +60,21 @@ def interactiveEmit(self, record):
         raise
     except:
         self.handleError(record)
+
+
+class CocaineHandler(logging.Handler):
+    def __init__(self):
+        logging.Handler.__init__(self)
+        self._logger = Logger()
+        self.LEVEL_BINDS = {
+            logging.DEBUG: self._logger.debug,
+            logging.INFO: self._logger.info,
+            logging.WARNING: self._logger.warn,
+            logging.ERROR: self._logger.error
+        }
+
+    def emit(self, record):
+        def dummy(*args):
+            pass
+        msg = self.format(record)
+        self.LEVEL_BINDS.get(record.levelno, dummy)(msg)
