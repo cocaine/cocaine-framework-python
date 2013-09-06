@@ -277,15 +277,16 @@ class ChainItem(object):
 
     def callback(self, chunk):
         if __debug__: log.debug('callback called with %s. Next chain item: %s', chunk, self.next)
-        futureResult = FutureResult(chunk)
-        if self.next:
-            self.next.execute(futureResult)
+        future = FutureResult(chunk)
+        if self.next is not None:
+            self.next.execute(future)
         else:
-            self.pending.append(futureResult)
+            self.pending.append(future)
 
     def errorback(self, error):
         self.callback(error)
-        if not self.next and not (isinstance(error, ChokeEvent) or isinstance(error, StopIteration)):
+        if self.next is None and not (isinstance(error, ChokeEvent) or isinstance(error, StopIteration)):
+            log.error('Uncaught exception reached end of the chain')
             log.error(error, exc_info=True)
 
 
