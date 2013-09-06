@@ -268,9 +268,7 @@ class ChainItem(object):
         if __debug__: log.debug('callback called with %s. Next chain item: %s', chunk, self.next)
         futureResult = FutureResult(chunk)
         if self.next:
-            # Actually it does not matter if we invoke next chain item synchronously or via event loop.
-            # But for convenience, let's do it asynchronously.
-            self._ioLoop.add_callback(self.next.execute, futureResult)
+            self.next.execute(futureResult)
         else:
             self.pending.append(futureResult)
 
