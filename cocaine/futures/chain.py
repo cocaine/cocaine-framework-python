@@ -235,9 +235,26 @@ class GeneratorFutureMock(Future):
         result.add_done_callback(unwrapResult)
 
 
+def _track_mailbox(func):
+    def wrapper(*args, **kwargs):
+        try:
+            log.debug('<~~ executing "%s" with "%s"', func, args)
+            future = func(*args, **kwargs)
+        except Exception as err:
+            log.debug('~~> received: %s', err)
+            raise
+        else:
+            log.debug('~~> received: %s', future)
+            return future
+    return wrapper
+
+
 class ChainItem(object):
     def __init__(self, func):
-        self.func = func
+        if __debug__:
+            self.func = _track_mailbox(func)
+        else:
+            self.func = func
         self.next = None
         self.pending = []
 
@@ -247,10 +264,7 @@ class ChainItem(object):
 
     def execute(self, *args, **kwargs):
         try:
-            if __debug__: log.debug('<~~ executing "%s" with "%s"', self.func, args)
             future = self.func(*args, **kwargs)
-            if __debug__: log.debug('~~> received: %r', future)
-
             if isinstance(future, Future):
                 pass
             elif isinstance(future, types.GeneratorType):
@@ -259,7 +273,6 @@ class ChainItem(object):
                 future = PreparedFuture(future)
             future.bind(self.callback, self.errorback)
         except Exception as err:
-            if __debug__: log.debug('~~> received: %r', err)
             self.errorback(err)
 
     def callback(self, chunk):
