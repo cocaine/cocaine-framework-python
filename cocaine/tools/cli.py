@@ -143,7 +143,6 @@ class CallActionCli(object):
                 log.info('Service "{0}" provides following API:'.format(self.action.serviceName))
                 log.info('\n'.join(' - {0}'.format(method) for method in response))
             elif requestType == 'invoke':
-                log.info('Response:')
                 if self.pretty:
                     try:
                         response = json.dumps(response, indent=4)
