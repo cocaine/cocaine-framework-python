@@ -46,11 +46,11 @@ class strategy:
     @classmethod
     def sync(cls, func):
         def wrapper(*args, **kwargs):
-            coroutine = func(*args, **kwargs)
+            g = func(*args, **kwargs)
             chunk = None
             while True:
                 try:
-                    chunk = coroutine.send(chunk)
+                    chunk = g.send(chunk)
                 except StopIteration:
                     break
         return wrapper
