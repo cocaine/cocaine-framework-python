@@ -98,6 +98,8 @@ class AbstractService(object):
 
     There is no other useful public methods, so the main aim of this class - is to provide superclass for inheriting
     for actual services or service-like objects (i.e. Locator).
+
+    :ivar name: service name.
     """
     def __init__(self, name):
         self.name = name
@@ -356,6 +358,10 @@ class Service(AbstractService):
               `connectThroughLocator` method, which is specially designed for that cases.
 
     .. note:: Actual service's API is building dynamically. Sorry, IDE users, there is no autocompletion :(
+
+    :ivar name: service or application name.
+    :ivar version: service or application version. Provided only after its resolving.
+    :ivar api: service or application API. Provided only after its resolving.
     """
     _locator_cache = {}
 

@@ -26,6 +26,11 @@ Package cocaine.asio
 
 Package cocaine.futures
 ------------------------------------
+.. automodule:: cocaine.futures
+   :members:
+   :noindex:
+
+
 .. automodule:: cocaine.futures.chain
    :members:
    :noindex:

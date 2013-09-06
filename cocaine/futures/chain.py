@@ -26,6 +26,7 @@ class FutureResult(object):
 
     .. note:: All methods in this class are reentrant.
 
+    :ivar result: stored result
     """
 
     def __init__(self, result):
@@ -69,6 +70,8 @@ class PreparedFuture(Future):
               meant to be used as chain item, the result will be automatically wrapped with `PreparedFuture`.
 
     .. note:: All methods in this class are reentrant.
+
+    :ivar result: stored result.
     """
     def __init__(self, result):
         super(PreparedFuture, self).__init__()
