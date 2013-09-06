@@ -11,7 +11,7 @@ from cocaine.asio.exceptions import *
 from cocaine.asio.pipe import Pipe
 from cocaine.asio import message
 from cocaine.asio.message import Message
-from cocaine.asio.stream import Decoder, WritableStream, ReadableStream
+from cocaine.asio.stream import WritableStream, ReadableStream
 from cocaine.futures import Future, chain
 from cocaine.futures.chain import Chain
 
@@ -109,9 +109,6 @@ class AbstractService(object):
         self._writableStream = None
         self._readableStream = None
 
-        self.decoder = Decoder()
-        self.decoder.bind(self._on_message)
-
         self._subscribers = {}
         self._session = 0
 
@@ -173,7 +170,13 @@ class AbstractService(object):
                 self._writableStream = WritableStream(self._ioLoop, self._pipe)
                 self._readableStream = ReadableStream(self._ioLoop, self._pipe)
                 self._ioLoop.bind_on_fd(self._pipe.fileno())
-                self._readableStream.bind(self.decoder.decode)
+
+                def decode_and_dispatch(on_event):
+                    def dispatch(unpacker):
+                        for chunk in unpacker:
+                            on_event(chunk)
+                    return dispatch
+                self._readableStream.bind(decode_and_dispatch(self._on_message))
                 return
 
         if timeout is not None and time() - start > timeout:

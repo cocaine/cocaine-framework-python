@@ -31,21 +31,18 @@ from cocaine.utils import weakmethod
 class Decoder(object):
     """Decoder middleware.
 
-    .. note:: All methods in this class are thread safe.
+    .. note:: All methods in this class are reentrant.
     """
     def __init__(self):
         self._callback = None
-        self._lock = threading.Lock()
 
     def bind(self, callback):
         assert callable(callback), 'callback argument must be callable'
-        with self._lock:
-            self._callback = callback
+        self._callback = callback
 
     def decode(self, unpacker):
-        with self._lock:
-            for chunk in unpacker:
-                self._callback(chunk)
+        for chunk in unpacker:
+            self._callback(chunk)
 
 
 class ReadableStream(object):
@@ -68,7 +65,7 @@ class ReadableStream(object):
     def bind(self, callback):
         assert callable(callback), 'callback argument must be callable'
         with self._lock:
-            if not self._pipe:
+            if self._pipe is None:
                 raise IllegalStateError('pipe is not connected')
 
             self._callback = callback
@@ -92,7 +89,7 @@ class ReadableStream(object):
     @weakmethod
     def _on_event(self):
         with self._lock:
-            if not self._pipe:
+            if self._pipe is None:
                 raise IllegalStateError('pipe is not connected')
 
             # Bad solution. On python 2.7 and higher - use memoryview and bytearray
@@ -130,14 +127,14 @@ class WritableStream(object):
     def _on_event(self):
         with self._lock:
             # All data was sent - so unbind writable event
-            if not self._buffer:
+            if len(self._buffer) == 0:
                 if self._attached:
                     self._loop.unregister_write_event(self._pipe.fileno())
                     self._attached = False
                 return
 
             can_write = True
-            while can_write and self._buffer:
+            while can_write and len(self._buffer) > 0:
                 current = self._buffer[0]
                 sent = self._pipe.write(buffer(current, self._tx_offset))
 
