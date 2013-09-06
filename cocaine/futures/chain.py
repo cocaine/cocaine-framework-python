@@ -24,7 +24,7 @@ class FutureResult(object):
     The result itself can be any object or exception. If some exception is stored, then it will be thrown after user
     invokes `get` method.
 
-    .. note:: All methods in this class are thread safe.
+    .. note:: All methods in this class are reentrant.
 
     """
 
@@ -68,7 +68,7 @@ class PreparedFuture(Future):
     .. note:: While in chain context, you don't need to use it directly - if you return something from function that
               meant to be used as chain item, the result will be automatically wrapped with `PreparedFuture`.
 
-    .. note:: All methods in this class are thread safe.
+    .. note:: All methods in this class are reentrant.
     """
     def __init__(self, result):
         super(PreparedFuture, self).__init__()
@@ -100,6 +100,8 @@ class Deferred(Future):
     Now you can use `timer_function` in Chain context::
 
         result = yield timer_function()
+
+    .. note:: All methods in this class are reentrant.
     """
     def __init__(self):
         super(Deferred, self).__init__()
@@ -301,6 +303,8 @@ class Chain(object):
     over again until it will be caught by `except` block or transferred to the event loop exception trap.
 
     There is also synchronous API provided, but it should be used only for scripting or tests.
+
+    .. note:: All methods in this class are reentrant.
     """
     def __init__(self, functions=None, ioLoop=None):
         """
