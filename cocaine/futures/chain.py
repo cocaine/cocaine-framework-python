@@ -1,4 +1,3 @@
-import collections
 import functools
 import threading
 import time
@@ -145,7 +144,8 @@ class GeneratorFutureMock(Future):
         super(GeneratorFutureMock, self).__init__()
         self._g = g
         self._current_deferred = None
-        self._results = collections.deque(maxlen=1)
+        self._is_set = False
+        self._result = None
 
     def bind(self, callback, errorback=None):
         self.callback = callback
@@ -176,9 +176,9 @@ class GeneratorFutureMock(Future):
             self.errorback(err)
 
     def _next(self, value):
-        if __debug__: log.debug('<-- "%s"', value if self._results and self._results[0] is None else None)
+        if __debug__: log.debug('<-- "%s"', value if self._is_set and self._result is None else None)
         if isinstance(value, ChokeEvent):
-            if self._results and self._results.pop() is None:
+            if self._is_set and self._result is None:
                 result = self._g.throw(value)
             else:
                 result = self._g.send(None)
@@ -186,7 +186,7 @@ class GeneratorFutureMock(Future):
             result = self._g.throw(value)
         else:
             result = self._g.send(value)
-        self._results.append(result)
+        self._is_set, self._result = True, result
         if __debug__: log.debug('--> "%s"', result)
 
         if isinstance(value, ChokeEvent) and result is None:
