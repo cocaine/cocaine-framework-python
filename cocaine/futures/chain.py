@@ -116,9 +116,9 @@ class Deferred(Future):
 
 
 class ConcurrentWorker(object):
-    def __init__(self, func, ioLoop=None, args=(), kwargs=None):
+    def __init__(self, func, io_loop=None, args=(), kwargs=None):
         self._func = func
-        self._ioLoop = ioLoop or IOLoop.current()
+        self._io_loop = io_loop or IOLoop.current()
         self._args = args
         self._kwargs = kwargs or {}
 
@@ -133,10 +133,10 @@ class ConcurrentWorker(object):
         except Exception as err:
             self._callback(err)
 
-    def runBackground(self, callback):
-        def onDone(result):
-            self._ioLoop.add_callback(lambda: callback(FutureResult(result)))
-        self._callback = onDone
+    def run_background(self, callback):
+        def on_done(result):
+            self._io_loop.add_callback(lambda: callback(FutureResult(result)))
+        self._callback = on_done
         self._worker.start()
 
 
@@ -209,7 +209,7 @@ class GeneratorFutureMock(Future):
             future = deferred
         elif isinstance(result, ConcurrentWorker):
             deferred = Deferred()
-            result.runBackground(lambda r: deferred.ready(r))
+            result.run_background(lambda r: deferred.ready(r))
             future = deferred
         elif isinstance(result, All):
             deferred = Deferred()
@@ -484,7 +484,7 @@ def concurrent(func):
     function in separate thread.
     """
     def wrapper(*args, **kwargs):
-        mock = ConcurrentWorker(func, ioLoop=None, args=args, kwargs=kwargs)
+        mock = ConcurrentWorker(func, io_loop=None, args=args, kwargs=kwargs)
         return mock
     return wrapper
 
