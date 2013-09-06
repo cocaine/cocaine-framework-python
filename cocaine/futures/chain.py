@@ -141,11 +141,10 @@ class ConcurrentWorker(object):
 
 
 class GeneratorFutureMock(Future):
-    def __init__(self, coroutine, ioLoop=None):
+    def __init__(self, g):
         super(GeneratorFutureMock, self).__init__()
-        self._coroutine = coroutine
-        self._ioLoop = ioLoop or IOLoop.current()
-        self._currentFuture = None
+        self._g = g
+        self._current_deferred = None
         self._results = collections.deque(maxlen=1)
 
     def bind(self, callback, errorback=None):
@@ -156,14 +155,14 @@ class GeneratorFutureMock(Future):
     def _advance(self, value=None):
         try:
             result = self._next(value)
-            future = self._wrapFuture(result)
+            future = self._wrap_result(result)
 
             if result is not None:
-                if __debug__: log.debug('-- rebinding %s instead of %s', future, self._currentFuture)
+                if __debug__: log.debug('-- rebinding %s instead of %s', future, self._current_deferred)
                 future.bind(self._advance, self._advance)
-                if self._currentFuture:
-                    self._currentFuture.unbind()
-                self._currentFuture = future
+                if self._current_deferred:
+                    self._current_deferred.unbind()
+                self._current_deferred = future
         except StopIteration:
             if __debug__: log.debug('-- StopIteration: %s', value)
             self.callback(value)
@@ -172,31 +171,31 @@ class GeneratorFutureMock(Future):
             self.errorback(err)
         except Exception as err:
             if __debug__: log.debug('-- Exception caught: %s', value, err)
-            if self._currentFuture:
-                self._currentFuture.unbind()
+            if self._current_deferred:
+                self._current_deferred.unbind()
             self.errorback(err)
 
     def _next(self, value):
         if __debug__: log.debug('<-- "%s"', value if self._results and self._results[0] is None else None)
         if isinstance(value, ChokeEvent):
             if self._results and self._results.pop() is None:
-                result = self._coroutine.throw(value)
+                result = self._g.throw(value)
             else:
-                result = self._coroutine.send(None)
+                result = self._g.send(None)
         elif isinstance(value, Exception):
-            result = self._coroutine.throw(value)
+            result = self._g.throw(value)
         else:
-            result = self._coroutine.send(value)
+            result = self._g.send(value)
         self._results.append(result)
         if __debug__: log.debug('--> "%s"', result)
 
         if isinstance(value, ChokeEvent) and result is None:
             if __debug__: log.debug('-- exhausted generator detected')
-            self._coroutine.throw(value)
+            self._g.throw(value)
             raise value
         return result
 
-    def _wrapFuture(self, result):
+    def _wrap_result(self, result):
         if isinstance(result, Future):
             future = result
         elif isinstance(result, Chain):
@@ -237,9 +236,8 @@ class GeneratorFutureMock(Future):
 
 
 class ChainItem(object):
-    def __init__(self, func, ioLoop=None):
+    def __init__(self, func):
         self.func = func
-        self._ioLoop = ioLoop or IOLoop.current()
         self.next = None
         self.pending = []
 
@@ -256,7 +254,7 @@ class ChainItem(object):
             if isinstance(future, Future):
                 pass
             elif isinstance(future, types.GeneratorType):
-                future = GeneratorFutureMock(future, ioLoop=self._ioLoop)
+                future = GeneratorFutureMock(future)
             else:
                 future = PreparedFuture(future)
             future.bind(self.callback, self.errorback)
@@ -323,7 +321,7 @@ class Chain(object):
                      method) than there is no parameters must be provided in function signature.
         """
         if __debug__: log.debug('~  adding function "%s" to the chain', func)
-        item = ChainItem(func, self._ioLoop)
+        item = ChainItem(func)
 
         if len(self.items) == 0:
             if __debug__: log.debug('~  executing first chain item asynchronously: %s ...', item)
