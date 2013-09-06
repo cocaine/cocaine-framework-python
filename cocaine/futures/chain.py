@@ -54,6 +54,9 @@ class FutureResult(object):
         else:
             return result
 
+    def __str__(self):
+        return 'FutureResult({0})'.format(self.result)
+
 
 class PreparedFuture(Future):
     """Represents prepared future object with in advance known result.
