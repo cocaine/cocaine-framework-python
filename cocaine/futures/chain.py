@@ -9,7 +9,6 @@ from tornado.ioloop import IOLoop
 from cocaine.exceptions import ChokeEvent
 from cocaine.asio.exceptions import TimeoutError, IllegalStateError
 from cocaine.futures import Future
-from cocaine.utils import Optional
 
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -149,7 +148,7 @@ class GeneratorFutureMock(Future):
         super(GeneratorFutureMock, self).__init__()
         self._g = g
         self._current_deferred = None
-        self._result = Optional()
+        self._result, self._is_set = None, False
 
     def bind(self, callback, errorback=None):
         super(GeneratorFutureMock, self).bind(callback, errorback)
@@ -179,9 +178,9 @@ class GeneratorFutureMock(Future):
             self.error(err)
 
     def _next(self, value):
-        if __debug__: log.debug('<-- "%s"', value if self._result.single() else None)
+        if __debug__: log.debug('<-- "%s"', value if self._is_set and self._result is None else None)
         if isinstance(value, ChokeEvent):
-            if self._result.single():
+            if self._result is None and self._is_set:
                 result = self._g.throw(value)
             else:
                 result = self._g.send(None)
@@ -189,7 +188,7 @@ class GeneratorFutureMock(Future):
             result = self._g.throw(value)
         else:
             result = self._g.send(value)
-        self._result.value = result
+        self._result, self._is_set = result, True
         if __debug__: log.debug('--> "%s"', result)
 
         if isinstance(value, ChokeEvent) and result is None:

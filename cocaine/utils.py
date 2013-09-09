@@ -33,23 +33,3 @@ class weakmethod(object):
         if obj is not None:
             obj = proxy(obj)
         return MethodType(self.func, obj, cls)
-
-
-class Optional(object):
-    __slots__ = ['value', '_value', '_is_set']
-
-    def __init__(self):
-        self._value = None
-        self._is_set = False
-
-    def single(self):
-        return self._is_set and self._value is None
-
-    @property
-    def value(self):
-        return self._value
-
-    @value.setter
-    def value(self, val):
-        self._value = val
-        self._is_set = True
