@@ -42,7 +42,7 @@ class NodeInfo(Node):
 
 
 class Call(object):
-    def __init__(self, command, host, port):
+    def __init__(self, command, host='localhost', port=10053):
         if not command:
             raise ValueError('Please specify service name for getting API or full command to invoke')
         self.host = host
@@ -75,7 +75,7 @@ class Call(object):
 
     def getService(self):
         try:
-            service = Service(self.serviceName)
+            service = Service(self.serviceName, host=self.host, port=self.port)
             return service
         except Exception as err:
             raise ServiceCallError(self.serviceName, err)
