@@ -143,15 +143,15 @@ class ConcurrentWorker(object):
         self._worker.start()
 
 
-class GeneratorFutureMock(Future):
+class GeneratorFuture(Future):
     def __init__(self, g):
-        super(GeneratorFutureMock, self).__init__()
+        super(GeneratorFuture, self).__init__()
         self._g = g
         self._current_deferred = None
         self._result, self._is_set = None, False
 
     def bind(self, callback, errorback=None):
-        super(GeneratorFutureMock, self).bind(callback, errorback)
+        super(GeneratorFuture, self).bind(callback, errorback)
         self._advance()
 
     def _advance(self, value=None):
@@ -273,7 +273,7 @@ class ChainItem(object):
             if isinstance(future, Future):
                 pass
             elif isinstance(future, types.GeneratorType):
-                future = GeneratorFutureMock(future)
+                future = GeneratorFuture(future)
             else:
                 future = PreparedFuture(future)
             future.bind(self.callback, self.errorback)
