@@ -43,7 +43,6 @@ class HotTestCase(AsyncTestCase):
         @chain.source
         def compare(s):
             c = yield s.execute()
-            log.info('%r', c)
             try:
                 completed[0] += 1
                 yield

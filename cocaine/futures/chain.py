@@ -291,8 +291,7 @@ class ChainItem(object):
     def errorback(self, error):
         self.callback(error)
         if self.next is None and not (isinstance(error, ChokeEvent) or isinstance(error, StopIteration)):
-            log.error('Uncaught exception reached end of the chain')
-            log.error(error, exc_info=True)
+            log.error('Uncaught exception reached end of the chain\n%s\n%s', 60 * '=', error, exc_info=True)
 
 
 class Chain(object):
