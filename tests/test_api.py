@@ -31,8 +31,6 @@ for logName in logNames:
     log.propagate = False
     log.addHandler(ch)
 
-log = logging.getLogger(__name__)
-
 
 class HotTestCase(AsyncTestCase):
     T = Chain
