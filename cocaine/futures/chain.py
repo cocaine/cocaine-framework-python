@@ -281,7 +281,7 @@ class ChainItem(object):
             self.errorback(err)
 
     def callback(self, chunk):
-        if __debug__: log.debug('callback called with %s. Next chain item: %s', chunk, self.next)
+        if __debug__: log.debug('~~ callback called with %s. Next chain item: %s', chunk, self.next)
         future = FutureResult(chunk)
         if self.next is not None:
             self.next.execute(future)
