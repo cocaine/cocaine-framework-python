@@ -153,8 +153,7 @@ class GeneratorFutureMock(Future):
         self._result = None
 
     def bind(self, callback, errorback=None):
-        self.callback = callback
-        self.errorback = errorback
+        super(GeneratorFutureMock, self).bind(callback, errorback)
         self._advance()
 
     def _advance(self, value=None):
@@ -170,15 +169,15 @@ class GeneratorFutureMock(Future):
                 self._current_deferred = future
         except StopIteration:
             if __debug__: log.debug('-- StopIteration: %s', value)
-            self.callback(value)
+            self.trigger(value)
         except ChokeEvent as err:
             if __debug__: log.debug('-- ChokeEvent caught')
-            self.errorback(err)
+            self.error(err)
         except Exception as err:
             if __debug__: log.debug('-- Exception caught: %s', value, err)
             if self._current_deferred:
                 self._current_deferred.unbind()
-            self.errorback(err)
+            self.error(err)
 
     def _next(self, value):
         if __debug__: log.debug('<-- "%s"', value if self._is_set and self._result is None else None)
