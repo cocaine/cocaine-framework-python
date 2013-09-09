@@ -20,7 +20,7 @@
 
 import logging
 
-from cocaine.logging.loggerhandler import LoggerHandler
+from cocaine.logging import LoggerHandler
 
 __all__ = ["core_log"]
 
