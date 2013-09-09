@@ -85,7 +85,8 @@ if __name__ == '__main__':
             'tickLimit': 0.1
         },
         'printObjectGraph': False,
-        'measureTime': True
+        'measureTime': True,
+        'measureRPS': True
     }
 
     c = Counter(config['benchmark']['maxRequests'], config['benchmark']['tickLimit'])
@@ -107,4 +108,8 @@ if __name__ == '__main__':
     if config['measureTime']:
         stop = time()
         print('Total elapsed: {0:.3f}s'.format(stop - start))
+
+    if config['measureRPS']:
+        stop = time()
+        print('RPS: {0:.3f}'.format(config['benchmark']['maxRequests'] / (stop - start)))
 
