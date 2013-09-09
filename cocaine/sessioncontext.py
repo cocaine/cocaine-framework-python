@@ -26,7 +26,7 @@ import msgpack
 from cocaine.exceptions import RequestError
 from cocaine.decorators import default
 from cocaine.logging.log import core_log
-from cocaine.futures import Future
+from cocaine.futures import Deferred
 from cocaine.futures import chain
 
 
@@ -94,7 +94,7 @@ class Stream(object):
         return self._m_state is None
 
 
-class Request(Future):
+class Request(Deferred):
 
     def __init__(self):
         self._logger = core_log

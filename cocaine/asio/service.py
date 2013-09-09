@@ -12,7 +12,7 @@ from cocaine.asio.pipe import Pipe
 from cocaine.asio import message
 from cocaine.asio.message import Message
 from cocaine.asio.stream import WritableStream, ReadableStream
-from cocaine.futures import Future, chain
+from cocaine.futures import Deferred, chain
 from cocaine.futures.chain import Chain
 
 
@@ -207,7 +207,7 @@ class AbstractService(object):
 
     def _invoke(self, methodId):
         def wrapper(*args, **kwargs):
-            future = Future()
+            future = Deferred()
             timeout = kwargs.get('timeout', None)
             if timeout is not None:
                 timeoutId = self._ioLoop.add_timeout(time() + timeout, lambda: future.error(TimeoutError(timeout)))

@@ -153,4 +153,10 @@ class NextTick(object):
     def bind(self, callback, errorback=None, on_done=None):
         raise NotImplementedError('broken')
 
-Future = Deferred
+
+# Left for backward compatibility
+class Future(Deferred):
+    def __init__(self):
+        import warnings
+        warnings.warn('This class was renamed into `Deferred`', DeprecationWarning)
+        super(Future, self).__init__()

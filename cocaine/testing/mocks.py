@@ -4,7 +4,7 @@ import sys
 from tornado.ioloop import IOLoop
 
 from cocaine.exceptions import ChokeEvent
-from cocaine.futures import Future
+from cocaine.futures import Deferred
 from cocaine.futures.chain import Chain
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -21,7 +21,7 @@ class CallableMock(object):
         return self.mock.__getattr__(methodName)
 
 
-class FutureTestMock(Future):
+class FutureTestMock(Deferred):
         def __init__(self, ioLoop, chunks=None, interval=0.01):
             super(FutureTestMock, self).__init__()
             self.ioLoop = ioLoop
