@@ -24,7 +24,7 @@ def _parseCrashlogs(crashlogs, timestamp=None):
 
 
 class Specific(actions.Storage):
-    def __init__(self, storage, name, timestamp):
+    def __init__(self, storage, name, timestamp=None):
         super(Specific, self).__init__(storage)
         self.name = name
         self.timestamp = timestamp
