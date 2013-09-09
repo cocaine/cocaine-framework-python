@@ -4,13 +4,36 @@ from cocaine.exceptions import ChokeEvent
 CLOSED_STATE_MESSAGE = 'invalid future object state - triggered while in closed state. Fix your code'
 
 
-class Future(object):
+class Deferred(object):
     """A Future encapsulates the result of an asynchronous operation.
 
-    In synchronous applications Futures are used to wait for the result from a thread or process pool. In cocaine
-    they are normally used by yielding them in a chain.source context.
+    This class represents deferred result of asynchronous operation. In synchronous applications Futures are used
+    to wait for the result from a thread or process pool. In cocaine they are normally used by yielding them in a
+    `chain.source` context.
 
-    :ivar state: current future's state. Can be one of the: `UNINITIALIZED`, `BOUND`, `CLOSED`.
+    Typical usage assumes that you create `Future` object, keep it somewhere, start asynchronous operation and
+    return this deferred from function. When asynchronous operation is done, just invoke `trigger` or `error` method
+    depending on which type of result you are get, and pass into it.
+
+    Here the example of asynchronous function that starts timer and signals the deferred after 1.0 sec.::
+
+        from tornado.ioloop import IOLoop
+
+        loop = IOLoop.current()
+
+        def timer_function():
+            deferred = Future()
+            timeout = 1.0
+            loop.add_timer(time.time() + timeout, lambda: deferred.trigger('Done')
+            return deferred
+
+    Now you can use `timer_function` in Chain context::
+
+        result = yield timer_function()
+
+    :ivar state: current object's state. Can be one of the: `UNINITIALIZED`, `BOUND`, `CLOSED`.
+
+    .. note:: All methods in this class are reentrant.
     """
     UNITIALIZED, BOUND, CLOSED = range(3)
 
@@ -129,3 +152,5 @@ class NextTick(object):
 
     def bind(self, callback, errorback=None, on_done=None):
         raise NotImplementedError('broken')
+
+Future = Deferred

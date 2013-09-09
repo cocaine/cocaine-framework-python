@@ -8,7 +8,7 @@ from tornado.ioloop import IOLoop
 
 from cocaine.exceptions import ChokeEvent
 from cocaine.asio.exceptions import TimeoutError, IllegalStateError
-from cocaine.futures import Future
+from cocaine.futures import Deferred
 
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -58,7 +58,7 @@ class FutureResult(object):
         return 'FutureResult({0})'.format(self.result)
 
 
-class PreparedFuture(Future):
+class PreparedFuture(Deferred):
     """Represents prepared future object with in advance known result.
 
     It is useful when you need to return already defined result from function and to use that function in some future
@@ -79,35 +79,6 @@ class PreparedFuture(Future):
 
     def bind(self, callback, errorback=None):
         callback(self.result)
-
-
-class Deferred(Future):
-    """Deferred future result.
-
-    This class represents deferred result of asynchronous operation. It is designed specially for returning from
-    function that is like to be used in Chain context.
-
-    Typical usage assumes that you create `Deferred` object, keep it somewhere, start asynchronous operation and
-    return this deferred from function. When asynchronous operation is done, just invoke `ready` and pass the result
-    (including Exceptions) into it.
-
-    Here the example of asynchronous function that starts timer and signals the deferred after 1.0 sec.::
-
-        from tornado.ioloop import IOLoop
-        def timer_function():
-            deferred = Deferred()
-            timeout = 1.0
-            IOLoop.current().add_timer(time.time() + timeout, lambda: deferred.ready('Done')
-            return deferred
-
-    Now you can use `timer_function` in Chain context::
-
-        result = yield timer_function()
-
-    .. note:: All methods in this class are reentrant.
-    """
-    def __init__(self):
-        super(Deferred, self).__init__()
 
 
 class ConcurrentWorker(object):
@@ -143,7 +114,7 @@ class ConcurrentWorker(object):
         self._worker.start()
 
 
-class GeneratorFuture(Future):
+class GeneratorFuture(Deferred):
     def __init__(self, g):
         super(GeneratorFuture, self).__init__()
         self._g = g
@@ -198,7 +169,7 @@ class GeneratorFuture(Future):
         return result
 
     def _wrap_result(self, result):
-        if isinstance(result, Future):
+        if isinstance(result, Deferred):
             future = result
         elif isinstance(result, Chain):
             deferred = Deferred()
@@ -270,7 +241,7 @@ class ChainItem(object):
     def execute(self, *args, **kwargs):
         try:
             future = self.func(*args, **kwargs)
-            if isinstance(future, Future):
+            if isinstance(future, Deferred):
                 pass
             elif isinstance(future, types.GeneratorType):
                 future = GeneratorFuture(future)
