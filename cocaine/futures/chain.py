@@ -110,15 +110,6 @@ class Deferred(Future):
     def __init__(self):
         super(Deferred, self).__init__()
 
-    def ready(self, result=None):
-        if not isinstance(result, FutureResult):
-            result = FutureResult(result)
-
-        try:
-            self.trigger(result.get())
-        except Exception as err:
-            self.error(err)
-
 
 class ConcurrentWorker(object):
     def __init__(self, func, io_loop=None, args=(), kwargs=None):
@@ -137,6 +128,14 @@ class ConcurrentWorker(object):
             self._callback(result)
         except Exception as err:
             self._callback(err)
+
+    def execute(self, deferred):
+        def dispatch_result(future):
+            try:
+                deferred.trigger(future.get())
+            except Exception as err:
+                deferred.error(err)
+        self.run_background(dispatch_result)
 
     def run_background(self, callback):
         def on_done(result):
@@ -213,7 +212,7 @@ class GeneratorFutureMock(Future):
             future = deferred
         elif isinstance(result, ConcurrentWorker):
             deferred = Deferred()
-            result.run_background(lambda r: deferred.ready(r))
+            result.execute(deferred)
             future = deferred
         elif isinstance(result, All):
             deferred = Deferred()
@@ -226,16 +225,19 @@ class GeneratorFutureMock(Future):
 
     def _wrap_chain(self, result, deferred):
         def cleanPending(r):
-            deferred.ready(r)
+            try:
+                deferred.trigger(r.get())
+            except Exception as err:
+                deferred.error(err)
             result.items[-1].pending = []
         result.then(cleanPending)
 
     def _wrap_python_future(self, result, deferred):
         def unwrapResult(result):
             try:
-                deferred.ready(result.result())
+                deferred.trigger(result.result())
             except Exception as err:
-                deferred.ready(err)
+                deferred.error(err)
         result.add_done_callback(unwrapResult)
 
 
@@ -586,6 +588,6 @@ class All(object):
             self._results[id_] = result.get()
             self._counter -= 1
             if self._counter == 0:
-                deferred.ready(self._results)
+                deferred.trigger(self._results)
         except Exception as err:
-            deferred.ready(err)
+            deferred.error(err)

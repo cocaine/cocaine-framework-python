@@ -87,7 +87,7 @@ class Pipe(object):
             else:
                 log.warning('connect error on fd {0}: {1}'.format(self.sock.fileno(), err))
                 self.close()
-                self._ioLoop.add_callback(lambda: self._onConnectedDeferred.ready(ConnectionError(address, err)))
+                self._ioLoop.add_callback(lambda: self._onConnectedDeferred.error(ConnectionError(address, err)))
         return self._onConnectedDeferred
 
     def close(self):
@@ -105,7 +105,7 @@ class Pipe(object):
             self._ioLoop.remove_timeout(timeoutId)
             self._connectionTimeoutTuple = None
             self.close()
-            self._onConnectedDeferred.ready(ConnectionTimeoutError(address, timeout))
+            self._onConnectedDeferred.error(ConnectionTimeoutError(address, timeout))
 
     def _onConnectedCallback(self, address, fd, event):
         assert fd == self.sock.fileno(), 'Incoming fd must be socket fd'
@@ -123,11 +123,11 @@ class Pipe(object):
             self.address = address
             removeConnectionTimeout()
             self._ioLoop.stop_listening(self.sock.fileno())
-            self._onConnectedDeferred.ready()
+            self._onConnectedDeferred.trigger(None)
         elif err not in (errno.EINPROGRESS, errno.EAGAIN, errno.EALREADY):
             self.close()
             removeConnectionTimeout()
-            self._onConnectedDeferred.ready(ConnectionError(address, os.strerror(err)))
+            self._onConnectedDeferred.error(ConnectionError(address, os.strerror(err)))
 
     def read(self, buff, size):
         return self._handle(self.sock.recv_into, buff, size)
