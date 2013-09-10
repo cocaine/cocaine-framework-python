@@ -1,3 +1,9 @@
+cocaine-framework-python (0.10.6.15) lucid; urgency=low
+
+  * Fix double exception trapping.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 10 Sep 2013 18:09:00 +0400
+
 cocaine-framework-python (0.10.6.14) lucid; urgency=low
 
   * fix bug in proxy with IOError on pidfile
