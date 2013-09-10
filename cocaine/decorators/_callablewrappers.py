@@ -45,20 +45,6 @@ class _Proxy(object):
         return self._state is None
 
 
-def exception_trap(func):
-    def wrapper(self, *args, **kwargs):
-        try:
-            func(self, *args, **kwargs)
-        except StopIteration:
-            pass
-        except Exception as err:
-            self._logger.error("Caught exception: %s" % repr(err))
-            traceback.print_stack()
-            if not self._response.closed:
-                self._response.error(1, "Unexpectd error %s" % str(err))
-    return wrapper
-
-
 class _Coroutine(_Proxy):
     """Wrapper for coroutine function """
 
@@ -68,7 +54,6 @@ class _Coroutine(_Proxy):
         self._state = None
         self._current_future_object = None
 
-    @exception_trap
     def invoke(self, request, stream):
         self._state = 1
         self._response = stream  # attach response stream
@@ -91,7 +76,6 @@ class _Coroutine(_Proxy):
         finally:
             if not self._response.closed:
                 self._logger.info("Handler for %s didn't close response stream" % self._response.event)
-
 
     def close(self):
         self._state = None
