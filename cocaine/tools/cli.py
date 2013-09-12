@@ -122,6 +122,7 @@ def makePrettyCrashlogRemove(cls, onDoneMessage=None):
                 print((onDoneMessage or 'Action for app "{0}" finished').format(self.name))
             except Exception as err:
                 log.error(err)
+                raise CocaineError(err)
             finally:
                 IOLoop.instance().stop()
 
@@ -151,6 +152,7 @@ class CallActionCli(object):
                 log.info(response)
         except Exception as err:
             log.error('Calling failed - %s', err)
+            raise CocaineError('calling failed - {0}'.format(err))
         finally:
             IOLoop.instance().stop()
 
@@ -219,6 +221,7 @@ class Tools(object):
             pass
         except Exception as err:
             log.error(err)
+            raise ToolsError(err)
         finally:
             IOLoop.instance().stop()
 
@@ -277,6 +280,8 @@ class Executor(object):
         except KeyboardInterrupt:
             log.error('Terminated by user')
             self.loop.stop()
+        except ToolsError as err:
+            raise
         except Exception as err:
             raise ToolsError('Unknown error occurred - {0}'.format(err))
 
