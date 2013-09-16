@@ -27,7 +27,7 @@ __all__ = ["core_log"]
 core_log = logging.getLogger("cocaine")
 core_log.setLevel(logging.ERROR)
 
-_core_logger_hanlder = LoggerHandler()
-_core_logger_hanlder.setLevel(logging.DEBUG)
+_core_logger_handler = LoggerHandler()
+_core_logger_handler.setLevel(logging.DEBUG)
 
-core_log.addHandler(_core_logger_hanlder)
+core_log.addHandler(_core_logger_handler)
