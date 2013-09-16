@@ -26,9 +26,11 @@ LOCATOR_DEFAULT_PORT = 10053
 
 if '--locator' in sys.argv:
     index = sys.argv.index('--locator') + 1
-    host, separator, port = sys.argv[index].partition(':')
-    LOCATOR_DEFAULT_HOST = host or LOCATOR_DEFAULT_HOST
-    LOCATOR_DEFAULT_PORT = port or LOCATOR_DEFAULT_PORT
+    host, _, port = sys.argv[index].rpartition(':')
+    if host:
+        LOCATOR_DEFAULT_HOST = host
+    if port.isdigit():
+        LOCATOR_DEFAULT_PORT = int(port)
 
 
 class strategy:

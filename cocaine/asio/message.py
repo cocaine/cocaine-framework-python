@@ -50,7 +50,7 @@ PROTOCOL_LIST = (
 PROTOCOL = {
     RPC_HANDSHAKE: {
         "id" : RPC_HANDSHAKE, #PROTOCOL_LIST.index("rpc::handshake"),
-        "tuple_type": ("unique_id")
+        "tuple_type": ("uuid",)
     },
     RPC_HEARTBEAT: {
         "id" : RPC_HEARTBEAT, #PROTOCOL_LIST.index("rpc::heartbeat"),
