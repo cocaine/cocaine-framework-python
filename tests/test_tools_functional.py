@@ -3,8 +3,11 @@ import os
 import shutil
 import logging
 import subprocess
+import tarfile
 import unittest
 import sys
+import time
+import contextlib
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -12,7 +15,7 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 log = logging.getLogger(__name__)
 h = logging.StreamHandler(stream=sys.stdout)
 log.addHandler(h)
-log.setLevel(logging.WARN)
+log.setLevel(logging.INFO)
 
 ROOT_PATH = '/Users/esafronov/testing'
 PLUGINS_PATH = os.path.join(ROOT_PATH, 'usr/lib/cocaine')
@@ -83,6 +86,30 @@ def trim(string):
     return string.replace(' ', '').replace('\n', '')
 
 
+@contextlib.contextmanager
+def prepare_app():
+    APP_PATH = os.path.join(ROOT_PATH, 'app')
+    try:
+        os.makedirs(APP_PATH)
+        manifest = {'slave': 'app'}
+        manifest_path = os.path.join(APP_PATH, 'manifest.json')
+        with open(manifest_path, 'w') as fh:
+            fh.write(json.dumps(manifest))
+
+        app_path = os.path.join(APP_PATH, 'app')
+        with open(app_path, 'w') as fh:
+            fh.write('')
+        os.chmod(app_path, 0755)
+
+        package_path = os.path.join(APP_PATH, 'package.tar.gz')
+        fh = tarfile.open(package_path, 'w|gz')
+        fh.add(app_path)
+        fh.close()
+        yield app_path, manifest_path, package_path
+    finally:
+        shutil.rmtree(APP_PATH, ignore_errors=True)
+
+
 class ToolsTestCase(unittest.TestCase):
     pid = -1
 
@@ -101,6 +128,7 @@ class ToolsTestCase(unittest.TestCase):
 
         log.info(' - starting cocaine-runtime ...')
         p = subprocess.Popen([COCAINE_RUNTIME_PATH, '-c', config_path], stdout=subprocess.PIPE)
+        time.sleep(0.1)
         self.pid = p.pid
 
     def tearDown(self):
@@ -110,6 +138,16 @@ class ToolsTestCase(unittest.TestCase):
             os.kill(self.pid, 9)
         log.info(' - cleaning up "%s" ...', ROOT_PATH)
         shutil.rmtree(ROOT_PATH, ignore_errors=True)
+
+    def test_app_upload_cycle(self):
+        with prepare_app() as (app_path, manifest_path, package_path):
+            code, out, err = call([COCAINE_TOOL, 'app', 'upload',
+                                   '--name', 'test_app',
+                                   '--manifest', manifest_path,
+                                   '--package', package_path])
+            self.assertEqual(0, code)
+            self.assertEqual('', out)
+            self.assertEqual('Uploading "test_app"... OK\n', err)
 
     def test_profile(self):
         code, out, err = call([COCAINE_TOOL, 'profile', 'upload',
