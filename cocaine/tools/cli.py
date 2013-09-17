@@ -1,7 +1,10 @@
+import os
 import json
 from time import time
+import errno
 
 import msgpack
+import sys
 from tornado.ioloop import IOLoop
 
 from cocaine.exceptions import CocaineError, ChokeEvent, ToolsError
@@ -30,6 +33,7 @@ def AwaitDoneWrapper(onDoneMessage=None, onErrorMessage=None):
                     log.error((onErrorMessage or 'Error occurred on action for "{name}": {error}').format(
                         name=self.name, error=err)
                     )
+                    exit(1)
                 finally:
                     IOLoop.instance().stop()
         return Wrapper
@@ -53,6 +57,7 @@ def AwaitJsonWrapper(onErrorMessage=None, unpack=False):
                     pass
                 except Exception as err:
                     log.error((onErrorMessage or 'Error occurred: {0}').format(err))
+                    exit(1)
                 finally:
                     IOLoop.instance().stop()
         return Wrapper
@@ -70,6 +75,7 @@ class ConsoleAddApplicationToRunlistAction(runlist.AddApplication):
             print(MESSAGE.format(app=self.app, profile=self.profile, runlist=self.name))
         except Exception as err:
             log.error(err)
+            exit(1)
         finally:
             IOLoop.instance().stop()
 
@@ -88,8 +94,8 @@ class PrettyPrintableCrashlogListAction(crashlog.List):
         except ChokeEvent:
             pass
         except Exception as err:
-            print(repr(err))
             log.error(('' or 'Unable to view "{name}" - {error}').format(name=self.name, error=err))
+            exit(1)
         finally:
             IOLoop.instance().stop()
 
@@ -104,6 +110,7 @@ class PrettyPrintableCrashlogViewAction(crashlog.View):
             print('\n'.join(msgpack.loads(result.get())))
         except Exception as err:
             log.error(err)
+            exit(1)
         finally:
             IOLoop.instance().stop()
 
@@ -122,7 +129,7 @@ def makePrettyCrashlogRemove(cls, onDoneMessage=None):
                 print((onDoneMessage or 'Action for app "{0}" finished').format(self.name))
             except Exception as err:
                 log.error(err)
-                raise CocaineError(err)
+                exit(1)
             finally:
                 IOLoop.instance().stop()
 
@@ -152,7 +159,7 @@ class CallActionCli(object):
                 log.info(response)
         except Exception as err:
             log.error('Calling failed - %s', err)
-            raise CocaineError('calling failed - {0}'.format(err))
+            exit(1)
         finally:
             IOLoop.instance().stop()
 
@@ -280,8 +287,6 @@ class Executor(object):
         except KeyboardInterrupt:
             log.error('Terminated by user')
             self.loop.stop()
-        except ToolsError as err:
-            raise
         except Exception as err:
             raise ToolsError('Unknown error occurred - {0}'.format(err))
 
