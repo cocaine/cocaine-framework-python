@@ -5,7 +5,6 @@ import logging
 import subprocess
 import unittest
 import sys
-import time
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -13,7 +12,7 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 log = logging.getLogger(__name__)
 h = logging.StreamHandler(stream=sys.stdout)
 log.addHandler(h)
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.WARN)
 
 ROOT_PATH = '/Users/esafronov/testing'
 PLUGINS_PATH = os.path.join(ROOT_PATH, 'usr/lib/cocaine')
@@ -129,4 +128,23 @@ class ToolsTestCase(unittest.TestCase):
                                '--name', 'test_profile'])
         self.assertEqual(0, code)
         self.assertEqual('The profile "test_profile" has been successfully removed\n', out)
+        self.assertEqual('', err)
+
+    def test_runlist(self):
+        code, out, err = call([COCAINE_TOOL, 'runlist', 'upload',
+                               '--name', 'test_runlist',
+                               '--runlist', "{}"])
+        self.assertEqual(0, code)
+        self.assertEqual('The runlist "test_runlist" has been successfully uploaded\n', out)
+        self.assertEqual('', err)
+
+        code, out, err = call([COCAINE_TOOL, 'runlist', 'list'])
+        self.assertEqual(0, code)
+        self.assertEqual('["test_runlist"]', trim(out))
+        self.assertEqual('', err)
+
+        code, out, err = call([COCAINE_TOOL, 'runlist', 'remove',
+                               '--name', 'test_runlist'])
+        self.assertEqual(0, code)
+        self.assertEqual('The runlist "test_runlist" has been successfully removed\n', out)
         self.assertEqual('', err)
