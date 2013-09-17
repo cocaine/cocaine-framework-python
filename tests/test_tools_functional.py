@@ -21,7 +21,7 @@ RUNTIME_PATH = os.path.join(ROOT_PATH, 'var/run/cocaine')
 SPOOL_PATH = os.path.join(ROOT_PATH, 'var/spool/cocaine')
 
 COCAINE_RUNTIME_PATH = '/Users/esafronov/sandbox/cocaine-core-build/cocaine-runtime'
-COCAINE_TOOL_PATH = '/Users/esafronov/sandbox/cocaine-framework-python/scripts/cocaine-tool'
+COCAINE_TOOL = '/Users/esafronov/sandbox/cocaine-framework-python/scripts/cocaine-tool'
 
 config = {
     "version": 2,
@@ -80,6 +80,10 @@ def call(cmd):
     return p.returncode, stdout, stderr
 
 
+def trim(string):
+    return string.replace(' ', '').replace('\n', '')
+
+
 class ToolsTestCase(unittest.TestCase):
     pid = -1
 
@@ -109,10 +113,15 @@ class ToolsTestCase(unittest.TestCase):
         shutil.rmtree(ROOT_PATH, ignore_errors=True)
 
     def test_profile_upload(self):
-        code, out, err = call([COCAINE_TOOL_PATH, 'profile', 'upload',
+        code, out, err = call([COCAINE_TOOL, 'profile', 'upload',
                                '--name', 'test_profile',
                                '--profile', '"{}"'])
         self.assertEqual(0, code)
         self.assertEqual('The profile "test_profile" has been successfully uploaded\n', out)
+        self.assertEqual('', err)
+
+        code, out, err = call([COCAINE_TOOL, 'profile', 'list'])
+        self.assertEqual(0, code)
+        self.assertEqual('["test_profile"]', trim(out))
         self.assertEqual('', err)
 
