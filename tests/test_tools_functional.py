@@ -112,7 +112,7 @@ class ToolsTestCase(unittest.TestCase):
         log.info(' - cleaning up "%s" ...', ROOT_PATH)
         shutil.rmtree(ROOT_PATH, ignore_errors=True)
 
-    def test_profile_upload(self):
+    def test_profile(self):
         code, out, err = call([COCAINE_TOOL, 'profile', 'upload',
                                '--name', 'test_profile',
                                '--profile', '"{}"'])
@@ -125,3 +125,8 @@ class ToolsTestCase(unittest.TestCase):
         self.assertEqual('["test_profile"]', trim(out))
         self.assertEqual('', err)
 
+        code, out, err = call([COCAINE_TOOL, 'profile', 'remove',
+                               '--name', 'test_profile'])
+        self.assertEqual(0, code)
+        self.assertEqual('The profile "test_profile" has been successfully removed\n', out)
+        self.assertEqual('', err)
