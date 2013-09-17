@@ -1,0 +1,11 @@
+Framework:
+ - back streaming into applications support.
+ - drop logger singleton in favor to configurable objects.
+ - implement logger pool.
+ - implement public locator pool (it's private for services at this moment).
+
+Tools:
+ - more convenient return codes for various error cases.
+ - prettifying for profile/runlist uploading.
+ - write functional tests for cocaine-tools.
+ - configure access rights for cocaine-tools.
