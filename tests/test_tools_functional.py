@@ -149,6 +149,17 @@ class ToolsTestCase(unittest.TestCase):
             self.assertEqual('', out)
             self.assertEqual('Uploading "test_app"... OK\n', err)
 
+            code, out, err = call([COCAINE_TOOL, 'app', 'list'])
+            self.assertEqual(0, code)
+            self.assertEqual('["test_app"]', trim(out))
+            self.assertEqual('', err)
+
+            code, out, err = call([COCAINE_TOOL, 'app', 'remove',
+                                   '--name', 'test_app'])
+            self.assertEqual(0, code)
+            self.assertEqual('', out)
+            self.assertEqual('Removing "test_app"... OK\n', err)
+
     def test_profile(self):
         code, out, err = call([COCAINE_TOOL, 'profile', 'upload',
                                '--name', 'test_profile',
