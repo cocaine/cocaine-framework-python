@@ -1,3 +1,9 @@
+cocaine-framework-python (0.10.6.17) lucid; urgency=low
+
+  * Fix bug.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 19 Sep 2013 18:20:00 +0400
+
 cocaine-framework-python (0.10.6.16) lucid; urgency=low
 
   * Fix absent cookie bug.
