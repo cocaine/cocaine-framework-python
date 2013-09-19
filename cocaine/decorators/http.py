@@ -65,7 +65,7 @@ class _HTTPRequest(object):
         self._meta['host'] = self._headers.get('Host') or self._headers.get('host', '')
         self._meta['remote_addr'] = self._headers.get('X-Real-IP') or self._headers.get('X-Forwarded-For', '')
         self._meta['query_string'] = urlparse.urlparse(url).query
-        self._meta['cookies'] = []
+        self._meta['cookies'] = dict()
         if 'Cookie' in self._headers:
             try:
                 cookies = Cookie.BaseCookie()
