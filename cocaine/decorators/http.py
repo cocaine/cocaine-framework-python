@@ -65,13 +65,15 @@ class _HTTPRequest(object):
         self._meta['host'] = self._headers.get('Host') or self._headers.get('host', '')
         self._meta['remote_addr'] = self._headers.get('X-Real-IP') or self._headers.get('X-Forwarded-For', '')
         self._meta['query_string'] = urlparse.urlparse(url).query
+        self._meta['cookies'] = []
         if 'Cookie' in self._headers:
             try:
                 cookies = Cookie.BaseCookie()
                 cookies.load(escape.native_str(self._headers['Cookie']))
                 self._meta['cookies'] = cookies
             except:
-                self._meta['cookies'] = []
+                pass
+
         tmp = urlparse.parse_qs(urlparse.urlparse(url).query)
         self._request = dict((k, v[0]) for k, v in tmp.iteritems() if len(v) > 0)
         self._files = None
