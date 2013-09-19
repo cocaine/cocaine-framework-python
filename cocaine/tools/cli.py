@@ -293,3 +293,4 @@ class Executor(object):
     def timeoutErrorback(self):
         log.error('Timeout')
         self.loop.stop()
+        exit(1)
