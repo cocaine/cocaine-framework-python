@@ -70,7 +70,7 @@ class _HTTPRequest(object):
             try:
                 cookies = Cookie.BaseCookie()
                 cookies.load(escape.native_str(self._headers['Cookie']))
-                self._meta['cookies'] = cookies
+                self._meta['cookies'] = dict((key, name.value) for key, name in cookies.iteritems())
             except:
                 pass
 
