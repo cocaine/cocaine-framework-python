@@ -20,7 +20,10 @@
 #
 
 
-from itertools import izip
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
 
 #
 #   Answer to C++ templates
@@ -43,8 +46,7 @@ PROTOCOL_LIST = (
     RPC_INVOKE,
     RPC_CHUNK,
     RPC_ERROR,
-    RPC_CHOKE
-    ) = xrange(7)
+    RPC_CHOKE) = range(7)
 
 
 PROTOCOL = {
