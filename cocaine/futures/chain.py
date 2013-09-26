@@ -143,7 +143,7 @@ class GeneratorFuture(Deferred):
             if __debug__: log.debug('-- ChokeEvent caught')
             self.error(err)
         except Exception as err:
-            if __debug__: log.debug('-- Exception caught: %s', value, err)
+            if __debug__: log.debug('-- Exception caught: %s', err)
             if self._current_deferred:
                 self._current_deferred.unbind()
             self.error(err)
