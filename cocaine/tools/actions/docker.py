@@ -13,6 +13,32 @@ from cocaine.tools.helpers._unix import AsyncUnixHTTPClient
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 DEFAULT_TIMEOUT = 120.0
+INDEX_URL = 'https://index.docker.io/v1/'
+
+
+def expand_registry_url(hostname):
+    if hostname.startswith('http:') or hostname.startswith('https:'):
+        if '/' not in hostname[9:]:
+            hostname += '/v1/'
+        return hostname
+    return 'http://' + hostname + '/v1/'
+
+
+def resolve_repository_name(fullname):
+    if '://' in fullname:
+        raise ValueError('repository name can not contain a scheme ({0})'.format(fullname))
+
+    parts = fullname.split('/', 1)
+    if not '.' in parts[0] and not ':' in parts[0] and parts[0] != 'localhost':
+        return INDEX_URL, fullname
+
+    if len(parts) < 2:
+        raise ValueError('invalid repository name ({0})'.format(fullname))
+
+    if 'index.docker.io' in parts[0]:
+        raise ValueError('invalid repository name, try "{0}" instead'.format(parts[1]))
+
+    return expand_registry_url(parts[0]), parts[1]
 
 
 class Client(object):
@@ -139,20 +165,20 @@ class Build(Action):
 
 
 class Push(Action):
-    def __init__(self, name, auth, registry=None, streaming=None,
+    def __init__(self, name, auth, streaming=None,
                  url='unix://var/run/docker.sock', version='1.4', timeout=DEFAULT_TIMEOUT, io_loop=None):
         self.name = name
         self.auth = auth
-        self.registry = registry
         self._streaming = streaming
         super(Push, self).__init__(url, version, timeout, io_loop)
 
     @chain.source
     def execute(self):
-        query = {'registry': self.registry}
-        url = self._make_url('/images/{0}/push'.format(self.name), query)
+        url = self._make_url('/images/{0}/push'.format(self.name))
+        registry, name = resolve_repository_name(self.name)
+
         body = json.dumps(self.auth)
-        log.info('Pushing "%s" into "%s"... ', self.name, self.registry if self.registry is not None else 'default')
+        log.info('Pushing "%s" into "%s"... ', name, registry)
         request = HTTPRequest(url, method='POST', body=body,
                               request_timeout=self.timeout,
                               streaming_callback=self._on_body)
