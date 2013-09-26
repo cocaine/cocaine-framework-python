@@ -90,7 +90,7 @@ class PrettyPrintableCrashlogListAction(crashlog.List):
             crashlogs = result.get()
             print('Currently available crashlogs for application \'%s\'' % self.name)
             for item in crashlog._parseCrashlogs(crashlogs):
-                print ' '.join(item)
+                print(' '.join(item))
         except ChokeEvent:
             pass
         except Exception as err:

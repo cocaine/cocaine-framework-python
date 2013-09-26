@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 from threading import Lock
 import logging
+import sys
 
 from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
 
@@ -125,7 +126,7 @@ class PythonModuleInstaller(ModuleInstaller):
                     'virtualEnvironmentPath': self.virtualEnvironmentPath,
                     'slave': manifest['slave']
                 }))
-            os.chmod(path, 0755)
+            os.chmod(path, 493)  # 0755
         except IOError as err:
             raise ModuleInstallError(BOOTSTRAP_CREATE_ERROR.format(err))
 

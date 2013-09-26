@@ -36,7 +36,7 @@ from cocaine.futures.chain import Chain
 def start_response(func, status, response_headers, exc_info=None):
     if exc_info:
         try:
-            raise exc_info[0], exc_info[1], exc_info[2]
+            raise (exc_info[0], exc_info[1], exc_info[2])
         finally:
             exc_info = None    # Avoid circular ref.
 
