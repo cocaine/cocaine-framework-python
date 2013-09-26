@@ -2,7 +2,6 @@ import atexit
 import pwd
 import time
 import os
-import os.path
 import sys
 import json
 from signal import SIGTERM
@@ -25,8 +24,8 @@ class Daemon(object):
             pid = os.fork()
             if pid > 0:
                 sys.exit(0)
-        except OSError, err:
-            sys.stderr.write("First fork failed: %d (%s)\n" % (err.errno, err.strerror))
+        except OSError as err:
+            sys.stderr.write("First fork failed: {0} ({1})\n".format(err.errno, err.strerror))
             sys.exit(1)
         # decouple from parent environment
         os.chdir("/")
@@ -39,15 +38,15 @@ class Daemon(object):
             pid = os.fork()
             if pid > 0:
                 sys.exit(0)
-        except OSError, err:
-            sys.stderr.write("Second fork failed: %d (%s)\n" % (err.errno, err.strerror))
+        except OSError as err:
+            sys.stderr.write("Second fork failed: {0} ({1})\n".format(err.errno, err.strerror))
             sys.exit(1)
             
         sys.stdout.flush()
         sys.stderr.flush()
-        si = file(self.stdin, 'r')
-        so = file(self.stdout, 'w')
-        se = file(self.stderr, 'w')
+        si = open(self.stdin, 'r')
+        so = open(self.stdout, 'w')
+        se = open(self.stderr, 'w')
         os.dup2(si.fileno(), sys.stdin.fileno())
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
@@ -55,12 +54,12 @@ class Daemon(object):
         #write PID file
         atexit.register(self.delpid)
         pid = str(os.getpid())
-        file(self.pidfile,'w').write("%s\n" % pid)
+        open(self.pidfile, 'w').write("%s\n" % pid)
 
     def delpid(self):
         try:
             os.remove(self.pidfile)
-        except Exception, err:
+        except Exception as err:
             pass
 
     def start(self, *args):
@@ -69,7 +68,7 @@ class Daemon(object):
         """
 
         if os.path.exists(self.pidfile):
-            msg = "pidfile %s exists. Exit.\n"
+            msg = "pidfile exists. Exit.\n"
             sys.stderr.write(msg % self.pidfile)
             sys.exit(1)
 
@@ -81,14 +80,14 @@ class Daemon(object):
         Stop daemon.
         """
         try:
-            pf = file(self.pidfile, 'r')
+            pf = open(self.pidfile, 'r')
             pid = int(pf.read().strip())
             pf.close()
         except IOError:
             pid = None
 
         if not pid:
-            msg = "pidfile %s doesn't exist. Exit.\n"
+            msg = "pidfile doesn't exist. Exit.\n"
             sys.stderr.write(msg % self.pidfile)
             sys.exit(1)
 
@@ -97,19 +96,19 @@ class Daemon(object):
             while True:
                 os.kill(pid, SIGTERM)
                 time.sleep(0.5)
-        except OSError, err:
+        except OSError as err:
             err = str(err)
             if err.find("No such process") > 0:
                 if os.path.exists(self.pidfile):
                     os.remove(self.pidfile)
-                sys.stdout.write("Process %d stoped successfully\n" % pid)
+                sys.stdout.write("Process {0} stopped successfully\n".format(pid))
             else:
-                print str(err)
+                print(err)
                 sys.exit(1)
 
     def status(self):
         try:
-            with file(self.pidfile, 'r') as pf:
+            with open(self.pidfile, 'r') as pf:
                 pid = int(pf.read().strip())
         except IOError:
             pid = None
