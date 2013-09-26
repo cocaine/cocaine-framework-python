@@ -152,7 +152,7 @@ class Push(Action):
         query = {'registry': self.registry}
         url = self._make_url('/images/{0}/push'.format(self.name), query)
         body = json.dumps(self.auth)
-        log.info('Pushing "%s" info "%s"... ', self.name, self.registry if self.registry is not None else 'default')
+        log.info('Pushing "%s" into "%s"... ', self.name, self.registry if self.registry is not None else 'default')
         request = HTTPRequest(url, method='POST', body=body,
                               request_timeout=self.timeout,
                               streaming_callback=self._on_body)
