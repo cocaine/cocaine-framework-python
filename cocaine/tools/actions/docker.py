@@ -66,8 +66,8 @@ class Client(object):
     def build(self, path, tag=None, quiet=False, streaming=None):
         return Build(path, tag, quiet, streaming, **self.config).execute()
 
-    def push(self, name, auth, registry=None, streaming=None):
-        return Push(name, auth, registry, streaming, **self.config).execute()
+    def push(self, name, auth, streaming=None):
+        return Push(name, auth, streaming, **self.config).execute()
 
 
 class Action(object):
