@@ -3,6 +3,7 @@ Framework:
  - drop logger singleton in favor to configurable objects.
  - implement logger pool.
  - implement public locator pool (it's private for services at this moment).
+ - more convenient synchronous api (v1.0).
 
 Tools:
  - more convenient return codes for various error cases.
