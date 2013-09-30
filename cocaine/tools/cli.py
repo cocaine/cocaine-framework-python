@@ -71,6 +71,7 @@ class CallActionCli(Tools):
 NG_ACTIONS = {
     'info': PrintJsonTools(common.NodeInfo),
     'call': CallActionCli(common.Call),
+
     'app:check': Tools(app.Check),
     'app:list': PrintJsonTools(app.List),
     'app:view': PrintJsonTools(app.View),
@@ -81,16 +82,19 @@ NG_ACTIONS = {
     'app:pause': PrintJsonTools(app.Stop),
     'app:stop': PrintJsonTools(app.Stop),
     'app:restart': PrintJsonTools(app.Restart),
+
     'profile:list': PrintJsonTools(profile.List),
     'profile:view': PrintJsonTools(profile.View),
     'profile:upload': Tools(profile.Upload),
     'profile:remove': Tools(profile.Remove),
+
     'runlist:list': PrintJsonTools(runlist.List),
     'runlist:view': PrintJsonTools(runlist.View),
     'runlist:add-app': PrintJsonTools(runlist.AddApplication),
     'runlist:create': Tools(runlist.Create),
     'runlist:upload': Tools(runlist.Upload),
     'runlist:remove': Tools(runlist.Remove),
+
     'crashlog:list': CrashlogListToolHandler(crashlog.List),
     'crashlog:view': CrashlogViewToolHandler(crashlog.View),
     'crashlog:remove': Tools(crashlog.Remove),
