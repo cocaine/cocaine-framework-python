@@ -14,43 +14,6 @@ from cocaine.futures import chain
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
-class CallActionCli(object):
-    def __init__(self, command, host, port, pretty=False):
-        self.action = common.Call(command, host, port)
-        self.pretty = pretty
-
-    @chain.source
-    def execute(self):
-        try:
-            result = yield self.action.execute()
-            requestType = result['request']
-            response = result['response']
-            if requestType == 'api':
-                log.info('Service "{0}" provides following API:'.format(self.action.serviceName))
-                log.info('\n'.join(' - {0}'.format(method) for method in response))
-            elif requestType == 'invoke':
-                if self.pretty:
-                    try:
-                        response = json.dumps(response, indent=4)
-                    except ValueError:
-                        log.error('Not valid json')
-                log.info(response)
-        except Exception as err:
-            log.error('Calling failed - %s', err)
-            exit(1)
-        finally:
-            IOLoop.instance().stop()
-
-
-CRASHLOG_REMOVE_SUCCESS = 'Crashlog for app "{0}" has been removed'
-CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
-
-
-AVAILABLE_TOOLS_ACTIONS = {
-    'call': CallActionCli,
-}
-
-
 class Tools(object):
     def __init__(self, Action):
         self._Action = Action
@@ -94,8 +57,20 @@ class CrashlogViewToolHandler(Tools):
         print('\n'.join(msgpack.loads(result)))
 
 
+class CallActionCli(Tools):
+    def _processResult(self, result):
+        requestType = result['request']
+        response = result['response']
+        if requestType == 'api':
+            log.info('Service provides following API:')
+            log.info('\n'.join(' - {0}'.format(method) for method in response))
+        elif requestType == 'invoke':
+            print(response)
+
+
 NG_ACTIONS = {
     'info': PrintJsonTools(common.NodeInfo),
+    'call': CallActionCli(common.Call),
     'app:check': Tools(app.Check),
     'app:list': PrintJsonTools(app.List),
     'app:view': PrintJsonTools(app.View),
@@ -148,14 +123,10 @@ class Executor(object):
         :param options: various action configuration
         """
         try:
-            assert actionName in dict(NG_ACTIONS, **AVAILABLE_TOOLS_ACTIONS), 'wrong action - {0}'.format(actionName)
-            if actionName in NG_ACTIONS:
-                action = NG_ACTIONS[actionName]
-                action.execute(**options)
-            else:
-                Action = AVAILABLE_TOOLS_ACTIONS[actionName]
-                action = Action(**options)
-                action.execute()
+            assert actionName in NG_ACTIONS, 'wrong action - {0}'.format(actionName)
+
+            action = NG_ACTIONS[actionName]
+            action.execute(**options)
             if self.timeout is not None:
                 self.loop.add_timeout(time.time() + self.timeout, self.timeoutErrorback)
             self.loop.start()
