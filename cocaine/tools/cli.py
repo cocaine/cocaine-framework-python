@@ -14,56 +14,6 @@ from cocaine.futures import chain
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
-def AwaitDoneWrapper(onDoneMessage=None, onErrorMessage=None):
-    def Patch(cls):
-        class Wrapper(cls):
-            def execute(self):
-                chain = super(Wrapper, self).execute()
-                chain.then(self.processResult)
-                return chain
-
-            def processResult(self, status):
-                try:
-                    status.get()
-                    print((onDoneMessage or 'Action for "{name}" - done').format(name=self.name))
-                except ChokeEvent:
-                    print((onDoneMessage or 'Action for "{name}" - done').format(name=self.name))
-                except Exception as err:
-                    log.error((onErrorMessage or 'Error occurred on action for "{name}": {error}').format(
-                        name=self.name, error=err)
-                    )
-                    exit(1)
-                finally:
-                    IOLoop.instance().stop()
-        return Wrapper
-    return Patch
-
-
-# def AwaitJsonWrapper(onErrorMessage=None, unpack=False):
-#     def Patch(cls):
-#         class Wrapper(cls):
-#             def execute(self):
-#                 chain = super(Wrapper, self).execute()
-#                 chain.then(self.processResult).run()
-#                 return chain
-#
-#             def processResult(self, chunk):
-#                 try:
-#                     result = chunk.get()
-#                     if unpack:
-#                         result = msgpack.loads(result)
-#                     print(json.dumps(result, indent=4))
-#                 except ChokeEvent:
-#                     pass
-#                 except Exception as err:
-#                     log.error((onErrorMessage or 'Error occurred: {0}').format(err))
-#                     exit(1)
-#                 finally:
-#                     IOLoop.instance().stop()
-#         return Wrapper
-#     return Patch
-
-
 class ConsoleAddApplicationToRunlistAction(runlist.AddApplication):
     def execute(self):
         return super(ConsoleAddApplicationToRunlistAction, self).execute().then(self.printResult).run()
@@ -190,17 +140,10 @@ CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
 
 AVAILABLE_TOOLS_ACTIONS = {
-    'runlist:upload': AwaitDoneWrapper(RUNLIST_UPLOAD_SUCCESS, RUNLIST_UPLOAD_FAIL)(runlist.Upload),
-    'runlist:remove': AwaitDoneWrapper(RUNLIST_REMOVE_SUCCESS, RUNLIST_REMOVE_FAIL)(runlist.Remove),
     'crashlog:list': PrettyPrintableCrashlogListAction,
     'crashlog:view': PrettyPrintableCrashlogViewAction,
     'crashlog:remove': makePrettyCrashlogRemove(crashlog.Remove, CRASHLOG_REMOVE_SUCCESS),
     'crashlog:removeall': makePrettyCrashlogRemove(crashlog.RemoveAll, CRASHLOGS_REMOVE_SUCCESS),
-    # 'info': AwaitJsonWrapper()(common.NodeInfo),
-    # 'app:start': AwaitJsonWrapper()(app.Start),
-    # 'app:pause': AwaitJsonWrapper()(app.Stop),
-    # 'app:stop': AwaitJsonWrapper()(app.Stop),
-    # 'app:restart': AwaitJsonWrapper()(app.Restart),
     'call': CallActionCli,
 }
 
@@ -233,20 +176,27 @@ class PrintJsonTools(Tools):
 
 
 NG_ACTIONS = {
+    'info': PrintJsonTools(common.NodeInfo),
     'app:check': Tools(app.Check),
     'app:list': PrintJsonTools(app.List),
+    'app:view': PrintJsonTools(app.View),
     'app:remove': Tools(app.Remove),
     'app:upload-manual': Tools(app.Upload),
     'app:upload': Tools(app.LocalUpload),
-    'app:view': PrintJsonTools(app.View),
+    'app:start': PrintJsonTools(app.Start),
+    'app:pause': PrintJsonTools(app.Stop),
+    'app:stop': PrintJsonTools(app.Stop),
+    'app:restart': PrintJsonTools(app.Restart),
     'profile:list': PrintJsonTools(profile.List),
+    'profile:view': PrintJsonTools(profile.View),
     'profile:upload': Tools(profile.Upload),
     'profile:remove': Tools(profile.Remove),
-    'profile:view': PrintJsonTools(profile.View),
-    'runlist:add-app': PrintJsonTools(runlist.AddApplication),
-    'runlist:create': Tools(runlist.Create),
     'runlist:list': PrintJsonTools(runlist.List),
     'runlist:view': PrintJsonTools(runlist.View),
+    'runlist:add-app': PrintJsonTools(runlist.AddApplication),
+    'runlist:create': Tools(runlist.Create),
+    'runlist:upload': Tools(runlist.Upload),
+    'runlist:remove': Tools(runlist.Remove),
 }
 
 
