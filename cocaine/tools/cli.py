@@ -1,14 +1,15 @@
 import json
 import time
+import errno
 
 import msgpack
 from tornado.ioloop import IOLoop
 
-from cocaine.exceptions import CocaineError, ChokeEvent
+from cocaine.exceptions import ChokeEvent
+from cocaine.futures import chain
 from cocaine.tools.actions import common, app, profile, runlist, crashlog
 from cocaine.tools.error import Error as ToolsError
 from cocaine.tools import log
-from cocaine.futures import chain
 
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
@@ -133,18 +134,12 @@ class Executor(object):
             action.execute(**options)
             if self.timeout is not None:
                 self.loop.add_timeout(time.time() + self.timeout, self.timeoutErrorback)
+
             self.loop.start()
-        except CocaineError as err:
-            raise ToolsError(err)
-        except ValueError as err:
-            raise ToolsError(err)
-        except KeyboardInterrupt:
-            log.error('Terminated by user')
+        finally:
             self.loop.stop()
-        except Exception as err:
-            raise ToolsError('Unknown error occurred - {0}'.format(err))
 
     def timeoutErrorback(self):
         log.error('Timeout')
         self.loop.stop()
-        exit(1)
+        exit(errno.ETIMEDOUT)
