@@ -5,6 +5,7 @@ import tarfile
 import msgpack
 
 from cocaine.asio.exceptions import ConnectionError, ConnectionRefusedError
+from cocaine.futures import chain
 from cocaine.services import Service
 from cocaine.tools import log
 
@@ -72,3 +73,22 @@ class List(Storage):
 
     def execute(self):
         return self.storage.find(self.key, self.tags)
+
+
+class Specific(Storage):
+    def __init__(self, storage, entity, name):
+        super(Specific, self).__init__(storage)
+        self.name = name
+        if not self.name:
+            raise ValueError('Please specify {0} name'.format(entity))
+
+
+class View(Specific):
+    def __init__(self, storage, entity, name, collection):
+        super(View, self).__init__(storage, entity, name)
+        self.collection = collection
+
+    @chain.source
+    def execute(self):
+        value = yield self.storage.read(self.collection, self.name)
+        yield msgpack.loads(value)

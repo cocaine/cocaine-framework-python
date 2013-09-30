@@ -39,29 +39,29 @@ def AwaitDoneWrapper(onDoneMessage=None, onErrorMessage=None):
     return Patch
 
 
-def AwaitJsonWrapper(onErrorMessage=None, unpack=False):
-    def Patch(cls):
-        class Wrapper(cls):
-            def execute(self):
-                chain = super(Wrapper, self).execute()
-                chain.then(self.processResult).run()
-                return chain
-
-            def processResult(self, chunk):
-                try:
-                    result = chunk.get()
-                    if unpack:
-                        result = msgpack.loads(result)
-                    print(json.dumps(result, indent=4))
-                except ChokeEvent:
-                    pass
-                except Exception as err:
-                    log.error((onErrorMessage or 'Error occurred: {0}').format(err))
-                    exit(1)
-                finally:
-                    IOLoop.instance().stop()
-        return Wrapper
-    return Patch
+# def AwaitJsonWrapper(onErrorMessage=None, unpack=False):
+#     def Patch(cls):
+#         class Wrapper(cls):
+#             def execute(self):
+#                 chain = super(Wrapper, self).execute()
+#                 chain.then(self.processResult).run()
+#                 return chain
+#
+#             def processResult(self, chunk):
+#                 try:
+#                     result = chunk.get()
+#                     if unpack:
+#                         result = msgpack.loads(result)
+#                     print(json.dumps(result, indent=4))
+#                 except ChokeEvent:
+#                     pass
+#                 except Exception as err:
+#                     log.error((onErrorMessage or 'Error occurred: {0}').format(err))
+#                     exit(1)
+#                 finally:
+#                     IOLoop.instance().stop()
+#         return Wrapper
+#     return Patch
 
 
 class ConsoleAddApplicationToRunlistAction(runlist.AddApplication):
@@ -190,27 +190,25 @@ CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
 
 AVAILABLE_TOOLS_ACTIONS = {
-    'app:list': AwaitJsonWrapper()(app.List),
-    'app:view': AwaitJsonWrapper(unpack=True)(app.View),
-    'profile:list': AwaitJsonWrapper()(profile.List),
-    'profile:view': AwaitJsonWrapper(unpack=True)(profile.View),
+    # 'profile:list': AwaitJsonWrapper()(profile.List),
+    # 'profile:view': AwaitJsonWrapper(unpack=True)(profile.View),
     'profile:upload': AwaitDoneWrapper(PROFILE_UPLOAD_SUCCESS, PROFILE_UPLOAD_FAIL)(profile.Upload),
     'profile:remove': AwaitDoneWrapper(PROFILE_REMOVE_SUCCESS, PROFILE_REMOVE_FAIL)(profile.Remove),
-    'runlist:list': AwaitJsonWrapper()(runlist.List),
-    'runlist:view': AwaitJsonWrapper(unpack=True)(runlist.View),
+    # 'runlist:list': AwaitJsonWrapper()(runlist.List),
+    # 'runlist:view': AwaitJsonWrapper(unpack=True)(runlist.View),
     'runlist:upload': AwaitDoneWrapper(RUNLIST_UPLOAD_SUCCESS, RUNLIST_UPLOAD_FAIL)(runlist.Upload),
     'runlist:create': AwaitDoneWrapper(RUNLIST_CREATE_SUCCESS, RUNLIST_CREATE_FAIL)(runlist.Create),
     'runlist:remove': AwaitDoneWrapper(RUNLIST_REMOVE_SUCCESS, RUNLIST_REMOVE_FAIL)(runlist.Remove),
-    'runlist:add-app': AwaitJsonWrapper()(runlist.AddApplication),
+    # 'runlist:add-app': AwaitJsonWrapper()(runlist.AddApplication),
     'crashlog:list': PrettyPrintableCrashlogListAction,
     'crashlog:view': PrettyPrintableCrashlogViewAction,
     'crashlog:remove': makePrettyCrashlogRemove(crashlog.Remove, CRASHLOG_REMOVE_SUCCESS),
     'crashlog:removeall': makePrettyCrashlogRemove(crashlog.RemoveAll, CRASHLOGS_REMOVE_SUCCESS),
-    'info': AwaitJsonWrapper()(common.NodeInfo),
-    'app:start': AwaitJsonWrapper()(app.Start),
-    'app:pause': AwaitJsonWrapper()(app.Stop),
-    'app:stop': AwaitJsonWrapper()(app.Stop),
-    'app:restart': AwaitJsonWrapper()(app.Restart),
+    # 'info': AwaitJsonWrapper()(common.NodeInfo),
+    # 'app:start': AwaitJsonWrapper()(app.Start),
+    # 'app:pause': AwaitJsonWrapper()(app.Stop),
+    # 'app:stop': AwaitJsonWrapper()(app.Stop),
+    # 'app:restart': AwaitJsonWrapper()(app.Restart),
     'call': CallActionCli,
 }
 
@@ -237,11 +235,18 @@ class Tools(object):
         pass
 
 
+class PrintJsonTools(Tools):
+    def _processResult(self, result):
+        print(json.dumps(result, indent=4))
+
+
 NG_ACTIONS = {
+    'app:check': Tools(app.Check),
+    'app:list': PrintJsonTools(app.List),
+    'app:remove': Tools(app.Remove),
     'app:upload-manual': Tools(app.Upload),
     'app:upload': Tools(app.LocalUpload),
-    'app:remove': Tools(app.Remove),
-    'app:check': Tools(app.Check),
+    'app:view': PrintJsonTools(app.View)
 }
 
 

@@ -1,11 +1,16 @@
 import msgpack
 
 from cocaine.futures import chain
+from cocaine.tools import actions, log
 from cocaine.tools.actions import CocaineConfigReader
 from cocaine.tools.tags import RUNLISTS_TAGS
-from cocaine.tools import actions, log
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
+
+
+class Specific(actions.Specific):
+    def __init__(self, storage, name):
+        super(Specific, self).__init__(storage, 'runlist', name)
 
 
 class List(actions.List):
@@ -13,17 +18,9 @@ class List(actions.List):
         super(List, self).__init__('runlists', RUNLISTS_TAGS, storage)
 
 
-class Specific(actions.Storage):
+class View(actions.View):
     def __init__(self, storage, name):
-        super(Specific, self).__init__(storage)
-        self.name = name
-        if not self.name:
-            raise ValueError('Please specify runlist name')
-
-
-class View(Specific):
-    def execute(self):
-        return self.storage.read('runlists', self.name)
+        super(View, self).__init__(storage, 'runlist', name, 'runlists')
 
 
 class Upload(Specific):

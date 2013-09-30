@@ -1,8 +1,13 @@
+from cocaine.tools import actions
 from cocaine.tools.actions import CocaineConfigReader
 from cocaine.tools.tags import PROFILES_TAGS
-from cocaine.tools import actions
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
+
+
+class Specific(actions.Specific):
+    def __init__(self, storage, name):
+        super(Specific, self).__init__(storage, 'profile', name)
 
 
 class List(actions.List):
@@ -10,17 +15,9 @@ class List(actions.List):
         super(List, self).__init__('profiles', PROFILES_TAGS, storage)
 
 
-class Specific(actions.Storage):
+class View(actions.View):
     def __init__(self, storage, name):
-        super(Specific, self).__init__(storage)
-        self.name = name
-        if not self.name:
-            raise ValueError('Please specify profile name')
-
-
-class View(Specific):
-    def execute(self):
-        return self.storage.read('profiles', self.name)
+        super(View, self).__init__(storage, 'profile', name, 'profiles')
 
 
 class Upload(Specific):

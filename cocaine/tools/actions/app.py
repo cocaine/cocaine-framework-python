@@ -29,20 +29,19 @@ venvFactory = {
 }
 
 
+class Specific(actions.Specific):
+    def __init__(self, storage, name):
+        super(Specific, self).__init__(storage, 'application', name)
+
+
 class List(actions.List):
     def __init__(self, storage):
         super(List, self).__init__('manifests', APPS_TAGS, storage)
 
 
-class View(actions.Storage):
+class View(actions.View):
     def __init__(self, storage, name):
-        super(View, self).__init__(storage)
-        self.name = name
-        if not self.name:
-            raise ValueError('Specify name of the application')
-
-    def execute(self):
-        return self.storage.read('manifests', self.name)
+        super(View, self).__init__(storage, 'application', name, 'manifests')
 
 
 class Upload(actions.Storage):
