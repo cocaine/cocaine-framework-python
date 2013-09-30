@@ -30,15 +30,17 @@ class Upload(Specific):
         if not self.runlist:
             raise ValueError('Please specify runlist file path')
 
+    @chain.source
     def execute(self):
         runlist = CocaineConfigReader.load(self.runlist)
-        return self.storage.write('runlists', self.name, runlist, RUNLISTS_TAGS)
+        log.info('Uploading "%s"... ', self.name)
+        yield self.storage.write('runlists', self.name, runlist, RUNLISTS_TAGS)
+        log.info('OK')
 
 
 class Create(Specific):
     def execute(self):
-        runlist = msgpack.dumps({})
-        return self.storage.write('runlists', self.name, runlist, RUNLISTS_TAGS)
+        return Upload(self.storage, self.name, '{}').execute()
 
 
 class Remove(Specific):
@@ -74,8 +76,7 @@ class AddApplication(Specific):
             yield Create(self.storage, self.name).execute()
             result['status'] = 'created'
 
-        runlistInfo = yield View(self.storage, name=self.name).execute()
-        runlist = msgpack.loads(runlistInfo)
+        runlist = yield View(self.storage, name=self.name).execute()
         log.debug('Found runlist: {0}'.format(runlist))
         runlist[self.app] = self.profile
         runlistUploadAction = Upload(self.storage, name=self.name, runlist=runlist)
