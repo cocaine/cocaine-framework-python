@@ -14,27 +14,6 @@ from cocaine.futures import chain
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
-class PrettyPrintableCrashlogListAction(crashlog.List):
-    def execute(self):
-        chain = super(PrettyPrintableCrashlogListAction, self).execute()
-        chain.then(self.handleResult)
-        return chain
-
-    def handleResult(self, result):
-        try:
-            crashlogs = result.get()
-            print('Currently available crashlogs for application \'%s\'' % self.name)
-            for item in crashlog._parseCrashlogs(crashlogs):
-                print(' '.join(item))
-        except ChokeEvent:
-            pass
-        except Exception as err:
-            log.error(('' or 'Unable to view "{name}" - {error}').format(name=self.name, error=err))
-            exit(1)
-        finally:
-            IOLoop.instance().stop()
-
-
 class PrettyPrintableCrashlogViewAction(crashlog.View):
     def execute(self):
         return super(PrettyPrintableCrashlogViewAction, self).execute().then(self.handleResult)
@@ -104,7 +83,6 @@ CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
 
 AVAILABLE_TOOLS_ACTIONS = {
-    'crashlog:list': PrettyPrintableCrashlogListAction,
     'crashlog:view': PrettyPrintableCrashlogViewAction,
     'crashlog:remove': makePrettyCrashlogRemove(crashlog.Remove, CRASHLOG_REMOVE_SUCCESS),
     'crashlog:removeall': makePrettyCrashlogRemove(crashlog.RemoveAll, CRASHLOGS_REMOVE_SUCCESS),
@@ -139,6 +117,17 @@ class PrintJsonTools(Tools):
         print(json.dumps(result, indent=4))
 
 
+class CrashlogListToolHandler(Tools):
+    def _processResult(self, result):
+        if not result:
+            log.info('Crashlog list is empty')
+            return
+
+        log.info('{:^20} {:^26} {:^30}'.format('Timestamp', 'Time', 'UUID'))
+        for timestamp, time, uuid in crashlog._parseCrashlogs(result):
+            print('{:^20} {:^26} {:^30}'.format(timestamp, time, uuid))
+
+
 NG_ACTIONS = {
     'info': PrintJsonTools(common.NodeInfo),
     'app:check': Tools(app.Check),
@@ -161,6 +150,7 @@ NG_ACTIONS = {
     'runlist:create': Tools(runlist.Create),
     'runlist:upload': Tools(runlist.Upload),
     'runlist:remove': Tools(runlist.Remove),
+    'crashlog:list': CrashlogListToolHandler(crashlog.List),
 }
 
 
