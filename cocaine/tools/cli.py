@@ -14,27 +14,6 @@ from cocaine.futures import chain
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
-def makePrettyCrashlogRemove(cls, onDoneMessage=None):
-    class PrettyWrapper(cls):
-        def __init__(self, storage=None, **config):
-            super(PrettyWrapper, self).__init__(storage, **config)
-
-        def execute(self):
-            return super(PrettyWrapper, self).execute().then(self.handleResult)
-
-        def handleResult(self, result):
-            try:
-                result.get()
-                print((onDoneMessage or 'Action for app "{0}" finished').format(self.name))
-            except Exception as err:
-                log.error(err)
-                exit(1)
-            finally:
-                IOLoop.instance().stop()
-
-    return PrettyWrapper
-
-
 class CallActionCli(object):
     def __init__(self, command, host, port, pretty=False):
         self.action = common.Call(command, host, port)
@@ -68,8 +47,6 @@ CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
 
 AVAILABLE_TOOLS_ACTIONS = {
-    'crashlog:remove': makePrettyCrashlogRemove(crashlog.Remove, CRASHLOG_REMOVE_SUCCESS),
-    'crashlog:removeall': makePrettyCrashlogRemove(crashlog.RemoveAll, CRASHLOGS_REMOVE_SUCCESS),
     'call': CallActionCli,
 }
 
@@ -141,6 +118,8 @@ NG_ACTIONS = {
     'runlist:remove': Tools(runlist.Remove),
     'crashlog:list': CrashlogListToolHandler(crashlog.List),
     'crashlog:view': CrashlogViewToolHandler(crashlog.View),
+    'crashlog:remove': Tools(crashlog.Remove),
+    'crashlog:removeall': Tools(crashlog.RemoveAll),
 }
 
 
