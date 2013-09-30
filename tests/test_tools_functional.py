@@ -266,7 +266,7 @@ class ToolsTestCase(unittest.TestCase):
                                '--name', 'test_app',
                                '--profile', 'default'])
         self.assertEqual(1, code)
-        self.assertEqual('', trim(out))
+        self.assertEqual('', out)
         self.assertEqual(('Error occurred: '
                           'error in service "node" - '
                           'object \'test_app\' has not been found in \'manifests\': '
@@ -278,7 +278,7 @@ class ToolsTestCase(unittest.TestCase):
                                    '--name', 'test_app',
                                    '--profile', 'default'])
             self.assertEqual(1, code)
-            self.assertEqual('', trim(out))
+            self.assertEqual('', out)
             self.assertEqual(('Error occurred: '
                               'error in service "node" - '
                               'object \'default\' has not been found in \'profiles\': '
