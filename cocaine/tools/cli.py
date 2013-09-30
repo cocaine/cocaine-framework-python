@@ -14,7 +14,7 @@ from cocaine.futures import chain
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
-class Tools(object):
+class ToolHandler(object):
     def __init__(self, Action):
         self._Action = Action
 
@@ -36,12 +36,12 @@ class Tools(object):
         pass
 
 
-class PrintJsonTools(Tools):
+class JsonToolHandler(ToolHandler):
     def _processResult(self, result):
         print(json.dumps(result, indent=4))
 
 
-class CrashlogListToolHandler(Tools):
+class CrashlogListToolHandler(ToolHandler):
     def _processResult(self, result):
         if not result:
             log.info('Crashlog list is empty')
@@ -52,12 +52,12 @@ class CrashlogListToolHandler(Tools):
             print('{:^20} {:^26} {:^30}'.format(timestamp, time, uuid))
 
 
-class CrashlogViewToolHandler(Tools):
+class CrashlogViewToolHandler(ToolHandler):
     def _processResult(self, result):
         print('\n'.join(msgpack.loads(result)))
 
 
-class CallActionCli(Tools):
+class CallActionCli(ToolHandler):
     def _processResult(self, result):
         requestType = result['request']
         response = result['response']
@@ -69,36 +69,36 @@ class CallActionCli(Tools):
 
 
 NG_ACTIONS = {
-    'info': PrintJsonTools(common.NodeInfo),
+    'info': JsonToolHandler(common.NodeInfo),
     'call': CallActionCli(common.Call),
 
-    'app:check': Tools(app.Check),
-    'app:list': PrintJsonTools(app.List),
-    'app:view': PrintJsonTools(app.View),
-    'app:remove': Tools(app.Remove),
-    'app:upload-manual': Tools(app.Upload),
-    'app:upload': Tools(app.LocalUpload),
-    'app:start': PrintJsonTools(app.Start),
-    'app:pause': PrintJsonTools(app.Stop),
-    'app:stop': PrintJsonTools(app.Stop),
-    'app:restart': PrintJsonTools(app.Restart),
+    'app:check': ToolHandler(app.Check),
+    'app:list': JsonToolHandler(app.List),
+    'app:view': JsonToolHandler(app.View),
+    'app:remove': ToolHandler(app.Remove),
+    'app:upload-manual': ToolHandler(app.Upload),
+    'app:upload': ToolHandler(app.LocalUpload),
+    'app:start': JsonToolHandler(app.Start),
+    'app:pause': JsonToolHandler(app.Stop),
+    'app:stop': JsonToolHandler(app.Stop),
+    'app:restart': JsonToolHandler(app.Restart),
 
-    'profile:list': PrintJsonTools(profile.List),
-    'profile:view': PrintJsonTools(profile.View),
-    'profile:upload': Tools(profile.Upload),
-    'profile:remove': Tools(profile.Remove),
+    'profile:list': JsonToolHandler(profile.List),
+    'profile:view': JsonToolHandler(profile.View),
+    'profile:upload': ToolHandler(profile.Upload),
+    'profile:remove': ToolHandler(profile.Remove),
 
-    'runlist:list': PrintJsonTools(runlist.List),
-    'runlist:view': PrintJsonTools(runlist.View),
-    'runlist:add-app': PrintJsonTools(runlist.AddApplication),
-    'runlist:create': Tools(runlist.Create),
-    'runlist:upload': Tools(runlist.Upload),
-    'runlist:remove': Tools(runlist.Remove),
+    'runlist:list': JsonToolHandler(runlist.List),
+    'runlist:view': JsonToolHandler(runlist.View),
+    'runlist:add-app': JsonToolHandler(runlist.AddApplication),
+    'runlist:create': ToolHandler(runlist.Create),
+    'runlist:upload': ToolHandler(runlist.Upload),
+    'runlist:remove': ToolHandler(runlist.Remove),
 
     'crashlog:list': CrashlogListToolHandler(crashlog.List),
     'crashlog:view': CrashlogViewToolHandler(crashlog.View),
-    'crashlog:remove': Tools(crashlog.Remove),
-    'crashlog:removeall': Tools(crashlog.RemoveAll),
+    'crashlog:remove': ToolHandler(crashlog.Remove),
+    'crashlog:removeall': ToolHandler(crashlog.RemoveAll),
 }
 
 
