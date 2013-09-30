@@ -225,6 +225,7 @@ class Executor(object):
         :param options: various action configuration
         """
         try:
+            assert actionName in dict(NG_ACTIONS, **AVAILABLE_TOOLS_ACTIONS), 'wrong action - {0}'.format(actionName)
             if actionName in NG_ACTIONS:
                 action = NG_ACTIONS[actionName]
                 action.execute(**options)
@@ -239,8 +240,6 @@ class Executor(object):
             raise ToolsError(err)
         except ValueError as err:
             raise ToolsError(err)
-        except KeyError as err:
-            raise ToolsError('Action {0} is not available'.format(err))
         except KeyboardInterrupt:
             log.error('Terminated by user')
             self.loop.stop()
