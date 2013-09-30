@@ -97,28 +97,69 @@ def trim(string):
     return string.replace(' ', '').replace('\n', '')
 
 
+def make_manifest(dirname):
+    manifest = {'slave': 'app'}
+    path = os.path.join(dirname, 'manifest.json')
+    with open(path, 'w') as fh:
+        fh.write(json.dumps(manifest))
+    return path
+
+
+def make_app(dirname):
+    path = os.path.join(dirname, 'app')
+    with open(path, 'w') as fh:
+        fh.write('')
+    os.chmod(path, 0755)
+    return path
+
+
+def make_package(dirname, app_path):
+    path = os.path.join(dirname, 'package.tar.gz')
+    fh = tarfile.open(path, 'w|gz')
+    fh.add(app_path)
+    fh.close()
+    return path
+
 @contextlib.contextmanager
 def prepare_app():
-    APP_PATH = os.path.join(ROOT_PATH, 'app')
+    APP_ROOT_PATH = os.path.join(ROOT_PATH, 'app')
     try:
-        os.makedirs(APP_PATH)
-        manifest = {'slave': 'app'}
-        manifest_path = os.path.join(APP_PATH, 'manifest.json')
-        with open(manifest_path, 'w') as fh:
-            fh.write(json.dumps(manifest))
-
-        app_path = os.path.join(APP_PATH, 'app')
-        with open(app_path, 'w') as fh:
-            fh.write('')
-        os.chmod(app_path, 0755)
-
-        package_path = os.path.join(APP_PATH, 'package.tar.gz')
-        fh = tarfile.open(package_path, 'w|gz')
-        fh.add(app_path)
-        fh.close()
+        os.makedirs(APP_ROOT_PATH)
+        manifest_path = make_manifest(APP_ROOT_PATH)
+        app_path = make_app(APP_ROOT_PATH)
+        package_path = make_package(APP_ROOT_PATH, app_path)
         yield app_path, manifest_path, package_path
     finally:
-        shutil.rmtree(APP_PATH, ignore_errors=True)
+        shutil.rmtree(APP_ROOT_PATH, ignore_errors=True)
+
+
+@contextlib.contextmanager
+def upload_app(name):
+    APP_ROOT_PATH = os.path.join(ROOT_PATH, 'app')
+    try:
+        os.makedirs(APP_ROOT_PATH)
+        manifest_path = make_manifest(APP_ROOT_PATH)
+        app_path = make_app(APP_ROOT_PATH)
+        package_path = make_package(APP_ROOT_PATH, app_path)
+
+        call([COCAINE_TOOL, 'app', 'upload',
+              '--name', name,
+              '--manifest', manifest_path,
+              '--package', package_path])
+        yield
+    finally:
+        shutil.rmtree(APP_ROOT_PATH, ignore_errors=True)
+
+
+def upload_profile(name):
+    profile = {
+        'isolate': {
+            'args': {
+                'spool': SPOOL_PATH
+            }
+        }
+    }
+    call([COCAINE_TOOL, 'profile', 'upload', '--name', name, '--profile', json.dumps(profile)])
 
 
 class ToolsTestCase(unittest.TestCase):
@@ -208,3 +249,13 @@ class ToolsTestCase(unittest.TestCase):
         self.assertEqual(0, code)
         self.assertEqual('The runlist "test_runlist" has been successfully removed\n', out)
         self.assertEqual('', err)
+
+    def test_app_start(self):
+        with upload_app('test_app'):
+            upload_profile('default')
+            code, out, err = call([COCAINE_TOOL, 'app', 'start',
+                                   '--name', 'test_app',
+                                   '--profile', 'default'])
+            self.assertEqual(0, code)
+            self.assertEqual(trim('{"test_app": "the app has been started"}'), trim(out))
+            self.assertEqual('', err)
