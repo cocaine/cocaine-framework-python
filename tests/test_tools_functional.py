@@ -259,3 +259,15 @@ class ToolsTestCase(unittest.TestCase):
             self.assertEqual(0, code)
             self.assertEqual(trim('{"test_app": "the app has been started"}'), trim(out))
             self.assertEqual('', err)
+
+    def test_app_start_fail_because_of_app(self):
+        upload_profile('default')
+        code, out, err = call([COCAINE_TOOL, 'app', 'start',
+                               '--name', 'test_app',
+                               '--profile', 'default'])
+        self.assertEqual(1, code)
+        self.assertEqual('', trim(out))
+        self.assertEqual(('Error occurred: '
+                          'error in service "node" - '
+                          'object \'test_app\' has not been found in \'manifests\': '
+                          'object has not been found [2]\n'), err)
