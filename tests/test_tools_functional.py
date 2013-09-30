@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 h = logging.StreamHandler(stream=sys.stdout)
 log.addHandler(h)
 log.setLevel(logging.INFO)
+log.propagate = False
 
 ROOT_PATH = '/Users/esafronov/testing'
 PLUGINS_PATH = os.path.join(ROOT_PATH, 'usr/lib/cocaine')
@@ -67,6 +68,16 @@ config = {
             },
             "handler": {
                 "type": "files",
+                "path": "/dev/stdout",
+                "verbosity": "info"
+            }
+        }
+    },
+    # Old style logging config
+    "loggers": {
+        "core": {
+            "type": "files",
+            "args": {
                 "path": "/dev/stdout",
                 "verbosity": "info"
             }
