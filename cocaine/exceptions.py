@@ -62,17 +62,3 @@ class AsyncConnectionError(ConnectionError):
 class ChokeEvent(Exception):
     def __str__(self):
         return 'ChokeEvent'
-
-
-############ COCAINE TOOL ERRORS ############
-class ToolsError(CocaineError):
-    pass
-
-
-class UploadError(ToolsError):
-    pass
-
-
-class ServiceCallError(ToolsError):
-    def __init__(self, serviceName, reason):
-        super(ServiceCallError, self).__init__('error in service "{0}" - {1}'.format(serviceName, reason))

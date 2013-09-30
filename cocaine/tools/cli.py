@@ -1,16 +1,14 @@
-import os
 import json
-from time import time
-import errno
+import time
 
 import msgpack
-import sys
 from tornado.ioloop import IOLoop
 
-from cocaine.exceptions import CocaineError, ChokeEvent, ToolsError
-from cocaine.futures import chain
-from cocaine.tools import log
+from cocaine.exceptions import CocaineError, ChokeEvent
 from cocaine.tools.actions import common, app, profile, runlist, crashlog
+from cocaine.tools.error import Error as ToolsError
+from cocaine.tools import log
+from cocaine.futures import chain
 
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
@@ -22,6 +20,7 @@ def AwaitDoneWrapper(onDoneMessage=None, onErrorMessage=None):
             def execute(self):
                 chain = super(Wrapper, self).execute()
                 chain.then(self.processResult)
+                return chain
 
             def processResult(self, status):
                 try:
@@ -46,6 +45,7 @@ def AwaitJsonWrapper(onErrorMessage=None, unpack=False):
             def execute(self):
                 chain = super(Wrapper, self).execute()
                 chain.then(self.processResult).run()
+                return chain
 
             def processResult(self, chunk):
                 try:
@@ -66,7 +66,7 @@ def AwaitJsonWrapper(onErrorMessage=None, unpack=False):
 
 class ConsoleAddApplicationToRunlistAction(runlist.AddApplication):
     def execute(self):
-        super(ConsoleAddApplicationToRunlistAction, self).execute().then(self.printResult).run()
+        return super(ConsoleAddApplicationToRunlistAction, self).execute().then(self.printResult).run()
 
     def printResult(self, result):
         try:
@@ -84,6 +84,7 @@ class PrettyPrintableCrashlogListAction(crashlog.List):
     def execute(self):
         chain = super(PrettyPrintableCrashlogListAction, self).execute()
         chain.then(self.handleResult).run()
+        return chain
 
     def handleResult(self, result):
         try:
@@ -102,7 +103,7 @@ class PrettyPrintableCrashlogListAction(crashlog.List):
 
 class PrettyPrintableCrashlogViewAction(crashlog.View):
     def execute(self):
-        super(PrettyPrintableCrashlogViewAction, self).execute().then(self.handleResult).run()
+        return super(PrettyPrintableCrashlogViewAction, self).execute().then(self.handleResult).run()
 
     def handleResult(self, result):
         try:
@@ -121,7 +122,7 @@ def makePrettyCrashlogRemove(cls, onDoneMessage=None):
             super(PrettyWrapper, self).__init__(storage, **config)
 
         def execute(self):
-            super(PrettyWrapper, self).execute().then(self.handleResult).run()
+            return super(PrettyWrapper, self).execute().then(self.handleResult).run()
 
         def handleResult(self, result):
             try:
@@ -270,13 +271,14 @@ class Executor(object):
         try:
             if actionName in NG_ACTIONS:
                 action = NG_ACTIONS[actionName]
-                action.execute(**options)
+                c = action.execute(**options)
+                print(c)
             else:
                 Action = AVAILABLE_TOOLS_ACTIONS[actionName]
                 action = Action(**options)
                 action.execute()
             if self.timeout is not None:
-                self.loop.add_timeout(time() + self.timeout, self.timeoutErrorback)
+                self.loop.add_timeout(time.time() + self.timeout, self.timeoutErrorback)
             self.loop.start()
         except CocaineError as err:
             raise ToolsError(err)

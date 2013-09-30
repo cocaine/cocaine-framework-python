@@ -1,9 +1,10 @@
 import ast
 import re
 
-from cocaine.exceptions import ServiceCallError, ServiceError
+from cocaine.exceptions import ServiceError
 from cocaine.futures import chain
 from cocaine.services import Service
+from cocaine.tools.error import ServiceCallError
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 

@@ -7,11 +7,12 @@ import tempfile
 import msgpack
 from cocaine.asio.service import Service
 
-from cocaine.exceptions import ToolsError, ServiceError
+from cocaine.exceptions import ServiceError
 from cocaine.futures import chain
 from cocaine.tools import actions, log
 from cocaine.tools.actions import common, readArchive, CocaineConfigReader
 from cocaine.tools.actions.common import NodeInfo
+from cocaine.tools.error import Error as ToolsError
 from cocaine.tools.installer import PythonModuleInstaller, ModuleInstallError, _locateFile
 from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
 from cocaine.tools.tags import APPS_TAGS
