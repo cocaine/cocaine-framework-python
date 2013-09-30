@@ -271,8 +271,7 @@ class Executor(object):
         try:
             if actionName in NG_ACTIONS:
                 action = NG_ACTIONS[actionName]
-                c = action.execute(**options)
-                print(c)
+                action.execute(**options)
             else:
                 Action = AVAILABLE_TOOLS_ACTIONS[actionName]
                 action = Action(**options)
