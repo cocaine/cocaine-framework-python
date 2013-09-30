@@ -257,6 +257,7 @@ class Executor(object):
     def loop(self):
         """Lazy event loop initialization"""
         if self._loop:
+            self._loop = IOLoop.current()
             return self._loop
         return IOLoop.current()
 
