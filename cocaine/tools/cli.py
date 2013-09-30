@@ -190,12 +190,8 @@ CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
 
 AVAILABLE_TOOLS_ACTIONS = {
-    # 'profile:list': AwaitJsonWrapper()(profile.List),
-    # 'profile:view': AwaitJsonWrapper(unpack=True)(profile.View),
     'profile:upload': AwaitDoneWrapper(PROFILE_UPLOAD_SUCCESS, PROFILE_UPLOAD_FAIL)(profile.Upload),
     'profile:remove': AwaitDoneWrapper(PROFILE_REMOVE_SUCCESS, PROFILE_REMOVE_FAIL)(profile.Remove),
-    # 'runlist:list': AwaitJsonWrapper()(runlist.List),
-    # 'runlist:view': AwaitJsonWrapper(unpack=True)(runlist.View),
     'runlist:upload': AwaitDoneWrapper(RUNLIST_UPLOAD_SUCCESS, RUNLIST_UPLOAD_FAIL)(runlist.Upload),
     'runlist:create': AwaitDoneWrapper(RUNLIST_CREATE_SUCCESS, RUNLIST_CREATE_FAIL)(runlist.Create),
     'runlist:remove': AwaitDoneWrapper(RUNLIST_REMOVE_SUCCESS, RUNLIST_REMOVE_FAIL)(runlist.Remove),
@@ -246,7 +242,11 @@ NG_ACTIONS = {
     'app:remove': Tools(app.Remove),
     'app:upload-manual': Tools(app.Upload),
     'app:upload': Tools(app.LocalUpload),
-    'app:view': PrintJsonTools(app.View)
+    'app:view': PrintJsonTools(app.View),
+    'profile:list': PrintJsonTools(profile.List),
+    'profile:view': PrintJsonTools(profile.View),
+    'runlist:list': PrintJsonTools(runlist.List),
+    'runlist:view': PrintJsonTools(runlist.View),
 }
 
 
