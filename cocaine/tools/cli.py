@@ -14,21 +14,6 @@ from cocaine.futures import chain
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
-class PrettyPrintableCrashlogViewAction(crashlog.View):
-    def execute(self):
-        return super(PrettyPrintableCrashlogViewAction, self).execute().then(self.handleResult)
-
-    def handleResult(self, result):
-        try:
-            print('Crashlog:')
-            print('\n'.join(msgpack.loads(result.get())))
-        except Exception as err:
-            log.error(err)
-            exit(1)
-        finally:
-            IOLoop.instance().stop()
-
-
 def makePrettyCrashlogRemove(cls, onDoneMessage=None):
     class PrettyWrapper(cls):
         def __init__(self, storage=None, **config):
@@ -83,7 +68,6 @@ CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
 
 AVAILABLE_TOOLS_ACTIONS = {
-    'crashlog:view': PrettyPrintableCrashlogViewAction,
     'crashlog:remove': makePrettyCrashlogRemove(crashlog.Remove, CRASHLOG_REMOVE_SUCCESS),
     'crashlog:removeall': makePrettyCrashlogRemove(crashlog.RemoveAll, CRASHLOGS_REMOVE_SUCCESS),
     'call': CallActionCli,
@@ -128,6 +112,11 @@ class CrashlogListToolHandler(Tools):
             print('{:^20} {:^26} {:^30}'.format(timestamp, time, uuid))
 
 
+class CrashlogViewToolHandler(Tools):
+    def _processResult(self, result):
+        print('\n'.join(msgpack.loads(result)))
+
+
 NG_ACTIONS = {
     'info': PrintJsonTools(common.NodeInfo),
     'app:check': Tools(app.Check),
@@ -151,6 +140,7 @@ NG_ACTIONS = {
     'runlist:upload': Tools(runlist.Upload),
     'runlist:remove': Tools(runlist.Remove),
     'crashlog:list': CrashlogListToolHandler(crashlog.List),
+    'crashlog:view': CrashlogViewToolHandler(crashlog.View),
 }
 
 
