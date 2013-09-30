@@ -14,22 +14,6 @@ from cocaine.futures import chain
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
-class ConsoleAddApplicationToRunlistAction(runlist.AddApplication):
-    def execute(self):
-        return super(ConsoleAddApplicationToRunlistAction, self).execute().then(self.printResult).run()
-
-    def printResult(self, result):
-        try:
-            result.get()
-            MESSAGE = 'Application "{app}" with profile "{profile}" has been successfully added to runlist "{runlist}"'
-            print(MESSAGE.format(app=self.app, profile=self.profile, runlist=self.name))
-        except Exception as err:
-            log.error(err)
-            exit(1)
-        finally:
-            IOLoop.instance().stop()
-
-
 class PrettyPrintableCrashlogListAction(crashlog.List):
     def execute(self):
         chain = super(PrettyPrintableCrashlogListAction, self).execute()
@@ -114,26 +98,6 @@ class CallActionCli(object):
         finally:
             IOLoop.instance().stop()
 
-
-APP_LIST_SUCCESS = 'Currently uploaded apps:'
-# APP_UPLOAD_SUCCESS = 'The app "{name}" has been successfully uploaded'
-APP_UPLOAD_FAIL = 'Unable to upload application {name} - {error}'
-APP_REMOVE_SUCCESS = 'The app "{name}" has been successfully removed'
-APP_REMOVE_FAIL = 'Unable to remove application {name} - {error}'
-
-PROFILE_LIST_SUCCESS = 'Currently uploaded profiles:'
-PROFILE_UPLOAD_SUCCESS = 'The profile "{name}" has been successfully uploaded'
-PROFILE_UPLOAD_FAIL = 'Unable to upload profile "{name}" - {error}'
-PROFILE_REMOVE_SUCCESS = 'The profile "{name}" has been successfully removed'
-PROFILE_REMOVE_FAIL = 'Unable to remove profile "{name}" - {error}'
-
-RUNLIST_LIST_SUCCESS = 'Currently uploaded runlists:'
-RUNLIST_UPLOAD_SUCCESS = 'The runlist "{name}" has been successfully uploaded'
-RUNLIST_UPLOAD_FAIL = 'Unable to upload runlist "{name}" - {error}'
-RUNLIST_CREATE_SUCCESS = 'The runlist "{name}" has been successfully created'
-RUNLIST_CREATE_FAIL = 'Unable to create runlist "{name}" - {error}'
-RUNLIST_REMOVE_SUCCESS = 'The runlist "{name}" has been successfully removed'
-RUNLIST_REMOVE_FAIL = 'Unable to remove runlist "{name}" - {error}'
 
 CRASHLOG_REMOVE_SUCCESS = 'Crashlog for app "{0}" has been removed'
 CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
