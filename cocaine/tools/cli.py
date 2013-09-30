@@ -190,10 +190,7 @@ CRASHLOGS_REMOVE_SUCCESS = 'Crashlogs for app "{0}" have been removed'
 
 
 AVAILABLE_TOOLS_ACTIONS = {
-    'profile:upload': AwaitDoneWrapper(PROFILE_UPLOAD_SUCCESS, PROFILE_UPLOAD_FAIL)(profile.Upload),
-    'profile:remove': AwaitDoneWrapper(PROFILE_REMOVE_SUCCESS, PROFILE_REMOVE_FAIL)(profile.Remove),
     'runlist:upload': AwaitDoneWrapper(RUNLIST_UPLOAD_SUCCESS, RUNLIST_UPLOAD_FAIL)(runlist.Upload),
-    # 'runlist:create': AwaitDoneWrapper(RUNLIST_CREATE_SUCCESS, RUNLIST_CREATE_FAIL)(runlist.Create),
     'runlist:remove': AwaitDoneWrapper(RUNLIST_REMOVE_SUCCESS, RUNLIST_REMOVE_FAIL)(runlist.Remove),
     'crashlog:list': PrettyPrintableCrashlogListAction,
     'crashlog:view': PrettyPrintableCrashlogViewAction,
@@ -243,6 +240,8 @@ NG_ACTIONS = {
     'app:upload': Tools(app.LocalUpload),
     'app:view': PrintJsonTools(app.View),
     'profile:list': PrintJsonTools(profile.List),
+    'profile:upload': Tools(profile.Upload),
+    'profile:remove': Tools(profile.Remove),
     'profile:view': PrintJsonTools(profile.View),
     'runlist:add-app': PrintJsonTools(runlist.AddApplication),
     'runlist:create': Tools(runlist.Create),
