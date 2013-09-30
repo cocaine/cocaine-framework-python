@@ -17,7 +17,7 @@ __author__ = 'EvgenySafronov <division494@gmail.com>'
 class PrettyPrintableCrashlogListAction(crashlog.List):
     def execute(self):
         chain = super(PrettyPrintableCrashlogListAction, self).execute()
-        chain.then(self.handleResult).run()
+        chain.then(self.handleResult)
         return chain
 
     def handleResult(self, result):
@@ -37,7 +37,7 @@ class PrettyPrintableCrashlogListAction(crashlog.List):
 
 class PrettyPrintableCrashlogViewAction(crashlog.View):
     def execute(self):
-        return super(PrettyPrintableCrashlogViewAction, self).execute().then(self.handleResult).run()
+        return super(PrettyPrintableCrashlogViewAction, self).execute().then(self.handleResult)
 
     def handleResult(self, result):
         try:
@@ -56,7 +56,7 @@ def makePrettyCrashlogRemove(cls, onDoneMessage=None):
             super(PrettyWrapper, self).__init__(storage, **config)
 
         def execute(self):
-            return super(PrettyWrapper, self).execute().then(self.handleResult).run()
+            return super(PrettyWrapper, self).execute().then(self.handleResult)
 
         def handleResult(self, result):
             try:
