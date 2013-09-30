@@ -1,5 +1,6 @@
+from cocaine.futures import chain
 from cocaine.tools import actions
-from cocaine.tools.actions import CocaineConfigReader
+from cocaine.tools.actions import CocaineConfigReader, log
 from cocaine.tools.tags import PROFILES_TAGS
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -27,11 +28,17 @@ class Upload(Specific):
         if not self.profile:
             raise ValueError('Please specify profile file path')
 
+    @chain.source
     def execute(self):
+        log.info('Uploading "%s"... ', self.name)
         profile = CocaineConfigReader.load(self.profile)
-        return self.storage.write('profiles', self.name, profile, PROFILES_TAGS)
+        yield self.storage.write('profiles', self.name, profile, PROFILES_TAGS)
+        log.info('OK')
 
 
 class Remove(Specific):
+    @chain.source
     def execute(self):
-        return self.storage.remove('profiles', self.name)
+        log.info('Uploading "%s"... ', self.name)
+        yield self.storage.remove('profiles', self.name)
+        log.info('OK')

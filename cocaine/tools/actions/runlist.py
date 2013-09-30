@@ -44,8 +44,11 @@ class Create(Specific):
 
 
 class Remove(Specific):
+    @chain.source
     def execute(self):
-        return self.storage.remove('runlists', self.name)
+        log.info('Removing "%s"... ', self.name)
+        yield self.storage.remove('runlists', self.name)
+        log.info('OK')
 
 
 class AddApplication(Specific):
