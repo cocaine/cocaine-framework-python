@@ -26,7 +26,8 @@ from tornado import ioloop as ev
 
 
 class Loop(object):
-    """ Event loop wrapper"""
+    """Event loop wrapper for inner usage. Normally you should use `tornado.IOLoop.current()`.
+    """
 
     _instance_lock = Lock()  # Lock for instance method
 
@@ -125,8 +126,6 @@ class Loop(object):
 
 
 class Timer(ev.PeriodicCallback):
-    """ Timer wrapper """
-
     def __init__(self, callback, callback_time, io_loop):
         super(Timer, self).__init__(callback, callback_time * 1000, io_loop.ioloop)
 

@@ -9,6 +9,11 @@ Package cocaine
 
 Package cocaine.asio
 ------------------------------------
+.. automodule:: cocaine.asio.engine
+  :members:
+  :noindex:
+
+
 .. automodule:: cocaine.asio.ev
    :members:
    :noindex:
