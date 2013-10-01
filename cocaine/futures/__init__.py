@@ -56,7 +56,7 @@ class Deferred(object):
         :param callback: callback which will be invoked on every pending result.
         :param errorback: errorback which will be invoked on every pending error.
 
-        .. warning:: it's prohibited by design to call this method while future is already bounded.
+        .. warning:: It's prohibited by design to call this method while future is already bounded.
         """
         assert self.state in (self.UNITIALIZED, self.CLOSED), 'double bind is prohibited by design'
         if errorback is None:
@@ -85,8 +85,8 @@ class Deferred(object):
     def close(self, silent=False):
         """Close future and transfer it to the `CLOSED` state.
 
-        .. note:: it is safe to call this method multiple times.
-        .. warning:: after closing Future is considered to be dead. Therefore, it can be rebound again.
+        .. note:: It is safe to call this method multiple times.
+        .. warning:: After closing Future is considered to be dead. Therefore, it can be rebound again.
         """
         if self.state == self.CLOSED:
             return
