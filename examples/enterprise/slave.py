@@ -17,7 +17,7 @@ PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
 worker = Worker()
 worker.run({
-    'work':  django(**{
+    'work': django(**{
         'root': os.path.join(PROJECT_ROOT, 'enterprise'),
         'settings': 'enterprise.settings',
         'async': True,
