@@ -7,7 +7,7 @@ from cocaine.futures import Deferred
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
-def subprocess(command, callbacks=None, cwd=None, io_loop=None):
+def async_subprocess(command, callbacks=None, cwd=None, io_loop=None):
     """Run subprocess asynchronously and get bound `Deferred` object.
 
     This function runs separate subprocess `command` and attaches to the standard output stream (`stdout`) and
