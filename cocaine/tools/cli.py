@@ -49,7 +49,7 @@ class CrashlogListToolHandler(ToolHandler):
             return
 
         log.info('{:^20} {:^26} {:^30}'.format('Timestamp', 'Time', 'UUID'))
-        for timestamp, time, uuid in crashlog._parseCrashlogs(result):
+        for timestamp, time, uuid in sorted(crashlog._parseCrashlogs(result), key=lambda (ts, time, uuid): ts):
             print('{:^20} {:^26} {:^30}'.format(timestamp, time, uuid))
 
 
