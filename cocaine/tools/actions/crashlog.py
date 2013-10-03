@@ -72,6 +72,6 @@ class Status(actions.Storage):
             crashlogs = yield List(self.storage, application).execute()
             if crashlogs:
                 last = max(_parseCrashlogs(crashlogs), key=lambda (timestamp, time, uuid): timestamp)
-                crashed.append((application, last))
+                crashed.append((application, last, len(crashlogs)))
         yield crashed
 

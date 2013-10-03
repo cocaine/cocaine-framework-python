@@ -43,18 +43,19 @@ class JsonToolHandler(ToolHandler):
 
 
 class CrashlogStatusToolHandler(ToolHandler):
-    FORMAT_HEADER = '{:^20} {:^26} {:^36}'
-    HEADER = FORMAT_HEADER.format('Application', 'Time', 'UUID')
-    FORMAT_CONTENT = '{:<20} {:<26} {:<36}'
+    FORMAT_HEADER = '{:^20} {:^10} {:^26} {:^36}'
+    HEADER = FORMAT_HEADER.format('Application', 'Total', 'Last', 'UUID')
+    FORMAT_CONTENT = '{:<20}|{:^10}|{:^26}|{:^38}'
 
     def _processResult(self, result):
         if not result:
             print('There are no applications with crashlogs')
 
+        key = lambda (app, (timestamp, time, uuid), total): timestamp
+
         log.info(self.HEADER)
-        print('=' * len(self.HEADER))
-        for app, (timestamp, time, uuid) in sorted(result, key=lambda (app, (timestamp, time, uuid)): timestamp):
-            print(self.FORMAT_CONTENT.format(app, time, uuid))
+        for app, (timestamp, time, uuid), total in sorted(result, key=key):
+            print(self.FORMAT_CONTENT.format(app, total, time, uuid))
 
 
 class CrashlogListToolHandler(ToolHandler):
