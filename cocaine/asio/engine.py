@@ -2,7 +2,7 @@ import subprocess
 
 from tornado.ioloop import IOLoop
 
-from cocaine.futures import Deferred
+from cocaine.futures import Deferred, chain
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
@@ -62,3 +62,7 @@ def async_subprocess(command, callbacks=None, cwd=None, io_loop=None):
     for fh, callback in zip(fhs, callbacks):
         io_loop.add_handler(fh.fileno(), create_handler(fh, callback), io_loop.READ)
     return deferred
+
+
+def asynchronous(func):
+    return chain.source(func)
