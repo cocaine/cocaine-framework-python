@@ -1,7 +1,9 @@
 import time
+from cocaine.asio import engine
 
 from cocaine.futures import chain
 from cocaine.tools import actions
+from cocaine.tools.actions import app
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -59,3 +61,17 @@ class Remove(Specific):
 class RemoveAll(Remove):
     def __init__(self, storage, name):
         super(RemoveAll, self).__init__(storage, name, timestamp=None)
+
+
+class Status(actions.Storage):
+    @engine.asynchronous
+    def execute(self):
+        applications = yield app.List(self.storage).execute()
+        crashed = []
+        for application in applications:
+            crashlogs = yield List(self.storage, application).execute()
+            if crashlogs:
+                last = max(_parseCrashlogs(crashlogs), key=lambda (timestamp, time, uuid): timestamp)
+                crashed.append((application, last))
+        yield crashed
+

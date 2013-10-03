@@ -42,15 +42,33 @@ class JsonToolHandler(ToolHandler):
         print(json.dumps(result, indent=4))
 
 
+class CrashlogStatusToolHandler(ToolHandler):
+    FORMAT_HEADER = '{:^20} {:^26} {:^36}'
+    HEADER = FORMAT_HEADER.format('Application', 'Time', 'UUID')
+    FORMAT_CONTENT = '{:<20} {:<26} {:<36}'
+
+    def _processResult(self, result):
+        if not result:
+            print('There are no applications with crashlogs')
+
+        log.info(self.HEADER)
+        print('=' * len(self.HEADER))
+        for app, (timestamp, time, uuid) in sorted(result, key=lambda (app, (timestamp, time, uuid)): timestamp):
+            print(self.FORMAT_CONTENT.format(app, time, uuid))
+
+
 class CrashlogListToolHandler(ToolHandler):
+    FORMAT_HEADER = '{:^20} {:^26} {:^36}'
+    HEADER = FORMAT_HEADER.format('Timestamp', 'Time', 'UUID')
+
     def _processResult(self, result):
         if not result:
             log.info('Crashlog list is empty')
             return
 
-        log.info('{:^20} {:^26} {:^30}'.format('Timestamp', 'Time', 'UUID'))
+        log.info(self.HEADER)
         for timestamp, time, uuid in sorted(crashlog._parseCrashlogs(result), key=lambda (ts, time, uuid): ts):
-            print('{:^20} {:^26} {:^30}'.format(timestamp, time, uuid))
+            print(self.FORMAT_HEADER.format(timestamp, time, uuid))
 
 
 class CrashlogViewToolHandler(ToolHandler):
@@ -96,6 +114,7 @@ NG_ACTIONS = {
     'runlist:upload': ToolHandler(runlist.Upload),
     'runlist:remove': ToolHandler(runlist.Remove),
 
+    'crashlog:status': CrashlogStatusToolHandler(crashlog.Status),
     'crashlog:list': CrashlogListToolHandler(crashlog.List),
     'crashlog:view': CrashlogViewToolHandler(crashlog.View),
     'crashlog:remove': ToolHandler(crashlog.Remove),

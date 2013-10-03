@@ -412,6 +412,14 @@ def runlist_add_app(options,
     })
 
 
+@crashlogDispatcher.command(name='status')
+def crashlog_status(options):
+    """Show crashlog status.
+    """
+    options.executor.executeAction('crashlog:status', **{
+        'storage': options.getService('storage'),
+    })
+
 @crashlogDispatcher.command(name='list')
 def crashlog_list(options,
                   name=('n', '', 'name')):
