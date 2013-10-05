@@ -168,7 +168,7 @@ class AbstractService(object):
                 log.debug(' - success')
             except ConnectionError as err:
                 errors.append(err)
-                log.warn(' - failed - {}'.format(err))
+                log.debug(' - failed - {}'.format(err))
             except Exception as err:
                 log.warn('Unexpected error caught while connecting to the "{}" - {}'.format(address, err))
             else:
