@@ -156,19 +156,23 @@ class AbstractService(object):
         if not addressInfoList:
             raise ConnectionResolveError((host, port))
 
+        log.debug('Connecting to the service "{}", candidates: {}'.format(self.name, addressInfoList))
         start = time()
         errors = []
         for family, socktype, proto, canonname, address in addressInfoList:
+            log.debug(' - connecting to "{} {}"'.format(proto, address))
             sock = socket.socket(family=family, type=socktype, proto=proto)
             try:
                 self._pipe = Pipe(sock)
-                remainingTimeout = timeout - (time() - start) if timeout is not None else None
-                yield self._pipe.connect(address, timeout=remainingTimeout, blocking=blocking)
+                yield self._pipe.connect(address, timeout=timeout, blocking=blocking)
+                log.debug(' - success')
             except ConnectionError as err:
                 errors.append(err)
+                log.warn(' - failed - {}'.format(err))
+            except Exception as err:
+                log.warn('Unexpected error caught while connecting to the "{}" - {}'.format(address, err))
             else:
                 self._ioLoop = self._pipe._ioLoop
-                #todo: Is we REALLY need to reconnect streams instead of creating new ones?
                 self._writableStream = WritableStream(self._ioLoop, self._pipe)
                 self._readableStream = ReadableStream(self._ioLoop, self._pipe)
                 self._ioLoop.bind_on_fd(self._pipe.fileno())
@@ -181,7 +185,7 @@ class AbstractService(object):
                 self._readableStream.bind(decode_and_dispatch(self._on_message))
                 return
 
-        if timeout is not None and time() - start > timeout:
+        if timeout is not None and time() - start > timeout * len(addressInfoList):
             raise ConnectionTimeoutError((host, port), timeout)
 
         prefix = 'service resolving failed. Reason:'
