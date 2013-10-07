@@ -11,7 +11,8 @@ from mockito import mock, when, verify, any, unstub
 
 from cocaine.testing.mocks import CallableMock
 from cocaine.futures.chain import Chain
-from cocaine.exceptions import ServiceError, ToolsError, ServiceCallError
+from cocaine.exceptions import ServiceError
+from cocaine.tools.error import Error as ToolsError, ServiceCallError
 from cocaine.tools.tags import APPS_TAGS, PROFILES_TAGS, RUNLISTS_TAGS
 from cocaine.tools.actions import common, app, profile, runlist, crashlog
 
