@@ -13,7 +13,9 @@ from cocaine.tools.helpers._unix import AsyncUnixHTTPClient
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 DEFAULT_TIMEOUT = 120.0
-INDEX_URL = 'https://index.docker.io/v1/'
+DEFAULT_URL = 'unix://var/run/docker.sock'
+DEFAULT_VERSION = '1.4'
+DEFAULT_INDEX_URL = 'https://index.docker.io/v1/'
 
 
 def expand_registry_url(hostname):
@@ -30,7 +32,7 @@ def resolve_repository_name(fullname):
 
     parts = fullname.split('/', 1)
     if not '.' in parts[0] and not ':' in parts[0] and parts[0] != 'localhost':
-        return INDEX_URL, fullname
+        return DEFAULT_INDEX_URL, fullname
 
     if len(parts) < 2:
         raise ValueError('invalid repository name ({0})'.format(fullname))
@@ -42,7 +44,7 @@ def resolve_repository_name(fullname):
 
 
 class Client(object):
-    def __init__(self, url='unix://var/run/docker.sock', version='1.4', timeout=DEFAULT_TIMEOUT, io_loop=None):
+    def __init__(self, url=DEFAULT_URL, version=DEFAULT_VERSION, timeout=DEFAULT_TIMEOUT, io_loop=None):
         self.url = url
         self.version = version
         self.timeout = timeout

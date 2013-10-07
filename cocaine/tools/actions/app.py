@@ -5,12 +5,13 @@ import shutil
 import tarfile
 import tempfile
 import msgpack
-from cocaine.asio.service import Service
 
+from cocaine.asio import engine
+from cocaine.asio.service import Service
 from cocaine.exceptions import ServiceError
 from cocaine.futures import chain
 from cocaine.tools import actions, log
-from cocaine.tools.actions import common, readArchive, CocaineConfigReader
+from cocaine.tools.actions import common, readArchive, CocaineConfigReader, docker
 from cocaine.tools.actions.common import NodeInfo
 from cocaine.tools.error import Error as ToolsError
 from cocaine.tools.installer import PythonModuleInstaller, ModuleInstallError, _locateFile
@@ -173,13 +174,46 @@ class Check(common.Node):
             raise ToolsError('stopped')
 
 
+class DockerUpload(actions.Storage):
+    def __init__(self, storage, path, name, manifest, address, registry=''):
+        super(DockerUpload, self).__init__(storage)
+        self.path = path
+        self.name = name or os.path.basename(os.path.abspath(path))
+        if registry:
+            self.name = '{}/{}'.format(registry, self.name)
+        print(self.name)
+
+        self.manifest = manifest
+
+        self.client = docker.Client(address)
+
+        if not os.path.exists(os.path.join(path, 'Dockerfile')):
+            raise ValueError('Dockerfile not found')
+        if not address:
+            raise ValueError('Docker address is not specified')
+
+    @engine.asynchronous
+    def execute(self):
+        response = yield self.client.build(self.path, tag=self.name, streaming=self._on_read)
+        if response.code != 200:
+            raise ToolsError('upload failed with error code {}'.format(response.code))
+
+        print(self.name)
+        response = yield self.client.push(self.name, {}, streaming=self._on_read)
+        if response.code != 200:
+            raise ToolsError('upload failed with error code {}'.format(response.code))
+
+    def _on_read(self, value):
+        print(value)
+
+
 class LocalUpload(actions.Storage):
-    def __init__(self, storage, path, name, manifest, venv):
+    def __init__(self, storage, path, name, manifest):
         super(LocalUpload, self).__init__(storage)
         self.path = path or os.path.curdir
         self.name = name
         self.manifest = manifest
-        self.virtualEnvironmentType = venv
+        self.virtualEnvironmentType = 'None'
         if not self.name:
             self.name = os.path.basename(os.path.abspath(self.path))
         if not self.name:

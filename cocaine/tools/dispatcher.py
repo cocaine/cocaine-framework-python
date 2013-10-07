@@ -1,3 +1,4 @@
+import collections
 import logging
 import os
 import sys
@@ -7,8 +8,8 @@ from opster import Dispatcher
 from cocaine.asio.service import Locator, Service
 from cocaine.logging.hanlders import ColoredFormatter, interactiveEmit
 from cocaine.tools.actions import proxy
-from cocaine.tools.error import Error as ToolsError
 from cocaine.tools.cli import Executor
+from cocaine.tools.error import Error as ToolsError
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -166,7 +167,9 @@ def app_upload(options,
                name=('n', '', 'application name'),
                manifest=('', '', 'manifest file name'),
                package=('', '', 'path to the application archive'),
-               venv=('', ('None', 'P', 'R', 'J'), 'virtual environment type (None, P, R, J).')):
+               docker_address=('', '', 'docker address'),
+               registry=('', '', 'registry address'),
+               recipe=('', '', 'path to the recipe file')):
     """Upload application with its environment (directory) into the storage.
 
     Application directory or its subdirectories must contain valid manifest file named `manifest.json` or `manifest`
@@ -175,31 +178,23 @@ def app_upload(options,
     You can specify application name. By default, leaf directory name is treated as application name.
 
     If you have already prepared application archive (*.tar.gz), you can explicitly specify path to it by setting
-    `--package` option. Note, that PATH and --package options are mutual exclusive as well as --package and --venv
-    options.
-
-    If you specify option `--venv`, then virtual environment will be created for application.
-    Possible values:
-        N - do not create virtual environment (default)
-        P - python virtual environment using virtualenv package
-        R - ruby virtual environment using Bundler (not yet implemented)
-        J - jar archive will be created (not yet implemented)
+    `--package` option.
 
     You can control process of creating and uploading application by specifying `--debug=tools` option. This is helpful
     when some errors occurred.
-
-    .. warning:: Creating virtual environment may take a long time and can cause timeout. You can increase timeout by
-                 specifying `--timeout` option.
-
-    .. warning: This is experimental feature.
     """
-    if path and package:
-        print('Wrong usage: option PATH and --package are mutual exclusive, you can only force one')
-        exit(os.EX_USAGE)
-
-    if venv != 'None' and package:
-        print('Wrong usage: option --package and --venv are mutual exclusive, you can only force one')
-        exit(os.EX_USAGE)
+    # @warning: hack!
+    options.executor.timeout = 120.0
+    MutexRecord = collections.namedtuple('MutexRecord', 'value, name')
+    mutex = [
+        (MutexRecord(path, 'PATH'), MutexRecord(package, '--package')),
+        (MutexRecord(package, '--package'), MutexRecord(docker_address, '--docker')),
+        (MutexRecord(package, '--package'), MutexRecord(registry, '--registry')),
+    ]
+    for (f, s) in mutex:
+        if f.value and s.value:
+            print('Wrong usage: option {} and {} are mutual exclusive, you can only force one'.format(f.name, s.name))
+            exit(os.EX_USAGE)
 
     if package:
         options.executor.executeAction('app:upload-manual', **{
@@ -208,17 +203,21 @@ def app_upload(options,
             'manifest': manifest,
             'package': package
         })
-    else:
-        if venv != 'None':
-            print('You specified building virtual environment')
-            print('It may take a long time and can cause timeout. Increase it by specifying `--timeout` option if'
-                  ' needed')
-        options.executor.executeAction('app:upload', **{
+    elif docker_address:
+        options.executor.executeAction('app:upload-docker', **{
             'storage': options.getService('storage'),
             'path': path,
             'name': name,
             'manifest': manifest,
-            'venv': venv
+            'address': docker_address,
+            'registry': registry
+        })
+    else:
+        options.executor.executeAction('app:upload', **{
+            'storage': options.getService('storage'),
+            'path': path,
+            'name': name,
+            'manifest': manifest
         })
 
 
