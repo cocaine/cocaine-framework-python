@@ -164,7 +164,7 @@ class AbstractService(object):
             sock = socket.socket(family=family, type=socktype, proto=proto)
             try:
                 self._pipe = Pipe(sock)
-                yield self._pipe.connect(address, timeout=timeout, blocking=blocking)
+                yield self._pipe.connect(address, timeout=float(timeout) / len(addressInfoList), blocking=blocking)
                 log.debug(' - success')
             except ConnectionError as err:
                 errors.append(err)
@@ -185,7 +185,7 @@ class AbstractService(object):
                 self._readableStream.bind(decode_and_dispatch(self._on_message))
                 return
 
-        if timeout is not None and time() - start > timeout * len(addressInfoList):
+        if timeout is not None and time() - start > timeout:
             raise ConnectionTimeoutError((host, port), timeout)
 
         prefix = 'service resolving failed. Reason:'
