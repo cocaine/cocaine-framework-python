@@ -1,3 +1,7 @@
+cocaine-framework-python (0.10.6.19) lucid; urgency=low
+
+  * Assertion error fix.
+
 cocaine-framework-python (0.10.6.18) lucid; urgency=low
 
   * Cookie fix.
