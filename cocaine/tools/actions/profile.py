@@ -39,6 +39,6 @@ class Upload(Specific):
 class Remove(Specific):
     @chain.source
     def execute(self):
-        log.info('Uploading "%s"... ', self.name)
+        log.info('Removing "%s"... ', self.name)
         yield self.storage.remove('profiles', self.name)
         log.info('OK')

@@ -109,10 +109,9 @@ class Start(common.Node):
             raise ValueError('Please specify profile name')
 
     def execute(self):
-        apps = {
+        return self.node.start_app({
             self.name: self.profile
-        }
-        return self.node.start_app(apps)
+        })
 
 
 class Stop(common.Node):
