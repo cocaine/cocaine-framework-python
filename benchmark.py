@@ -77,11 +77,11 @@ class Counter(object):
 if __name__ == '__main__':
     config = {
         'service': {
-            'name': 'Echo'
+            'name': 'echo'
         },
         'benchmark': {
             'interval': 0.01,
-            'maxRequests': 100000,
+            'maxRequests': 10000,
             'tickLimit': 0.1
         },
         'printObjectGraph': False,

@@ -208,7 +208,6 @@ class AbstractService(object):
                 if future is not None:
                     future.close()
             elif msg.id == message.RPC_ERROR:
-                print(msg.id)
                 self._subscribers[msg.session].error(ServiceError(self.name, msg.message, msg.code))
         except Exception as err:
             log.warning('"_on_message" method has caught an error - %s', err)

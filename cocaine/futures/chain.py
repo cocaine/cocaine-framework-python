@@ -227,17 +227,16 @@ def _track_mailbox(func):
 
 
 class ChainItem(object):
-    def __init__(self, func):
+    def __init__(self, chain, func):
+        self.chain = chain
         if __debug__:
             self.func = _track_mailbox(func)
         else:
             self.func = func
         self.next = None
-        self.pending = []
 
     def couple(self, item):
         self.next = item
-        self.pending = []
 
     def execute(self, *args, **kwargs):
         try:
@@ -258,7 +257,7 @@ class ChainItem(object):
         if self.next is not None:
             self.next.execute(future)
         else:
-            self.pending.append(future)
+            self.chain.add_pending(future)
 
     def errorback(self, error):
         self.callback(error)
@@ -299,6 +298,16 @@ class Chain(object):
         for func in functions:
             self.then(func)
 
+        self._pending = []
+        self._pending_watcher = lambda: None
+        self._raise_timeout = False
+        self._timeout = 0.0
+
+    # Private
+    def add_pending(self, future):
+        self._pending.append(future)
+        self._pending_watcher()
+
     def then(self, func):
         """
         Puts specified chunk processing function into chain pipeline.
@@ -313,7 +322,7 @@ class Chain(object):
                      method) than there is no parameters must be provided in function signature.
         """
         if __debug__: log.debug('~  adding function "%s" to the chain', func)
-        item = ChainItem(func)
+        item = ChainItem(self, func)
 
         if len(self.items) == 0:
             if __debug__: log.debug('~  executing first chain item asynchronously: %s ...', item)
@@ -364,10 +373,11 @@ class Chain(object):
         self._trackLastResult()
 
         if timeout:
-            def fire():
-                setattr(self, '__timeout', timeout)
+            def set_raise_timeout():
+                self._raise_timeout = True
+                self._timeout = timeout
                 self._io_loop.stop()
-            self._io_loop.add_timeout(time.time() + timeout, fire)
+            self._io_loop.add_timeout(time.time() + timeout, set_raise_timeout)
 
         ran = self._io_loop._running
         self._io_loop.start()
@@ -422,50 +432,31 @@ class Chain(object):
         except ChokeEvent:
             raise StopIteration
 
-    @property
-    def _pending(self):
-        return self.items[-1].pending if self.items else []
-
     def _checkTimeout(self, timeout):
         if timeout is not None and timeout < 0.001:
             raise ValueError('timeout can not be less then 1 ms')
 
     def _trackLastResult(self):
-        if not self._isTrackingForLastResult():
-            def patch(func):
-                def wrapper(*args, **kwargs):
-                    try:
-                        func(*args, **kwargs)
-                    finally:
-                        self._io_loop.stop()
-                return wrapper
-
-            self.__callback = self.items[-1].callback
-            self.items[-1].callback = patch(self.__callback)
-            setattr(self, '__tracked', True)
+        self._pending_watcher = self._io_loop.stop
 
     def _removeTrackingLastResult(self):
-        if self._isTrackingForLastResult():
-            self.items[-1].callback = self.__callback
-            delattr(self, '__tracked')
-
-    def _isTrackingForLastResult(self):
-        return hasattr(self, '__tracked')
+        self._pending_watcher = lambda: None
 
     def _getLastResult(self):
-        if hasattr(self, '__timeout'):
-            timeout = getattr(self, '__timeout')
-            delattr(self, '__timeout')
+        if self._raise_timeout:
+            timeout = self._timeout
+            self._raise_timeout = False
+            self._timeout = 0.0
             raise TimeoutError(timeout)
 
         assert len(self._pending) > 0
 
-        lastResult = self._pending[0]
-        if isinstance(lastResult.result, ChokeEvent):
-            return lastResult.get()
+        head = self._pending[0]
+        if isinstance(head.result, ChokeEvent):
+            return head.get()
         else:
             self._pending.pop(0)
-            return lastResult.get()
+            return head.get()
 
 
 def concurrent(func):
