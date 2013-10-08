@@ -156,6 +156,8 @@ class AbstractService(object):
         if not addressInfoList:
             raise ConnectionResolveError((host, port))
 
+        pipe_timeout = float(timeout) / len(addressInfoList) if timeout is not None else None
+
         log.debug('Connecting to the service "{}", candidates: {}'.format(self.name, addressInfoList))
         start = time()
         errors = []
@@ -164,7 +166,7 @@ class AbstractService(object):
             sock = socket.socket(family=family, type=socktype, proto=proto)
             try:
                 self._pipe = Pipe(sock)
-                yield self._pipe.connect(address, timeout=float(timeout) / len(addressInfoList), blocking=blocking)
+                yield self._pipe.connect(address, timeout=pipe_timeout, blocking=blocking)
                 log.debug(' - success')
             except ConnectionError as err:
                 errors.append(err)
@@ -206,6 +208,7 @@ class AbstractService(object):
                 if future is not None:
                     future.close()
             elif msg.id == message.RPC_ERROR:
+                print(msg.id)
                 self._subscribers[msg.session].error(ServiceError(self.name, msg.message, msg.code))
         except Exception as err:
             log.warning('"_on_message" method has caught an error - %s', err)
