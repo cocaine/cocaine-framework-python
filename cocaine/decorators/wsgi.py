@@ -18,13 +18,13 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
-import os
 
-import sys
+import functools
 import logging
+import os
+import sys
+import threading
 import types
-from threading import Lock
-from functools import partial
 
 from tornado.wsgi import WSGIContainer
 
@@ -47,7 +47,7 @@ def wsgi(application):
     @tornado
     def wrapper(request, response):
         req = yield request.read()
-        for data in application(WSGIContainer.environ(req), partial(start_response, response)):
+        for data in application(WSGIContainer.environ(req), functools.partial(start_response, response)):
             response.write(data)
         response.close()
     return wrapper
@@ -76,7 +76,7 @@ def django(root, settings, async=False, log=None):
         log = logging.getLogger(__name__)
 
     class WSGIHandler(base.BaseHandler):
-        initLock = Lock()
+        initLock = threading.Lock()
         request_class = WSGIRequest
 
         @chain.source
@@ -215,7 +215,7 @@ def django(root, settings, async=False, log=None):
     @tornado
     def wrapper(request, response):
         req = yield request.read()
-        datas = yield application(WSGIContainer.environ(req), partial(start_response, response))
+        datas = yield application(WSGIContainer.environ(req), functools.partial(start_response, response))
         for data in datas:
             response.write(data)
         response.close()
