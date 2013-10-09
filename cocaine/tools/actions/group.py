@@ -2,18 +2,21 @@ import msgpack
 
 from cocaine.asio import engine
 from cocaine.tools import actions
+from cocaine.tools.tags import GROUPS_TAGS
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
+
+GROUP_COLLECTION = 'groups'
 
 
 class List(actions.List):
     def __init__(self, storage):
-        super(List, self).__init__('groups', ['group'], storage)
+        super(List, self).__init__(GROUP_COLLECTION, GROUPS_TAGS, storage)
 
 
 class View(actions.View):
     def __init__(self, storage, name):
-        super(View, self).__init__(storage, 'groups', name, 'groups')
+        super(View, self).__init__(storage, GROUP_COLLECTION, name, 'groups')
 
 
 class Create(actions.Specific):
@@ -21,7 +24,7 @@ class Create(actions.Specific):
         super(Create, self).__init__(storage, 'group', name)
 
     def execute(self):
-        return self.storage.write('groups', self.name, msgpack.dumps({}), ['group'])
+        return self.storage.write(GROUP_COLLECTION, self.name, msgpack.dumps({}), GROUPS_TAGS)
 
 
 class Remove(actions.Specific):
@@ -29,7 +32,7 @@ class Remove(actions.Specific):
         super(Remove, self).__init__(storage, 'group', name)
 
     def execute(self):
-        return self.storage.remove('groups', self.name)
+        return self.storage.remove(GROUP_COLLECTION, self.name)
 
 
 class Refresh(actions.Storage):
@@ -53,10 +56,10 @@ class AddApplication(actions.Specific):
 
     @engine.asynchronous
     def execute(self):
-        group = yield self.storage.read('groups', self.name)
+        group = yield self.storage.read(GROUP_COLLECTION, self.name)
         group = msgpack.loads(group)
         group[self.app] = self.weight
-        yield self.storage.write('groups', self.name, msgpack.dumps(group), ['group'])
+        yield self.storage.write(GROUP_COLLECTION, self.name, msgpack.dumps(group), GROUPS_TAGS)
 
 
 class RemoveApplication(actions.Specific):
@@ -66,8 +69,8 @@ class RemoveApplication(actions.Specific):
 
     @engine.asynchronous
     def execute(self):
-        group = yield self.storage.read('groups', self.name)
+        group = yield self.storage.read(GROUP_COLLECTION, self.name)
         group = msgpack.loads(group)
         if self.app in group:
             del group[self.app]
-        yield self.storage.write('groups', self.name, msgpack.dumps(group), ['group'])
+        yield self.storage.write(GROUP_COLLECTION, self.name, msgpack.dumps(group), GROUPS_TAGS)
