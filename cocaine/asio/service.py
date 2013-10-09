@@ -9,7 +9,7 @@ import msgpack
 from cocaine.exceptions import ServiceError
 from cocaine.asio.exceptions import *
 from cocaine.asio.pipe import Pipe
-from cocaine.asio import message
+from cocaine.asio import message, engine
 from cocaine.asio.message import Message
 from cocaine.asio.stream import WritableStream, ReadableStream
 from cocaine.futures import Deferred, chain
@@ -283,7 +283,7 @@ class Locator(AbstractService):
     .. note:: Normally, you shouldn't use this class directly - it is using behind the scene for resolving other
               services endpoints.
     """
-    RESOLVE_METHOD_ID, SYNC_METHOD_ID, REPORTS_METHOD_ID = range(3)
+    RESOLVE_METHOD_ID, SYNC_METHOD_ID, REPORTS_METHOD_ID, REFRESH_METHOD_ID = range(4)
 
     def __init__(self):
         super(Locator, self).__init__('locator')
@@ -291,6 +291,7 @@ class Locator(AbstractService):
             'resolve': self.RESOLVE_METHOD_ID,
             'sync': self.SYNC_METHOD_ID,
             'reports': self.REPORTS_METHOD_ID,
+            'refresh': self.REFRESH_METHOD_ID,
         }
 
     def connect(self, host, port, timeout, blocking):
@@ -326,6 +327,10 @@ class Locator(AbstractService):
             return endpoint, version, api
         else:
             return self._invoke(self.RESOLVE_METHOD_ID)(name, timeout=timeout)
+
+    @engine.asynchronous
+    def refresh(self, name, timeout=None):
+        return self._invoke(self.REFRESH_METHOD_ID)(name, timeout=timeout)
 
 
 class Service(AbstractService):
