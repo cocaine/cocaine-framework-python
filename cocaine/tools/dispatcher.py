@@ -493,11 +493,13 @@ def group_view(options,
 
 @dispatcher.group.command(name='create')
 def group_create(options,
-                 name):
+                 name,
+                 content=None):
     """Create routing group"""
     options.executor.executeAction('group:create', **{
         'storage': options.getService('storage'),
-        'name': name
+        'name': name,
+        'content': content
     })
 
 

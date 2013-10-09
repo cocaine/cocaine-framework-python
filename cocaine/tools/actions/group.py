@@ -2,6 +2,7 @@ import msgpack
 
 from cocaine.asio import engine
 from cocaine.tools import actions
+from cocaine.tools.actions import CocaineConfigReader
 from cocaine.tools.tags import GROUPS_TAGS
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
@@ -20,11 +21,23 @@ class View(actions.View):
 
 
 class Create(actions.Specific):
-    def __init__(self, storage, name):
+    def __init__(self, storage, name, content=None):
         super(Create, self).__init__(storage, 'group', name)
+        self.content = content
 
+    @engine.asynchronous
     def execute(self):
-        return self.storage.write(GROUP_COLLECTION, self.name, msgpack.dumps({}), GROUPS_TAGS)
+        if self.content:
+            content = CocaineConfigReader.load(self.content, validate=self._validate)
+        else:
+            content = msgpack.dumps({})
+        yield self.storage.write(GROUP_COLLECTION, self.name, content, GROUPS_TAGS)
+
+    def _validate(self, content):
+        for app, weight in content.items():
+            if not isinstance(weight, (int, long)):
+                raise ValueError('all weights must be integer')
+
 
 
 class Remove(actions.Specific):
