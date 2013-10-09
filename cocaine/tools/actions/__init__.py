@@ -29,9 +29,10 @@ def readArchive(filename):
 
 class CocaineConfigReader:
     @classmethod
-    def load(cls, context):
+    def load(cls, context, validate=lambda ctx: None):
         if isinstance(context, dict):
             log.debug('Content specified directly by dict')
+            validate(context)
             return msgpack.dumps(context)
 
         if isJsonValid(context):
@@ -41,7 +42,9 @@ class CocaineConfigReader:
             log.debug('Loading content from file ...')
             with open(context, 'rb') as fh:
                 content = fh.read()
-        return msgpack.dumps(json.loads(content))
+        content = json.loads(content)
+        validate(content)
+        return msgpack.dumps(content)
 
 
 class Storage(object):
