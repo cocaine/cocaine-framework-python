@@ -5,6 +5,7 @@
 
 # [IDE Specific]
 .idea/
+*.iml
 
 # [Build]
 build/
