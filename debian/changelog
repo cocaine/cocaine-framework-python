@@ -2,6 +2,8 @@ cocaine-framework-python (0.10.6.19) lucid; urgency=low
 
   * Assertion error fix.
 
+-- Evgeny Safronov <division494@gmail.com>  Tue, 07 Oct 2013 15:02:00 +0400
+
 cocaine-framework-python (0.10.6.18) lucid; urgency=low
 
   * Cookie fix.
