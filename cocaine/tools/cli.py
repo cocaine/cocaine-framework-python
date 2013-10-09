@@ -7,7 +7,7 @@ from tornado.ioloop import IOLoop
 
 from cocaine.exceptions import ChokeEvent
 from cocaine.futures import chain
-from cocaine.tools.actions import common, app, profile, runlist, crashlog
+from cocaine.tools.actions import common, app, profile, runlist, crashlog, group
 from cocaine.tools.error import Error as ToolsError
 from cocaine.tools import log
 
@@ -115,6 +115,14 @@ NG_ACTIONS = {
     'runlist:create': ToolHandler(runlist.Create),
     'runlist:upload': ToolHandler(runlist.Upload),
     'runlist:remove': ToolHandler(runlist.Remove),
+
+    'group:list': JsonToolHandler(group.List),
+    'group:view': JsonToolHandler(group.View),
+    'group:create': ToolHandler(group.Create),
+    'group:remove': ToolHandler(group.Remove),
+    'group:refresh': ToolHandler(group.Refresh),
+    'group:app:add': ToolHandler(group.AddApplication),
+    'group:app:remove': ToolHandler(group.RemoveApplication),
 
     'crashlog:status': CrashlogStatusToolHandler(crashlog.Status),
     'crashlog:list': CrashlogListToolHandler(crashlog.List),

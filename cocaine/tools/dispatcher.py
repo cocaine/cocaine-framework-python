@@ -103,10 +103,17 @@ def middleware(func):
 
 d = Dispatcher(globaloptions=Global.options, middleware=middleware)
 appDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
+
+
+class dispatcher:
+    group = Dispatcher(globaloptions=Global.options, middleware=middleware)
+
+
 profileDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
 runlistDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
 crashlogDispatcher = Dispatcher(globaloptions=Global.options, middleware=middleware)
 proxyDispatcher = Dispatcher()
+
 
 @d.command()
 def info(options):
@@ -465,6 +472,82 @@ def crashlog_removeall(options,
         'name': name,
     })
 
+
+@dispatcher.group.command(name='list')
+def group_list(options):
+    """Show routing groups"""
+    options.executor.executeAction('group:list', **{
+        'storage': options.getService('storage')
+    })
+
+
+@dispatcher.group.command(name='view')
+def group_view(options,
+               name):
+    """Show specified routing group"""
+    options.executor.executeAction('group:view', **{
+        'storage': options.getService('storage'),
+        'name': name
+    })
+
+
+@dispatcher.group.command(name='create')
+def group_create(options,
+                 name):
+    """Create routing group"""
+    options.executor.executeAction('group:create', **{
+        'storage': options.getService('storage'),
+        'name': name
+    })
+
+
+@dispatcher.group.command(name='remove')
+def group_remove(options,
+                 name):
+    """Remove routing group"""
+    options.executor.executeAction('group:remove', **{
+        'storage': options.getService('storage'),
+        'name': name
+    })
+
+
+@dispatcher.group.command(name='refresh')
+def group_refresh(options,
+                  name=('n', '', 'group name (if empty - refreshes all groups)')):
+    """Refresh routing group"""
+    options.executor.executeAction('group:refresh', **{
+        'locator': options.locator,
+        'storage': options.getService('storage'),
+        'name': name
+    })
+
+
+@dispatcher.group.command(name='app-add')
+def group_app_add(options,
+                  name,
+                  app,
+                  weight):
+    """Add application with its weight into routing group"""
+    options.executor.executeAction('group:app:add', **{
+        'storage': options.getService('storage'),
+        'name': name,
+        'app': app,
+        'weight': weight
+    })
+
+
+@dispatcher.group.command(name='app-remove')
+def group_app_remove(options,
+                     name,
+                     app):
+    """Remove application from routing group"""
+    options.executor.executeAction('group:app:remove', **{
+        'storage': options.getService('storage'),
+        'name': name,
+        'app': app
+    })
+
+
 DEFAULT_COCAINE_PROXY_PID_FILE = '/var/run/cocaine-python-proxy.pid'
 
 
@@ -519,4 +602,5 @@ d.nest('app', appDispatcher, 'application commands')
 d.nest('profile', profileDispatcher, 'profile commands')
 d.nest('runlist', runlistDispatcher, 'runlist commands')
 d.nest('crashlog', crashlogDispatcher, 'crashlog commands')
+d.nest('group', dispatcher.group, 'routing group commands')
 d.nest('proxy', proxyDispatcher, 'cocaine proxy commands')
