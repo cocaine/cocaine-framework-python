@@ -246,11 +246,15 @@ class LocalUpload(actions.Storage):
             log.error(err)
 
     def _createRepository(self):
-        repositoryPath = tempfile.mkdtemp()
-        repositoryPath = os.path.join(repositoryPath, 'repo')
-        log.debug('Repository temporary path - "{0}"'.format(repositoryPath))
-        shutil.copytree(self.path, repositoryPath)
-        return repositoryPath
+        with printer('Creating temporary directory') as p:
+            repositoryPath = tempfile.mkdtemp()
+            p(repositoryPath)
+
+        with printer('Copying "%s" to "%s"', self.path, repositoryPath):
+            repositoryPath = os.path.join(repositoryPath, 'repo')
+            log.debug('Repository temporary path - "{0}"'.format(repositoryPath))
+            shutil.copytree(self.path, repositoryPath)
+            return repositoryPath
 
     @chain.concurrent
     def _createVirtualEnvironment(self, repositoryPath, manifestPath, Installer):
