@@ -1,6 +1,7 @@
 from cocaine.futures import chain
 from cocaine.tools import actions
 from cocaine.tools.actions import CocaineConfigReader, log
+from cocaine.tools.printer import printer
 from cocaine.tools.tags import PROFILES_TAGS
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -30,10 +31,10 @@ class Upload(Specific):
 
     @chain.source
     def execute(self):
-        log.info('Uploading "%s"... ', self.name)
-        profile = CocaineConfigReader.load(self.profile)
-        yield self.storage.write('profiles', self.name, profile, PROFILES_TAGS)
-        log.info('OK')
+        with printer('Loading profile'):
+            profile = CocaineConfigReader.load(self.profile)
+        with printer('Uploading "%s"', self.name):
+            yield self.storage.write('profiles', self.name, profile, PROFILES_TAGS)
 
 
 class Remove(Specific):

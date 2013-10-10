@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 import logging
 import errno
-from cocaine.exceptions import CocaineError
 
+from cocaine.exceptions import CocaineError
 from cocaine.tools.cli import ToolsError
 from cocaine.tools.dispatcher import d
+from cocaine.tools import printer
+
+printer.ENABLE_OUTPUT = True
 
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
