@@ -67,13 +67,16 @@ class Upload(actions.Storage):
 
     @chain.source
     def execute(self):
-        """
-        Encodes manifest and package files and (if successful) uploads them into storage
-        """
-        with printer('Uploading "%s"', self.name):
+        with printer('Loading manifest'):
             manifest = CocaineConfigReader.load(self.manifest)
+
+        with printer('Reading package "%s"', self.package):
             package = msgpack.dumps(readArchive(self.package))
+
+        with printer('Uploading manifest'):
             yield self.storage.write('manifests', self.name, manifest, APPS_TAGS)
+
+        with printer('Uploading application "%s"', self.name):
             yield self.storage.write('apps', self.name, package, APPS_TAGS)
 
 
@@ -90,7 +93,7 @@ class Remove(actions.Storage):
 
     @chain.source
     def execute(self):
-        with printer('Removing "%s"... ', self.name):
+        with printer('Removing "%s"', self.name):
             apps = yield List(self.storage).execute()
             if self.name not in apps:
                 raise ToolsError('application "{0}" does not exist'.format(self.name))

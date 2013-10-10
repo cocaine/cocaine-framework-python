@@ -180,7 +180,7 @@ class PythonModuleInstaller(ModuleInstaller):
 
 
 def _locateFile(path, filenameLocate):
-        with printer('Locating %s', filenameLocate):
+        with printer('Locating %s', filenameLocate) as p:
             basename, separator, extension = filenameLocate.partition('.')
             locatedFilenames = []
             for root, dirNames, filenames in os.walk(path):
@@ -198,4 +198,5 @@ def _locateFile(path, filenameLocate):
                 raise IOError('No files found in "{0}" or subdirectories'.format(path))
 
             filename, priority = locatedFilenames[0]
+            p('found "%s"', filename)
             return os.path.abspath(filename)
