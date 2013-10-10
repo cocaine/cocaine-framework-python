@@ -7,6 +7,7 @@ import tempfile
 import msgpack
 
 from cocaine.asio import engine
+from cocaine.asio.exceptions import LocatorResolveError
 from cocaine.asio.service import Service
 from cocaine.exceptions import ServiceError
 from cocaine.futures import chain
@@ -15,6 +16,7 @@ from cocaine.tools.actions import common, readArchive, CocaineConfigReader, dock
 from cocaine.tools.actions.common import NodeInfo
 from cocaine.tools.error import Error as ToolsError
 from cocaine.tools.installer import PythonModuleInstaller, ModuleInstallError, _locateFile
+from cocaine.tools.printer import printer
 from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
 from cocaine.tools.tags import APPS_TAGS
 
@@ -68,12 +70,11 @@ class Upload(actions.Storage):
         """
         Encodes manifest and package files and (if successful) uploads them into storage
         """
-        log.info('Uploading "%s"... ', self.name)
-        manifest = CocaineConfigReader.load(self.manifest)
-        package = msgpack.dumps(readArchive(self.package))
-        yield self.storage.write('manifests', self.name, manifest, APPS_TAGS)
-        yield self.storage.write('apps', self.name, package, APPS_TAGS)
-        log.info('OK')
+        with printer('Uploading "%s"', self.name):
+            manifest = CocaineConfigReader.load(self.manifest)
+            package = msgpack.dumps(readArchive(self.package))
+            yield self.storage.write('manifests', self.name, manifest, APPS_TAGS)
+            yield self.storage.write('apps', self.name, package, APPS_TAGS)
 
 
 class Remove(actions.Storage):
@@ -89,13 +90,12 @@ class Remove(actions.Storage):
 
     @chain.source
     def execute(self):
-        log.info('Removing "%s"... ', self.name)
-        apps = yield List(self.storage).execute()
-        if self.name not in apps:
-            raise ToolsError('application "{0}" does not exist'.format(self.name))
-        yield self.storage.remove('manifests', self.name)
-        yield self.storage.remove('apps', self.name)
-        log.info('OK')
+        with printer('Removing "%s"... ', self.name):
+            apps = yield List(self.storage).execute()
+            if self.name not in apps:
+                raise ToolsError('application "{0}" does not exist'.format(self.name))
+            yield self.storage.remove('manifests', self.name)
+            yield self.storage.remove('apps', self.name)
 
 
 class Start(common.Node):
@@ -169,7 +169,7 @@ class Check(common.Node):
             yield app.connectThroughLocator(self.locator)
             info = yield app.info()
             log.info(info['state'])
-        except ServiceError:
+        except (LocatorResolveError, ServiceError):
             raise ToolsError('stopped')
 
 
@@ -225,9 +225,7 @@ class LocalUpload(actions.Storage):
             if self.manifest:
                 manifestPath = self.manifest
             else:
-                log.info('Locating manifest... ')
                 manifestPath = _locateFile(self.path, 'manifest.json')
-                log.info('OK - %s', manifestPath)
             Installer = venvFactory[self.virtualEnvironmentType]
             if Installer:
                 yield self._createVirtualEnvironment(repositoryPath, manifestPath, Installer)
@@ -263,13 +261,12 @@ class LocalUpload(actions.Storage):
         installer.install()
 
     def _createPackage(self, repositoryPath):
-        log.info('Creating package... ')
-        packagePath = os.path.join(repositoryPath, 'package.tar.gz')
-        tar = tarfile.open(packagePath, mode='w:gz')
-        tar.add(repositoryPath, arcname='')
-        tar.close()
-        log.info('OK')
-        return packagePath
+        with printer('Creating package'):
+            packagePath = os.path.join(repositoryPath, 'package.tar.gz')
+            tar = tarfile.open(packagePath, mode='w:gz')
+            tar.add(repositoryPath, arcname='')
+            tar.close()
+            return packagePath
 
 
 class UploadRemote(actions.Storage):

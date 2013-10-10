@@ -5,8 +5,8 @@ import subprocess
 import tempfile
 from threading import Lock
 import logging
-import sys
 
+from cocaine.tools.printer import printer
 from cocaine.tools.repository import GitRepositoryDownloader, RepositoryDownloadError
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
@@ -180,21 +180,22 @@ class PythonModuleInstaller(ModuleInstaller):
 
 
 def _locateFile(path, filenameLocate):
-        basename, separator, extension = filenameLocate.partition('.')
-        locatedFilenames = []
-        for root, dirNames, filenames in os.walk(path):
-            for filename in filenames:
-                if filename.startswith(basename):
-                    priority = 1
-                    if root == path:
-                        priority += 100
-                    if filename == filenameLocate:
-                        priority += 10
-                    locatedFilenames.append((os.path.join(root, filename), priority))
-        locatedFilenames = sorted(locatedFilenames, key=lambda filename: filename[1], reverse=True)
-        log.debug('Filenames found: {0}'.format(locatedFilenames))
-        if not locatedFilenames:
-            raise IOError('No files found in "{0}" or subdirectories'.format(path))
+        with printer('Locating %s', filenameLocate):
+            basename, separator, extension = filenameLocate.partition('.')
+            locatedFilenames = []
+            for root, dirNames, filenames in os.walk(path):
+                for filename in filenames:
+                    if filename.startswith(basename):
+                        priority = 1
+                        if root == path:
+                            priority += 100
+                        if filename == filenameLocate:
+                            priority += 10
+                        locatedFilenames.append((os.path.join(root, filename), priority))
+            locatedFilenames = sorted(locatedFilenames, key=lambda filename: filename[1], reverse=True)
+            log.debug('Filenames found: {0}'.format(locatedFilenames))
+            if not locatedFilenames:
+                raise IOError('No files found in "{0}" or subdirectories'.format(path))
 
-        filename, priority = locatedFilenames[0]
-        return os.path.abspath(filename)
+            filename, priority = locatedFilenames[0]
+            return os.path.abspath(filename)
