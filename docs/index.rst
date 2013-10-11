@@ -26,7 +26,6 @@ More documentation
    :maxdepth: 1
 
    cocaine
-   tools
 
 
 Features
