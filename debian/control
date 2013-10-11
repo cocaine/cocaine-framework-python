@@ -6,7 +6,6 @@ Build-Depends: cdbs, debhelper (>= 7.0.13),
  python, 
  python-central,
  python-setuptools,
- bash-completion,
 Standards-Version: 3.9.1
 Vcs-Git: git://github.com/cocaine/cocaine-framework-python.git
 Vcs-Browser: https://github.com/cocaine/cocaine-framework-python
@@ -18,18 +17,3 @@ Depends: ${misc:Depends}, ${python:Depends}, python-msgpack | msgpack-python, py
 XB-Python-Version: >= 2.6
 Description: Cocaine - Python Framework
  A simple framework to ease the developing of Cocaine apps.
-
-Package: cocaine-tools
-Architecture: any
-Depends: ${misc:Depends}, ${python:Depends}, cocaine-framework-python (>= 0.10.6), python-opster (>= 3.8)
-XB-Python-Version: >= 2.6
-Description: Cocaine - Toolset
- Various tools to query and manipulate running Cocaine instances.
-
-Package: cocaine-tornado-proxy
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends},
- cocaine-framework-python (>=0.10.6)
-XB-Python-Version: >= 2.6
-Description: Tornado-based cocaine HTTP proxy
- Cocaine tornado proxy - HTTP entry point of the cloud.

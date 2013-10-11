@@ -158,11 +158,11 @@ class AbstractService(object):
 
         pipe_timeout = float(timeout) / len(addressInfoList) if timeout is not None else None
 
-        log.debug('Connecting to the service "{}", candidates: {}'.format(self.name, addressInfoList))
+        log.debug('Connecting to the service "{0}", candidates: {1}'.format(self.name, addressInfoList))
         start = time()
         errors = []
         for family, socktype, proto, canonname, address in addressInfoList:
-            log.debug(' - connecting to "{} {}"'.format(proto, address))
+            log.debug(' - connecting to "{0} {1}"'.format(proto, address))
             sock = socket.socket(family=family, type=socktype, proto=proto)
             try:
                 self._pipe = Pipe(sock)
@@ -170,9 +170,9 @@ class AbstractService(object):
                 log.debug(' - success')
             except ConnectionError as err:
                 errors.append(err)
-                log.debug(' - failed - {}'.format(err))
+                log.debug(' - failed - {0}'.format(err))
             except Exception as err:
-                log.warn('Unexpected error caught while connecting to the "{}" - {}'.format(address, err))
+                log.warn('Unexpected error caught while connecting to the "{0}" - {1}'.format(address, err))
             else:
                 self._ioLoop = self._pipe._ioLoop
                 self._writableStream = WritableStream(self._ioLoop, self._pipe)

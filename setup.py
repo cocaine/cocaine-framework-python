@@ -22,67 +22,37 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-import sys
 import os
 
 from setuptools import setup
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-if "--without-tools" in sys.argv:
-    sys.argv.remove("--without-tools")
-    tools_requires = []
-    tools_packages = []
-    tools_scripts = []
-    tools_data = []
-else:
-    sys.argv.append('--with-proxy')
-    tools_requires = ['opster >= 4.0']
-    tools_packages = ["cocaine.tools", "cocaine.tools.helpers"]
-    tools_scripts = ["scripts/cocaine-tool"]
-    if 'DEB_BUILD_GNU_TYPE' in os.environ:
-        tools_data = [
-            ('/etc/bash_completion.d/', ["scripts/bash_completion.d/cocaine-tool"])
-        ]
-    else:
-        tools_data = []
-
-if '--with-proxy' in sys.argv:
-    sys.argv.remove('--with-proxy')
-    proxy_packages = ["cocaine.proxy"]
-    proxy_scripts = ["scripts/cocaine-tornado-proxy"]
-    proxy_data = []
-else:
-    proxy_packages = []
-    proxy_scripts = []
-    proxy_data = []
-
 setup(
     name="cocaine",
-    version="0.11.0.2",
+    version="0.11.0.3",
     author="Anton Tyurin",
     author_email="noxiouz@yandex.ru",
     maintainer='Evgeny Safronov',
     maintainer_email='division494@gmail.com',
     url="https://github.com/cocaine/cocaine-framework-python",
-    description="Cocaine Python Framework and Tools for Cocaine Application Cloud.",
-    long_description=("A simple framework to ease the development of Cocaine apps "
-                      "and tools for deploying applications in the cloud"),
+    description="Cocaine Python Framework for Cocaine Application Cloud.",
+    long_description="A simple framework to ease the development of Cocaine apps",
     license="LGPLv3+",
     platforms=["Linux", "BSD", "MacOS"],
-    packages= [
+    namespace_packages=['cocaine'],
+    include_package_data=True,
+    zip_safe=False,
+    packages=[
         "cocaine",
         "cocaine.asio",
         "cocaine.decorators",
         "cocaine.services",
         "cocaine.futures",
         "cocaine.logging",
-        "cocaine.tools",
-        "cocaine.tools.actions",
         "cocaine.testing",
-    ] + tools_packages + proxy_packages,
-    install_requires=["msgpack_python", "tornado"] + tools_requires,
-    scripts=tools_scripts + proxy_scripts,
+    ],
+    install_requires=["msgpack_python", "tornado"],
     tests_require=["mockito"],
     test_suite="unittest.TestCase",
     classifiers=[
