@@ -52,10 +52,7 @@ class Worker(object):
         self.loop = ev.Loop()
 
         self.disown_timer = ev.Timer(self.on_disown, disown_timeout, self.loop)
-        self.heartbeat_timer = ev.Timer(self.on_heartbeat,
-                                        heartbeat_timeout,
-                                        self.loop)
-        self.disown_timer.start()
+        self.heartbeat_timer = ev.Timer(self.on_heartbeat, heartbeat_timeout, self.loop)
         self.heartbeat_timer.start()
 
         if isinstance(self.endpoint, types.TupleType) or isinstance(self.endpoint, types.ListType):
@@ -106,8 +103,7 @@ class Worker(object):
         self.loop.run()
 
     def terminate(self, reason, msg):
-        self.w_stream.write(Message(message.RPC_TERMINATE,
-                                    0, reason, msg).pack())
+        self.w_stream.write(Message(message.RPC_TERMINATE, 0, reason, msg).pack())
         self.loop.stop()
         exit(1)
 
