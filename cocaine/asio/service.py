@@ -427,26 +427,26 @@ class Service(AbstractService):
         self.api = dict((methodName, methodId) for methodId, methodName in api.items())
         for methodId, methodName in api.items():
             invoke = self._invoke(methodId)
-
-            def decorate(func):
-                @strategy.coroutine
-                def wrapper(*args, **kwargs):
-                    if not self.isConnected():
-                        yield self.connectThroughLocator(locator)
-
-                    try:
-                        yield func(*args, **kwargs)
-                    except KeyError as fd:
-                        log.warn('broken pipe detected, fd: %s', str(fd))
-                        log.info('reconnecting... ')
-                        yield self.disconnect()
-                        yield self.connectThroughLocator(locator)
-                        yield func(*args, **kwargs)
-                        log.info('service has been successfully reconnected')
-
-                return wrapper
-            invoke = decorate(invoke)
+            invoke = self.make_reconnectable(invoke, locator)
             setattr(self, methodName, invoke)
+
+    def make_reconnectable(self, func, locator):
+        @strategy.coroutine
+        def wrapper(*args, **kwargs):
+            if not self.isConnected():
+                yield self.connectThroughLocator(locator)
+
+            try:
+                yield func(*args, **kwargs)
+            except KeyError as fd:
+                log.warn('broken pipe detected, fd: %s', str(fd))
+                log.info('reconnecting... ')
+                yield self.disconnect()
+                yield self.connectThroughLocator(locator)
+                yield func(*args, **kwargs)
+                log.info('service has been successfully reconnected')
+
+        return wrapper
 
     @strategy.coroutine
     def reconnect(self, timeout=None, blocking=False):
@@ -454,3 +454,9 @@ class Service(AbstractService):
             raise IllegalStateError('already connecting')
         self.disconnect()
         yield self.connect(timeout=timeout, blocking=blocking)
+
+    def __getattr__(self, item):
+        def caller(*args, **kwargs):
+            return self.enqueue(item, *args, **kwargs)
+        return caller
+
