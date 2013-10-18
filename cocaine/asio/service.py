@@ -427,10 +427,10 @@ class Service(AbstractService):
         self.api = dict((methodName, methodId) for methodId, methodName in api.items())
         for methodId, methodName in api.items():
             invoke = self._invoke(methodId)
-            invoke = self.make_reconnectable(invoke, locator)
+            invoke = self._make_reconnectable(invoke, locator)
             setattr(self, methodName, invoke)
 
-    def make_reconnectable(self, func, locator):
+    def _make_reconnectable(self, func, locator):
         @strategy.coroutine
         def wrapper(*args, **kwargs):
             if not self.isConnected():

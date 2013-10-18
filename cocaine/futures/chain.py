@@ -67,7 +67,7 @@ class PreparedFuture(Deferred):
 
     Specified callback or errorback will be triggered on the next event loop turn after `bind` method is invoked.
 
-    .. note:: While in chain context, you don't need to use it directly - if you return something from function that
+    .. note:: While in engine context, you don't need to use it directly - if you return something from function that
               meant to be used as chain item, the result will be automatically wrapped with `PreparedFuture`.
 
     .. note:: All methods in this class are reentrant.
@@ -461,7 +461,7 @@ class Chain(object):
 
 def concurrent(func):
     """
-    Wraps function or method, so it can be invoked concurrently by yielding in chain context.
+    Wraps function or method, so it can be invoked concurrently by yielding in engine context.
 
     Program control will be returned to the yield statement once processing is done. Current implementation invokes
     function in separate thread.
@@ -473,10 +473,9 @@ def concurrent(func):
 
 
 def source(func):
-    """Marks function or method as source of chain context.
+    """Marks function or method as source of engine context.
 
-    It means, that the decorated function becomes the first function in the chain pipeline. As a result, there
-    shouldn't be any parameter passed to that function (except `self` or `cls` for class methods).
+    .. warning:: This decorator is deprecated. Use `engine.asynchronous` instead.
     """
     def wrapper(*args, **kwargs):
         return Chain([lambda: func(*args, **kwargs)])
@@ -486,14 +485,14 @@ def source(func):
 class All(object):
     """Represents yieldable object for asynchronous future grouping.
 
-    This class provides ability to yield multiple yieldable objects in chain context. Program control returns after
+    This class provides ability to yield multiple yieldable objects in engine context. Program control returns after
     all of them completed. Future results will be placed in the list in original order.
 
     Typical usage::
 
         from cocaine.services import Service
         from cocaine.futures import chain
-        @chain.source
+        @engine.asynchronous
         def func():
             r1, r2 = yield chain.All([s1.execute(), s2.execute()])
             print(r1, r2)
@@ -504,7 +503,7 @@ class All(object):
     If you have specified deferred, you can invoke `execute` method and pass that deferred to it. This will have the
     same effect as yielding.
 
-    .. note:: You can yield this class's objects only in chain context and only once. Think about this class as some
+    .. note:: You can yield this class's objects only in engine context and only once. Think about this class as some
               kind of single-shot.
     .. note:: All methods in this class are thread-safe.
     """

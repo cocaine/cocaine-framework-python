@@ -5,13 +5,13 @@ CLOSED_STATE_MESSAGE = 'invalid future object state - triggered while in closed 
 
 
 class Deferred(object):
-    """A Future encapsulates the result of an asynchronous operation.
+    """Encapsulates the result of an asynchronous operation.
 
-    This class represents deferred result of asynchronous operation. In synchronous applications Futures are used
+    This class represents deferred result of asynchronous operation. In synchronous applications Deferreds are used
     to wait for the result from a thread or process pool. In cocaine they are normally used by yielding them in a
-    `chain.source` context.
+    `engine.asynchronous` context.
 
-    Typical usage assumes that you create `Future` object, keep it somewhere, start asynchronous operation and
+    Typical usage assumes that you create `Deferred` object, keep it somewhere, start asynchronous operation and
     return this deferred from function. When asynchronous operation is done, just invoke `trigger` or `error` method
     depending on which type of result you are get, and pass into it.
 
@@ -22,12 +22,12 @@ class Deferred(object):
         loop = IOLoop.current()
 
         def timer_function():
-            deferred = Future()
+            deferred = Deferred()
             timeout = 1.0
             loop.add_timer(time.time() + timeout, lambda: deferred.trigger('Done')
             return deferred
 
-    Now you can use `timer_function` in Chain context::
+    Now you can use `timer_function` in Engine context::
 
         result = yield timer_function()
 
@@ -47,16 +47,16 @@ class Deferred(object):
         self.state = self.UNITIALIZED
 
     def bind(self, callback, errorback=None):
-        """Binds callback and errorback to the future. Future immediately goes into `BOUND` state.
+        """Binds callback and errorback to the deferred. Deferred immediately goes into `BOUND` state.
 
-        When bound, future will trigger its callback and errorback on any pending value or error respectively.
-        If there is no any callback attached to the future, it will store them into cache which will be emptied as
+        When bound, deferred will trigger its callback and errorback on any pending value or error respectively.
+        If there is no any callback attached to the deferred, it will store them into cache which will be emptied as
         `bind` method invoked.
 
         :param callback: callback which will be invoked on every pending result.
         :param errorback: errorback which will be invoked on every pending error.
 
-        .. warning:: It's prohibited by design to call this method while future is already bounded.
+        .. warning:: It's prohibited by design to call this method while deferred is already bounded.
         """
         assert self.state in (self.UNITIALIZED, self.CLOSED), 'double bind is prohibited by design'
         if errorback is None:
@@ -73,9 +73,9 @@ class Deferred(object):
             self.state = self.BOUND
 
     def unbind(self):
-        """Unbind future and transfer it to the `UNINITIALIZED` state.
+        """Unbind deferred and transfer it to the `UNINITIALIZED` state.
 
-        This method drops any previously attached callback or errorback. Therefore, future can be used even after
+        This method drops any previously attached callback or errorback. Therefore, deferred can be used even after
         calling this method - it just need to be rebounded.
         """
         self._callback = None
@@ -83,10 +83,10 @@ class Deferred(object):
         self.state = self.UNITIALIZED
 
     def close(self, silent=False):
-        """Close future and transfer it to the `CLOSED` state.
+        """Close deferred and transfer it to the `CLOSED` state.
 
         .. note:: It is safe to call this method multiple times.
-        .. warning:: After closing Future is considered to be dead. Therefore, it can be rebound again.
+        .. warning:: After closing Deferred is considered to be dead. Therefore, it can be rebound again.
         """
         if self.state == self.CLOSED:
             return
@@ -101,7 +101,7 @@ class Deferred(object):
         self.state = self.CLOSED
 
     def trigger(self, chunk):
-        """Trigger future and transfer chunk to the attached callback.
+        """Trigger deferred and transfer chunk to the attached callback.
 
         If there is no callback attached, it will be stored until someone provides it by invoking `bind` method.
 
@@ -114,7 +114,7 @@ class Deferred(object):
             self._callback(chunk)
 
     def error(self, err):
-        """Trigger future and transfer chunk to the attached errorback.
+        """Trigger deferred and transfer chunk to the attached errorback.
 
         If there is no errorback attached, it will be stored until someone provides it by invoking `bind` method.
 

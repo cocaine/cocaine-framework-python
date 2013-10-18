@@ -29,7 +29,7 @@ def async_subprocess(command, callbacks=None, cwd=None, io_loop=None):
 
     An subprocess pipe exception will be raised if subprocess can not be started.
 
-    .. note:: You can `yield` this function in chain context.
+    .. note:: You can `yield` this function in `engine.asynchronous` context.
 
     :param command: command for subprocess to start, same as `subprocess.Popen` first argument.
     :param callbacks: list of two callbacks for `stdout` and `stderr` respectively. If you don't want to attach
@@ -65,4 +65,15 @@ def async_subprocess(command, callbacks=None, cwd=None, io_loop=None):
 
 
 def asynchronous(func):
+    """Decorates callable object as asynchronous and make possible to yield framework's deferreds and futures in it.
+
+    Decorator transforms any callable object, making deferred callable object. In fact, invocation event is pushed
+    in the event loop, which calls it later as it turn comes.
+
+    Decorated objects gain ability to `yield` all framework's futures and deferreds as like as tornado and python 3.3.
+    futures.
+
+    As the callable object becomes deferred, it can be `yielded` in another `asynchronous` decorated function, making
+    possible to create large chains of asynchronous invocations.
+    """
     return chain.source(func)

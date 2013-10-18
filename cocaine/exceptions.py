@@ -23,7 +23,7 @@ __all__ = ["ServiceError", "RequestError"]
 
 
 class CocaineError(Exception):
-    """ Base exception """
+    """Base exception"""
     pass
 
 

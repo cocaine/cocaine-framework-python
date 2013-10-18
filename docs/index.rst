@@ -45,21 +45,21 @@ Here's some extremely useful Cocaine app written in Python::
 
     #!/usr/bin/env python
 
-    from cocaine.services import Service
     from cocaine.worker import Worker
+    from cocaine.logging import Logger
 
-    storage = Service("storage")
+    __author__ = 'EvgenySafronov <division494@gmail.com>'
 
-    def process(value):
-        return len(value)
+    log = Logger()
 
-    def handle(request, response):
-        key = yield request.read()
-        value = yield storage.read("collection", key)
-
-        response.write(process(value))
+    def echo(request, response):
+        message = yield request.read()
+        log.debug('Message received: \'{0}\'. Sending it back ...'.format(message))
+        response.write(message)
         response.close()
 
-    Worker().run({
-        'calculate_length': handle
+
+    W = Worker()
+    W.run({
+        'ping': echo,
     })

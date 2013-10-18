@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import msgpack
-from cocaine.decorators import http
 
 from cocaine.worker import Worker
 from cocaine.logging import Logger
@@ -19,5 +18,5 @@ def echo(request, response):
 
 W = Worker()
 W.run({
-    'doIt': echo,
+    'ping': echo,
 })
