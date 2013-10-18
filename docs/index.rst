@@ -16,6 +16,7 @@ This documentation is for cocaine-framework-python.
 
 * Page on PyPI: https://pypi.python.org/pypi/cocaine
 * Repository: https://github.com/cocaine/cocaine-framework-python
+* Cocaine-tools: https://github.com/cocaine/cocaine-tools
 * Requires at least Python 2.6
 
 
@@ -35,7 +36,7 @@ Features
 * Wide support of asynchronous event-driven usage
 * Ready for usage with cloud services
 * Lot of examples included
-* Provided with cocaine-tools and embedded cocaine proxy
+* Provided with `cocaine-tools <https://github.com/cocaine/cocaine-tools>`_ and embedded cocaine proxy
 * PyPy support
 
 
@@ -47,8 +48,6 @@ Here's some extremely useful Cocaine app written in Python::
 
     from cocaine.worker import Worker
     from cocaine.logging import Logger
-
-    __author__ = 'EvgenySafronov <division494@gmail.com>'
 
     log = Logger()
 
