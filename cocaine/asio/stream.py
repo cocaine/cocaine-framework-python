@@ -121,37 +121,40 @@ class WritableStream(object):
         self._attached = False
         self._buffer = list()
         self._tx_offset = 0
-        self._lock = threading.RLock()
+        self._lock = threading.Lock()
 
     @weakmethod
     def _on_event(self):
         with self._lock:
-            # All data was sent - so unbind writable event
-            if len(self._buffer) == 0:
-                if self._attached:
-                    self._loop.unregister_write_event(self._pipe.fileno())
-                    self._attached = False
-                return
+            self._process_events()
 
-            can_write = True
-            while can_write and len(self._buffer) > 0:
-                current = self._buffer[0]
-                sent = self._pipe.write(buffer(current, self._tx_offset))
+    def _process_events(self):
+        # All data was sent - so unbind writable event
+        if len(self._buffer) == 0:
+            if self._attached:
+                self._loop.unregister_write_event(self._pipe.fileno())
+                self._attached = False
+            return
 
-                if sent > 0:
-                    self._tx_offset += sent
-                else:
-                    can_write = False
+        can_write = True
+        while can_write and len(self._buffer) > 0:
+            current = self._buffer[0]
+            sent = self._pipe.write(buffer(current, self._tx_offset))
 
-                # Current object is sent completely - pop it from buffer
-                if self._tx_offset == len(current):
-                    self._buffer.pop(0)
-                    self._tx_offset = 0
+            if sent > 0:
+                self._tx_offset += sent
+            else:
+                can_write = False
+
+            # Current object is sent completely - pop it from buffer
+            if self._tx_offset == len(current):
+                self._buffer.pop(0)
+                self._tx_offset = 0
 
     def write(self, data):
         with self._lock:
             self._buffer.append(msgpack.dumps(data))
-            self._on_event()
+            self._process_events()
 
             if not self._attached and self._pipe.isConnected():
                 self._loop.register_write_event(self._on_event, self._pipe.fileno())
