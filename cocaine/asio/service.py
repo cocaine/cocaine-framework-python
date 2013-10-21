@@ -424,11 +424,11 @@ class Service(AbstractService):
 
         yield self._connectToEndpoint(*endpoint, timeout=timeout, blocking=blocking)
 
-        self.api = dict((methodName, methodId) for methodId, methodName in api.items())
-        for methodId, methodName in api.items():
-            invoke = self._invoke(methodId)
+        for id_, (name, dispatch) in api.items():
+            invoke = self._invoke(id_)
             invoke = self._make_reconnectable(invoke, locator)
-            setattr(self, methodName, invoke)
+            self.api[name] = id_
+            setattr(self, name, invoke)
 
     def _make_reconnectable(self, func, locator):
         @strategy.coroutine
