@@ -33,6 +33,45 @@ if '--locator' in sys.argv:
         LOCATOR_DEFAULT_PORT = int(port)
 
 
+class StateBuilder(object):
+    def build(self, api):
+        root = RootState()
+        self._build(root, api)
+        return root
+
+    def _build(self, parent, api):
+        for id_, (name, api) in api.items():
+            state = State(id_, name, parent)
+            self._build(state, api)
+
+
+class State(object):
+    def __init__(self, id_, name, parent=None):
+        self.id_ = id_
+        self.name = name
+        self.children = []
+        if parent is not None:
+            parent.children.append(self)
+
+    def __str__(self):
+        return 'State(id={0}, name={1}, children={2})'.format(self.id_, self.name, self.children)
+
+    def __repr__(self):
+        return '<{0}>'.format(str(self))
+
+    def __eq__(self, other):
+        if other is None:
+            return False
+        return all([self.id_ == other.id_,
+                    self.name == other.name,
+                    self.children == other.children])
+
+
+class RootState(State):
+    def __init__(self):
+        super(RootState, self).__init__(0, '/', None)
+
+
 class strategy:
     @classmethod
     def init(cls, func, isBlocking):
@@ -116,6 +155,7 @@ class AbstractService(object):
 
         self.version = 0
         self.api = {}
+        self.states = []
 
     @property
     def address(self):
@@ -407,13 +447,9 @@ class Service(AbstractService):
         else:
             locator = self._locator_cache[(host, port)]
 
-        try:
-            if not locator.isConnected():
-                yield locator.connect(host, port, timeout, blocking=blocking)
-            yield self.connectThroughLocator(locator, timeout, blocking=blocking)
-        finally:
-            pass
-            # locator.disconnect()
+        if not locator.isConnected():
+            yield locator.connect(host, port, timeout, blocking=blocking)
+        yield self.connectThroughLocator(locator, timeout, blocking=blocking)
 
     @strategy.coroutine
     def connectThroughLocator(self, locator, timeout=None, blocking=False):
@@ -422,13 +458,14 @@ class Service(AbstractService):
         except ServiceError as err:
             raise LocatorResolveError(self.name, locator.address, err)
 
-        yield self._connectToEndpoint(*endpoint, timeout=timeout, blocking=blocking)
-
         for id_, (name, dispatch) in api.items():
-            invoke = self._invoke(id_)
-            invoke = self._make_reconnectable(invoke, locator)
+            invoke = self._make_reconnectable(self._invoke(id_), locator)
             self.api[name] = id_
             setattr(self, name, invoke)
+
+        builder = StateBuilder()
+        self.states = builder.build(api).children
+        yield self._connectToEndpoint(*endpoint, timeout=timeout, blocking=blocking)
 
     def _make_reconnectable(self, func, locator):
         @strategy.coroutine
