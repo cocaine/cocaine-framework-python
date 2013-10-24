@@ -19,7 +19,6 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-import array
 import threading
 
 import msgpack
@@ -59,7 +58,7 @@ class ReadableStream(object):
         self._callback = None
         self._attached = False
         self._buffer = msgpack.Unpacker()
-        self._tmp_buff = array.array('c', '\0' * self.START_CHUNK_SIZE)
+        self._tmp_buff = bytearray('\0' * self.START_CHUNK_SIZE) # array.array('c', '\0' * self.START_CHUNK_SIZE)
         self._lock = threading.Lock()
 
     def bind(self, callback):
@@ -93,7 +92,7 @@ class ReadableStream(object):
                 raise IllegalStateError('pipe is not connected')
 
             # Bad solution. On python 2.7 and higher - use memoryview and bytearray
-            length = self._pipe.read(self._tmp_buff, self._tmp_buff.buffer_info()[1])
+            length = self._pipe.read(self._tmp_buff, len(self._tmp_buff))
             if length <= 0:
                 if length == 0:
                     # Remote side has closed connection
@@ -105,7 +104,7 @@ class ReadableStream(object):
             self._callback(self._buffer)
 
             # Enlarge buffer if it is not large enough
-            if self._tmp_buff.buffer_info()[1] == length:
+            if len(self._tmp_buff) == length:
                 self._tmp_buff *= 2
 
 
