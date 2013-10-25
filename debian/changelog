@@ -1,66 +1,74 @@
-cocaine-framework-python (0.11.1.0) lucid; urgency=low
+cocaine-framework-python (0.11.1.0) unstable; urgency=low
 
-  * Release
+  * Docker uploading/managing support.
+  * Optimization.
+  * Locator as a Service.
+  * Explicit full address locator specification for workers.
+  * Asynchronous subprocess running.
+  * Explicit event name usage except of enqueue forwarding.
+  * Bugfix: thread-safe guarantee for streams and logging.
+  * Bugfix: proper timeout calculation for asynchronous service connecting.
+  * Bugfix: double disown timer start for workers.
 
  -- Evgeny Safronov <division494@gmail.com>  Tue, 18 Oct 2013 13:02:00 +0400
 
-cocaine-framework-python (0.11.0.4) lucid; urgency=low
+cocaine-framework-python (0.11.0.4) unstable; urgency=low
 
   * Documentation updated.
 
  -- Evgeny Safronov <division494@gmail.com>  Tue, 17 Oct 2013 18:00:00 +0400
 
-cocaine-framework-python (0.11.0.3) lucid; urgency=low
+cocaine-framework-python (0.11.0.3) unstable; urgency=low
 
   * Performance improvements.
 
  -- Evgeny Safronov <division494@gmail.com>  Tue, 11 Oct 2013 18:58:00 +0400
 
 
-cocaine-framework-python (0.11.0.2) lucid; urgency=low
+cocaine-framework-python (0.11.0.2) unstable; urgency=low
 
   * Memory leaks fixed.
 
  -- Evgeny Safronov <division494@gmail.com>  Tue, 11 Oct 2013 15:23:00 +0400
 
 
-cocaine-framework-python (0.11.0.1) lucid; urgency=low
+cocaine-framework-python (0.11.0.1) unstable; urgency=low
 
   * Bugs fixed.
 
  -- Evgeny Safronov <division494@gmail.com>  Tue, 11 Oct 2013 14:02:00 +0400
 
-cocaine-framework-python (0.11.0.0) lucid; urgency=low
+cocaine-framework-python (0.11.0.0) unstable; urgency=low
 
   * Cocaine-tools moved to the separate project.
 
  -- Evgeny Safronov <division494@gmail.com>  Tue, 10 Oct 2013 12:03:00 +0400
 
-cocaine-framework-python (0.10.6.18) lucid; urgency=low
+cocaine-framework-python (0.10.6.18) unstable; urgency=low
 
   * Cookie fix.
 
  -- Evgeny Safronov <division494@gmail.com>  Tue, 20 Sep 2013 13:56:00 +0400
 
-cocaine-framework-python (0.10.6.17) lucid; urgency=low
+cocaine-framework-python (0.10.6.17) unstable; urgency=low
 
   * Fix bug.
 
  -- Evgeny Safronov <division494@gmail.com>  Tue, 19 Sep 2013 18:20:00 +0400
 
-cocaine-framework-python (0.10.6.16) lucid; urgency=low
+cocaine-framework-python (0.10.6.16) unstable; urgency=low
 
   * Fix absent cookie bug.
 
  -- Evgeny Safronov <division494@gmail.com>  Tue, 19 Sep 2013 17:23:00 +0400
 
-cocaine-framework-python (0.10.6.15) lucid; urgency=low
+cocaine-framework-python (0.10.6.15) unstable; urgency=low
 
   * Fix double exception trapping.
 
  -- Evgeny Safronov <division494@gmail.com>  Tue, 10 Sep 2013 18:09:00 +0400
 
-cocaine-framework-python (0.10.6.14) lucid; urgency=low
+cocaine-framework-python (0.10.6.14) unstable; urgency=low
 
   * fix bug in proxy with IOError on pidfile
 
