@@ -19,16 +19,3 @@
 #
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
-
-
-class Session(object):
-    def __init__(self, state, session, service, deferred):
-        self._state = state
-        self._session = session
-        self._service = service
-        self._deferred = deferred
-        for substate in state.substates.values():
-            setattr(self, substate.name, service._make_chunk(substate.id, session))
-
-    def read(self):
-        return self._deferred

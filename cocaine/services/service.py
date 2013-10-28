@@ -278,7 +278,7 @@ class AbstractService(object):
         if len(state.substates) == 0:  # Non-Switching, pure invocation with deferreds and whores.
             return deferred
         else:  # Switching
-            return Session(state, session, self)
+            return Session(state, session, self, deferred)
 
     def _chunk(self, method_id, session, *args):
         log.debug('sending chunk [%d, %d, %s]', method_id, session, args)
