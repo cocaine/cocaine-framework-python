@@ -1,8 +1,7 @@
-import os
-from cocaine.futures import chain
 import msgpack
 import sys
 from tornado.ioloop import IOLoop
+from cocaine import concurrent
 
 from cocaine.exceptions import ChokeEvent
 from cocaine.services import Service
@@ -24,7 +23,7 @@ def then_api():
     return c
 
 
-@chain.source
+@concurrent.engine
 def yield_api():
     try:
         chunk = yield service.enqueue('chunkMe', msgpack.dumps(str(sys.argv[1])))
@@ -45,14 +44,17 @@ def yield_api():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print('Usage: chunker.py NUMBER_OF_CHUNKS')
-        exit(os.EX_USAGE)
-
-    service = Service('chunker')
-    try:
-        then_api()
-        # yield_api()
-        IOLoop.current().start()
-    except ChokeEvent:
-        print('Done')
+    # if len(sys.argv) != 2:
+    #     print('Usage: chunker.py NUMBER_OF_CHUNKS')
+    #     exit(os.EX_USAGE)
+    #
+    # service = Service('chunker')
+    # try:
+    #     then_api()
+    #     # yield_api()
+    #     IOLoop.current().start()
+    # except ChokeEvent:
+    #     print('Done')
+    s = Service('echo')
+    s.enqueue('ping')
+    print(s)

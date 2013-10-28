@@ -8,7 +8,7 @@ import time
 
 from cocaine.asio.ev import Loop
 from cocaine.asio.exceptions import *
-from cocaine.futures import Deferred
+from cocaine.concurrent import Deferred
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 

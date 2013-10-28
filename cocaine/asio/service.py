@@ -1,19 +1,18 @@
-import sys
-import socket
-import logging
-from time import time
 import contextlib
-
+import logging
+import socket
+import sys
+import time
 import msgpack
 
+from cocaine import concurrent
+from cocaine.concurrent import Deferred, return_
 from cocaine.exceptions import ServiceError
 from cocaine.asio.exceptions import *
 from cocaine.asio.pipe import Pipe
-from cocaine.asio import message, engine
+from cocaine.asio import message
 from cocaine.asio.message import Message
 from cocaine.asio.stream import WritableStream, ReadableStream
-from cocaine.futures import Deferred, chain
-from cocaine.futures.chain import Chain
 
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -41,6 +40,8 @@ class StateBuilder(object):
 
     def _build(self, parent, api):
         for id_, (name, api) in api.items():
+            if api is None:
+                return
             state = State(id_, name, parent)
             self._build(state, api)
 
@@ -98,15 +99,15 @@ class strategy:
 
     @classmethod
     def async(cls, func):
-        return chain.source(func)
+        return concurrent.engine(func)
 
 
 @contextlib.contextmanager
 def cumulative(timeout):
-    start = time()
+    start = time.time()
 
     def timeLeft():
-        return timeout - (time() - start) if timeout is not None else None
+        return timeout - (time.time() - start) if timeout is not None else None
     yield timeLeft
 
 
@@ -199,7 +200,7 @@ class AbstractService(object):
         pipe_timeout = float(timeout) / len(addressInfoList) if timeout is not None else None
 
         log.debug('Connecting to the service "{0}", candidates: {1}'.format(self.name, addressInfoList))
-        start = time()
+        start = time.time()
         errors = []
         for family, socktype, proto, canonname, address in addressInfoList:
             log.debug(' - connecting to "{0} {1}"'.format(proto, address))
@@ -227,7 +228,7 @@ class AbstractService(object):
                 self._readableStream.bind(decode_and_dispatch(self._on_message))
                 return
 
-        if timeout is not None and time() - start > timeout:
+        if timeout is not None and time.time() - start > timeout:
             raise ConnectionTimeoutError((host, port), timeout)
 
         prefix = 'service resolving failed. Reason:'
@@ -245,8 +246,7 @@ class AbstractService(object):
             elif msg.id == message.RPC_CHOKE:
                 future = self._subscribers.pop(msg.session, None)
                 assert future is not None, 'one of subscribers has suddenly disappeared'
-                if future is not None:
-                    future.close()
+                future.close()
             elif msg.id == message.RPC_ERROR:
                 self._subscribers[msg.session].error(ServiceError(self.name, msg.message, msg.code))
         except Exception as err:
@@ -255,21 +255,22 @@ class AbstractService(object):
 
     def _invoke(self, methodId):
         def wrapper(*args, **kwargs):
-            future = Deferred()
+            deferred = Deferred()
             timeout = kwargs.get('timeout', None)
             if timeout is not None:
-                timeoutId = self._ioLoop.add_timeout(time() + timeout, lambda: future.error(TimeoutError(timeout)))
+                timeoutId = self._ioLoop.add_timeout(time.time() + timeout,
+                                                     lambda: deferred.error(TimeoutError(timeout)))
 
                 def timeoutRemover(func):
                     def wrapper(*args, **kwargs):
                         self._ioLoop.remove_timeout(timeoutId)
                         return func(*args, **kwargs)
                     return wrapper
-                future.close = timeoutRemover(future.close)
+                deferred.close = timeoutRemover(deferred.close)
             self._session += 1
             self._writableStream.write([methodId, self._session, args])
-            self._subscribers[self._session] = future
-            return Chain([lambda: future], ioLoop=self._ioLoop)
+            self._subscribers[self._session] = deferred
+            return deferred
         return wrapper
 
     def perform_sync(self, method, *args, **kwargs):
@@ -368,7 +369,7 @@ class Locator(AbstractService):
         else:
             return self._invoke(self.RESOLVE_METHOD_ID)(name, timeout=timeout)
 
-    @engine.asynchronous
+    @concurrent.engine
     def refresh(self, name, timeout=None):
         return self._invoke(self.REFRESH_METHOD_ID)(name, timeout=timeout)
 
@@ -474,14 +475,16 @@ class Service(AbstractService):
                 yield self.connectThroughLocator(locator)
 
             try:
-                yield func(*args, **kwargs)
+                d = yield func(*args, **kwargs)
+                return_(d)
             except KeyError as fd:
                 log.warn('broken pipe detected, fd: %s', str(fd))
                 log.info('reconnecting... ')
                 yield self.disconnect()
                 yield self.connectThroughLocator(locator)
-                yield func(*args, **kwargs)
+                d = yield func(*args, **kwargs)
                 log.info('service has been successfully reconnected')
+                return_(d)
 
         return wrapper
 
@@ -496,4 +499,3 @@ class Service(AbstractService):
         def caller(*args, **kwargs):
             return self.enqueue(item, *args, **kwargs)
         return caller
-

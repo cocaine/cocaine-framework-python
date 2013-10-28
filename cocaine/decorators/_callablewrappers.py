@@ -21,13 +21,14 @@
 
 __all__ = ["proxy_factory"]
 
+import functools
 from abc import ABCMeta, abstractmethod
 import compiler
 import traceback
 
+from cocaine import concurrent
 from cocaine.exceptions import ChokeEvent
 from cocaine.logging.log import core_log
-from cocaine.futures.chain import Chain
 
 
 class _Proxy(object):
@@ -57,9 +58,10 @@ class _Coroutine(_Proxy):
     def invoke(self, request, stream):
         self._state = 1
         self._response = stream  # attach response stream
-        Chain([lambda: self._obj(request, self._response), self.on_error])
+        deferred = concurrent.engine(self._obj)(request, self._response)
+        deferred.add_callback(functools.partial(self._finally, self._response))
 
-    def on_error(self, res):
+    def _finally(self, res):
         try:
             res.get()
         except ChokeEvent:

@@ -31,6 +31,7 @@ from cocaine.asio.stream import WritableStream
 from cocaine.asio.stream import Decoder
 from cocaine.asio import message
 from cocaine.asio.message import Message
+from cocaine.concurrent import Deferred
 
 from cocaine.sessioncontext import Sandbox
 from cocaine.sessioncontext import Stream
@@ -121,7 +122,8 @@ class Worker(object):
             return
 
         elif msg.id == message.RPC_INVOKE:
-            request = Request()
+            d = Deferred()
+            request = Request(d)
             stream = Stream(msg.session, self, msg.event)
             try:
                 self.sandbox.invoke(msg.event, request, stream)
@@ -138,7 +140,7 @@ class Worker(object):
             self._logger.debug("Receive chunk: %d" % msg.session)
             try:
                 _session = self.sessions[msg.session]
-                _session.push(msg.data)
+                _session.trigger(msg.data)
             except Exception as err:
                 self._logger.error("On push error: %s" % str(err))
                 self.terminate(1, "Push error: %s" % str(err))

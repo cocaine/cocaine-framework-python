@@ -28,9 +28,9 @@ import types
 
 from tornado.wsgi import WSGIContainer
 
+from cocaine import concurrent
+from cocaine.concurrent import Deferred
 from cocaine.decorators.http import tornado
-from cocaine.futures import chain
-from cocaine.futures.chain import Chain
 
 
 def start_response(func, status, response_headers, exc_info=None):
@@ -79,7 +79,7 @@ def django(root, settings, async=False, log=None):
         initLock = threading.Lock()
         request_class = WSGIRequest
 
-        @chain.source
+        @concurrent.engine
         def __call__(self, environ, start_response):
             if self._request_middleware is None:
                 with self.initLock:
@@ -113,7 +113,7 @@ def django(root, settings, async=False, log=None):
             start_response(force_str(status), response_headers)
             yield response
 
-        @chain.source
+        @concurrent.engine
         def get_response(self, request):
             try:
                 urlconf = settings.ROOT_URLCONF
@@ -143,7 +143,9 @@ def django(root, settings, async=False, log=None):
 
                     if response is None:
                         try:
-                            response = yield Chain([lambda: callback(request, *callback_args, **callback_kwargs)])
+                            d = Deferred()
+                            d.add_callback(lambda: callback(request, *callback_args, **callback_kwargs))
+                            response = yield d
                         except Exception as e:
                             for middleware_method in self._exception_middleware:
                                 response = middleware_method(request, e)

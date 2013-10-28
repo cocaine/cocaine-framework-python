@@ -2,7 +2,7 @@ import subprocess
 
 from tornado.ioloop import IOLoop
 
-from cocaine.futures import Deferred, chain
+from cocaine.concurrent import Deferred
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
@@ -62,18 +62,3 @@ def async_subprocess(command, callbacks=None, cwd=None, io_loop=None):
     for fh, callback in zip(fhs, callbacks):
         io_loop.add_handler(fh.fileno(), create_handler(fh, callback), io_loop.READ)
     return deferred
-
-
-def asynchronous(func):
-    """Decorates callable object as asynchronous and make possible to yield framework's deferreds and futures in it.
-
-    Decorator transforms any callable object, making deferred callable object. In fact, invocation event is pushed
-    in the event loop, which calls it later as it turn comes.
-
-    Decorated objects gain ability to `yield` all framework's futures and deferreds as like as tornado and python 3.3.
-    futures.
-
-    As the callable object becomes deferred, it can be `yielded` in another `asynchronous` decorated function, making
-    possible to create large chains of asynchronous invocations.
-    """
-    return chain.source(func)

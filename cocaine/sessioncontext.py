@@ -23,11 +23,8 @@ import traceback
 
 import msgpack
 
-from cocaine.exceptions import RequestError
 from cocaine.decorators import default
 from cocaine.logging.log import core_log
-from cocaine.futures import Deferred
-from cocaine.futures import chain
 
 
 class Sandbox(object):
@@ -94,70 +91,9 @@ class Stream(object):
         return self._m_state is None
 
 
-class Request(Deferred):
-
-    def __init__(self):
-        self._logger = core_log
-        self.cache = list()
-        self._clbk = None   # Callback - on chunk
-        self._errbk = None  # Errorback - translate error to handler
-        self._errmsg = None  # Store message
-        self._state = 1      # Status of stream (close/open)
-
-    def push(self, chunk):
-        if self._clbk is None:
-            # If there is no attachment object, put chunk in the cache
-            self._logger.debug("Cache chunk")
-            self.cache.append(chunk)
-        else:
-            # Copy callback to temp, clear current callback and perform temp
-            # Do it so because self._clbk may change,
-            # while performing callback function.
-            # Avoid double chunk sending to the task
-            self._logger.debug("Send chunk to application")
-            temp = self._clbk
-            self._clbk = None
-            temp(chunk)
-
-    def error(self, errormsg):
-        self._errmsg = errormsg
-
-    def close(self):
-        self._logger.debug("Close request")
-        self._state = None
-        if len(self.cache) == 0 and self._clbk is not None:
-            self._logger.warn("Chunks are over,\
-                                but the application requests them")
-            if self._errbk is not None:
-                self._logger.error("Throw error")
-                self._errbk(RequestError("No chunks are available"))
-            else:
-                self._logger.error("No errorback. Can't throw error")
+class Request(object):
+    def __init__(self, deferred):
+        self._deferred = deferred
 
     def read(self):
-        return chain.Chain([lambda: self])
-
-    def default_errorback(self, err):
-        self._logger.error("No errorback.\
-                Can't throw error: %s" % str(self._errmsg))
-
-    def bind(self, callback, errorback=None, on_done=None):
-        #self._logger.debug("Bind request")
-        if len(self.cache) > 0:
-            callback(self.cache.pop(0))
-        elif self._errmsg is not None:
-            if errorback is not None:
-                errorback(self._errmsg)  # translate error into worker
-            else:
-                self.default_errorback(self._errmsg)
-        elif self._state is not None:
-            self._clbk = callback
-            self._errbk = errorback or self.default_errorback
-        else:
-            # Stream closed by choke
-            # Raise exception here because no chunks
-            # from cocaine-runtime are available
-            self._logger.warn("Chunks are over,\
-                                but the application requests them")
-            if errorback:
-                errorback(RequestError("No chunks are available"))
+        return self._deferred

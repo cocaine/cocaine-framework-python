@@ -46,9 +46,9 @@ setup(
     packages=[
         "cocaine",
         "cocaine.asio",
+        "cocaine.concurrent",
         "cocaine.decorators",
         "cocaine.services",
-        "cocaine.futures",
         "cocaine.logging",
         "cocaine.testing",
     ],
