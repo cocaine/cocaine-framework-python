@@ -20,6 +20,7 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 log = logging.getLogger(__name__)
 
+# Make defaults namespace
 LOCATOR_DEFAULT_HOST = '127.0.0.1'
 LOCATOR_DEFAULT_PORT = 10053
 
