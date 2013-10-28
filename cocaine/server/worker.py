@@ -23,15 +23,15 @@ import sys
 import traceback
 import types
 
-from cocaine.asio import ev
-from cocaine.asio.pipe import Pipe
-from cocaine.asio.stream import ReadableStream, WritableStream, Decoder
-from cocaine.asio.message import Message, RPC
-from cocaine.concurrent import Deferred
-from cocaine.server.request import Request
-from cocaine.server.response import Response
-from cocaine.logging.log import core_log
+from ..asio import ev
+from ..asio.pipe import Pipe
+from ..asio.stream import ReadableStream, WritableStream, Decoder
+from ..concurrent import Deferred
+from ..logging.log import core_log
+from ..protocol.message import Message, RPC
 
+from .request import Request
+from .response import Response
 from .sandbox import Sandbox
 
 

@@ -19,20 +19,20 @@
 #
 
 import contextlib
+import itertools
 import logging
+import msgpack
 import socket
 import sys
 import time
-import itertools
-import msgpack
 
 from cocaine import concurrent
-from cocaine.concurrent import Deferred, return_
-from cocaine.asio.exceptions import *
-from cocaine.asio.pipe import Pipe
-from cocaine.asio.message import Message, RPC
-from cocaine.asio.stream import WritableStream, ReadableStream
-from cocaine.protocol import ChokeEvent
+from ..asio.exceptions import *
+from ..asio.pipe import Pipe
+from ..asio.stream import WritableStream, ReadableStream
+from ..concurrent import Deferred, return_
+from ..protocol import ChokeEvent
+from ..protocol.message import Message, RPC
 
 from .exceptions import ServiceError
 from .session import Session
