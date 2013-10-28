@@ -1,6 +1,6 @@
 import unittest
 
-from cocaine.asio.service import StateBuilder, RootState, State
+from cocaine.services.service import StateBuilder, RootState, State
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 

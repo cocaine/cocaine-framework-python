@@ -2,7 +2,7 @@ import json
 from django.http import HttpResponse
 from django.shortcuts import render
 from cocaine.tools.actions import common
-from cocaine.asio.service import Service, Locator
+from cocaine.services import Service
 
 
 locator = Locator()

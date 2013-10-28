@@ -21,7 +21,7 @@
 import sys
 import threading
 
-from cocaine.asio.service import Service
+from cocaine.services import Service
 from cocaine.logging.log_message import Message
 
 __all__ = ["Logger"]

@@ -18,7 +18,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from cocaine.asio.service import Service
+from .service import Service
 
 __all__ = ["Service"]
 
