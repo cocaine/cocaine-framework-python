@@ -1,4 +1,3 @@
-# encoding: utf-8
 #
 #    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
 #    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
@@ -21,18 +20,18 @@
 
 import msgpack
 import urlparse
+
 from tornado import escape
-
 from tornado.httputil import parse_body_arguments
+from tornado.httpserver import HTTPRequest, Cookie
 
-from _callablewrappers import proxy_factory
+from ..server._wrappers import proxy_factory
 
 
-__all__ = ["http", "tornado"]
+__all__ = ['http', 'tornado']
 
 
 class _HTTPResponse(object):
-
     def __init__(self, stream):
         self._stream = stream
         self.event = self._stream.event
@@ -55,7 +54,6 @@ class _HTTPResponse(object):
 
 
 class _HTTPRequest(object):
-
     def __init__(self, data):
         method, url, version, headers, self._body = msgpack.unpackb(data)
         self._meta = dict()
@@ -114,13 +112,10 @@ def http_request_decorator(obj):
     return obj
 
 
-#==========
-from tornado.httpserver import HTTPRequest, Cookie
-
-
 def _tornado_request_wrapper(data):
     method, uri, version, headers, body = msgpack.unpackb(data)
     return HTTPRequest(method, uri, version, dict(headers), body)
+
 
 def tornado_request_decorator(obj):
     def dec(func):
@@ -133,6 +128,7 @@ def tornado_request_decorator(obj):
 
 def http(func):
     return proxy_factory(func, response_handler=_HTTPResponse, request_handler=http_request_decorator)
+
 
 def tornado(func):
     return proxy_factory(func, response_handler=_HTTPResponse, request_handler=tornado_request_decorator)

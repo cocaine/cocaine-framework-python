@@ -2,10 +2,9 @@
 
 from hashlib import sha512
 
-from cocaine.worker import Worker
+from cocaine.server.worker import Worker
 from cocaine.logging import Logger
 from cocaine.services import Service
-from cocaine.exceptions import *
 from cocaine.decorators import http, fs
 
 
@@ -14,7 +13,6 @@ L = Logger()
 urlfetcher_service = Service("urlfetch")
 storage_service = Service("storage")
 
-import sys
 
 def example(request, response):
     L.info("INITIALIZE FUNCTION")

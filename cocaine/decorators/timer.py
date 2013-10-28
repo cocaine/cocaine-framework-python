@@ -1,4 +1,3 @@
-# encoding: utf-8
 #
 #    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
 #    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
@@ -19,11 +18,10 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
+from ..server._wrappers import proxy_factory
 
-from _callablewrappers import proxy_factory
 
-
-__all__ = ["timer"]
+__all__ = ['timer']
 
 
 def timer(func):

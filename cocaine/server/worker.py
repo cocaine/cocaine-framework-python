@@ -30,8 +30,9 @@ from cocaine.asio.message import Message, RPC
 from cocaine.concurrent import Deferred
 from cocaine.server.request import Request
 from cocaine.server.response import Response
-from cocaine.sessioncontext import Sandbox
 from cocaine.logging.log import core_log
+
+from .sandbox import Sandbox
 
 
 class Worker(object):

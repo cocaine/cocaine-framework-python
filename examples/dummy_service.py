@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from cocaine.worker import Worker
+from cocaine.server.worker import Worker
 from cocaine.services import Service
 
 storage = Service("storage")

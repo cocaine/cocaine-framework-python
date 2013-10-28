@@ -4,7 +4,7 @@ import StringIO
 import qrcode
 
 from cocaine.decorators import http
-from cocaine.worker import Worker
+from cocaine.server.worker import Worker
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
