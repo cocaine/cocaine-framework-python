@@ -19,12 +19,6 @@
 #
 
 
-try:
-    from itertools import izip
-except ImportError:
-    izip = zip
-
-
 class RPC:
     PROTOCOL_LIST = (
         HANDSHAKE,
@@ -81,7 +75,7 @@ class MessageInit(type):
         msg.__init__()
         setattr(msg, "id", obj_dict["id"])
         setattr(msg, "session", session)
-        for attr, value in izip(obj_dict["tuple_type"], tuple_types):
+        for attr, value in zip(obj_dict["tuple_type"], tuple_types):
             setattr(msg, attr, value)
         setattr(msg, "pack", closure(msg.id, msg.session, tuple_types))
         return msg
@@ -91,8 +85,6 @@ class Message(object):
     __metaclass__ = MessageInit
 
     @staticmethod
-    def initialize(unpacked_data):
-        _id = unpacked_data[0]
-        session = unpacked_data[1]
-        args = unpacked_data[2]
-        return Message(RPC.PROTOCOL_LIST[_id], session, *args)
+    def initialize(data):
+        id_, session, args = data
+        return Message(RPC.PROTOCOL_LIST[id_], session, *args)
