@@ -97,18 +97,12 @@ def _engine_closure(final_deferred):
                 deferred_results[deferred].append(future)
         except _ReturnEvent as event:
             log.debug(event)
-            if deferred is not None:
-                deferred.close()
             final_deferred.trigger(event.value)
         except StopIteration:
             log.debug('StopIteration')
-            if deferred is not None:
-                deferred.close()
             final_deferred.trigger()
         except Exception as err:
             log.debug('error occurred - %s', err)
-            if deferred is not None:
-                deferred.close()
             final_deferred.error(err)
     return _engine
 

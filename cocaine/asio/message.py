@@ -47,7 +47,7 @@ PROTOCOL = {
     },
     RPC.TERMINATE: {
         "id": RPC.TERMINATE,
-        "tuple_type": ("reason", "message")
+        "tuple_type": ("errno", "reason")
     },
     RPC.INVOKE: {
         "id": RPC.INVOKE,
@@ -59,7 +59,7 @@ PROTOCOL = {
     },
     RPC.ERROR: {
         "id": RPC.ERROR,
-        "tuple_type": ("code", "message")
+        "tuple_type": ("errno", "reason")
     },
     RPC.CHOKE: {
         "id": RPC.CHOKE,

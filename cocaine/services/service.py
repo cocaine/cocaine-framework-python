@@ -42,6 +42,24 @@ from .state import StateBuilder, RootState
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
+class CocaineDeferred(Deferred):
+    def __init__(self):
+        super(CocaineDeferred, self).__init__()
+        self.count = 0
+        self.closed = False
+
+    def _trigger(self, result):
+        self.count += 1
+        super(CocaineDeferred, self)._trigger(result)
+
+    def close(self):
+        if self.count == 0:
+            self.trigger()
+        else:
+            self.error(ChokeEvent())
+        super(CocaineDeferred, self).close()
+
+
 log = logging.getLogger(__name__)
 
 # Make defaults namespace
@@ -230,7 +248,6 @@ class AbstractService(object):
         elif message.id == RPC.ERROR:
             deferred.error(ServiceError(message.errno, message.reason))
         elif message.id == RPC.CHOKE:
-            deferred.error(ChokeEvent())
             self._sessions.pop(message.session)
             deferred.close()
 
@@ -271,7 +288,7 @@ class AbstractService(object):
     def send_data(self, session, data):
         deferred = self._sessions.get(session)
         if deferred is None:
-            deferred = Deferred()
+            deferred = CocaineDeferred()
             self._sessions[session] = deferred
         self._writableStream.write(data)
         return deferred
@@ -463,7 +480,7 @@ class Service(AbstractService):
         else:
             locator = self._locator_cache[(host, port)]
 
-        if not locator.isConnected():
+        if not locator.connected():
             yield locator.connect(host, port, timeout, blocking=blocking)
         yield self.connectThroughLocator(locator, timeout, blocking=blocking)
 
@@ -491,7 +508,6 @@ class Service(AbstractService):
 
             try:
                 d = yield func(*args, **kwargs)
-                return_(d)
             except KeyError as fd:
                 log.warn('broken pipe detected, fd: %s', str(fd))
                 log.info('reconnecting... ')
@@ -499,13 +515,13 @@ class Service(AbstractService):
                 yield self.connectThroughLocator(locator)
                 d = yield func(*args, **kwargs)
                 log.info('service has been successfully reconnected')
-                return_(d)
+            return_(d)
 
         return wrapper
 
     @strategy.coroutine
     def reconnect(self, timeout=None, blocking=False):
-        if self.isConnecting():
+        if self.connecting():
             raise IllegalStateError('already connecting')
         self.disconnect()
         yield self.connect(timeout=timeout, blocking=blocking)
