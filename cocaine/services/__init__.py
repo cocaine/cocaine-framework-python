@@ -18,7 +18,8 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .service import Service, Locator
+from .service import Service
+from .locator import Locator
 
 __all__ = ['Service', 'Locator']
 
