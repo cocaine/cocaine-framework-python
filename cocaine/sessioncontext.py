@@ -19,10 +19,6 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import traceback
-
-import msgpack
-
 from cocaine.decorators import default
 from cocaine.logging.log import core_log
 
@@ -57,43 +53,3 @@ class Sandbox(object):
             if not hasattr(closure, "_wrapped"):
                 event_handler = default(event_handler)
         self._events[event_name] = event_handler
-
-
-class Stream(object):
-
-    def __init__(self, session, worker, event_name=""):
-        self._m_state = 1
-        self.worker = worker
-        self.session = session
-        self.event = event_name
-
-    def write(self, chunk):
-        chunk = msgpack.packb(chunk)
-        if self._m_state is not None:
-            self.worker.send_chunk(self.session, chunk)
-            return
-        traceback.print_stack()
-
-    def close(self):
-        if self._m_state is not None:
-            self.worker.send_choke(self.session)
-            self._m_state = None
-            return
-        traceback.print_stack()
-
-    def error(self, code, message):
-        if self._m_state is not None:
-            self.worker.send_error(self.session, code, message)
-            self.close()
-
-    @property
-    def closed(self):
-        return self._m_state is None
-
-
-class Request(object):
-    def __init__(self, deferred):
-        self._deferred = deferred
-
-    def read(self):
-        return self._deferred

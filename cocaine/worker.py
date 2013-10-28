@@ -19,23 +19,18 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 import socket
-
 import sys
 import traceback
 import types
 
 from cocaine.asio import ev
 from cocaine.asio.pipe import Pipe
-from cocaine.asio.stream import ReadableStream
-from cocaine.asio.stream import WritableStream
-from cocaine.asio.stream import Decoder
+from cocaine.asio.stream import ReadableStream, WritableStream, Decoder
 from cocaine.asio.message import Message, RPC
 from cocaine.concurrent import Deferred
-
+from cocaine.server.request import Request
+from cocaine.server.response import Response
 from cocaine.sessioncontext import Sandbox
-from cocaine.sessioncontext import Stream
-from cocaine.sessioncontext import Request
-
 from cocaine.logging.log import core_log
 
 
@@ -119,19 +114,19 @@ class Worker(object):
         if msg is None:
             return
         elif msg.id == RPC.INVOKE:
-            d = Deferred()
-            request = Request(d)
-            stream = Stream(msg.session, self, msg.event)
+            deferred = Deferred()
+            request = Request(deferred)
+            response = Response(msg.session, self)
             try:
-                self.sandbox.invoke(msg.event, request, stream)
-                self.sessions[msg.session] = request
+                self.sandbox.invoke(msg.event, request, response)
+                self.sessions[msg.session] = deferred
             except (ImportError, SyntaxError) as err:
-                stream.error(2, "unrecoverable error: %s " % str(err))
+                response.error(2, "unrecoverable error: %s " % str(err))
                 self.terminate(1, "Bad code")
             except Exception as err:
                 self._logger.error("On invoke error: %s" % err)
                 traceback.print_stack()
-                stream.error(1, "Invocation error")
+                response.error(1, "Invocation error")
         elif msg.id == RPC.CHUNK:
             self._logger.debug("Receive chunk: %d" % msg.session)
             try:
@@ -173,11 +168,11 @@ class Worker(object):
         self._logger.debug("Send heartbeat. Start disown timer")
         self.w_stream.write(Message(RPC.HEARTBEAT, 0).pack())
 
-    def send_choke(self, session):
+    def _send_choke(self, session):
         self.w_stream.write(Message(RPC.CHOKE, session).pack())
 
-    def send_chunk(self, session, data):
+    def _send_chunk(self, session, data):
         self.w_stream.write(Message(RPC.CHUNK, session, data).pack())
 
-    def send_error(self, session, code, msg):
+    def _send_error(self, session, code, msg):
         self.w_stream.write(Message(RPC.ERROR, session, code, msg).pack())

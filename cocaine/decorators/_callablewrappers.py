@@ -27,12 +27,11 @@ import compiler
 import traceback
 
 from cocaine import concurrent
-from cocaine.exceptions import ChokeEvent
 from cocaine.logging.log import core_log
+from ..protocol import ChokeEvent
 
 
 class _Proxy(object):
-
     __metaclass__ = ABCMeta
     _wrapped = True
     _logger = core_log
@@ -50,20 +49,17 @@ class _Coroutine(_Proxy):
     """Wrapper for coroutine function """
 
     def __init__(self, func):
-        self._response = None
         self._obj = func
         self._state = None
         self._current_future_object = None
 
-    def invoke(self, request, stream):
-        self._state = 1
-        self._response = stream  # attach response stream
-        deferred = concurrent.engine(self._obj)(request, self._response)
-        deferred.add_callback(functools.partial(self._finally, self._response))
+    def invoke(self, request, response):
+        deferred = concurrent.engine(self._obj)(request, response)
+        deferred.add_callback(functools.partial(self._finally, response))
 
-    def _finally(self, res):
+    def _finally(self, response, result):
         try:
-            res.get()
+            result.get()
         except ChokeEvent:
             pass
         except StopIteration:
@@ -71,13 +67,11 @@ class _Coroutine(_Proxy):
         except Exception as err:
             self._logger.error(repr(err), exc_info=True)
             traceback.print_stack()
-            if not self._response.closed:
-                self._response.error(1, "Error in event '%s' handler %s" %
-                                     (self._response.event,
-                                     str(err)))
+            if not response.closed:
+                response.error(1, 'Error in event \'%s\' handler %s', response.event, err)
         finally:
-            if not self._response.closed:
-                self._logger.info("Handler for %s didn't close response stream" % self._response.event)
+            if not response.closed:
+                self._logger.info('Handler for %s didn\'t close response stream', response.event)
 
     def close(self):
         self._state = None

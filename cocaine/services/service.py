@@ -495,7 +495,7 @@ class Service(AbstractService):
         for state in self.states.values():
             self.api[state.name] = state.id
             invoke = self._make_invokable(state)
-            invoke = self._make_reconnectable(invoke, locator)
+            # invoke = self._make_reconnectable(invoke, locator)
             setattr(self, state.name, invoke)
 
         yield self._connect_to_endpoint(*endpoint, timeout=timeout, blocking=blocking)

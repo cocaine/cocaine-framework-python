@@ -1,39 +1,24 @@
-# coding=utf-8
-import sys
+from tornado.ioloop import IOLoop
 
-from cocaine.futures.chain import Chain
-import msgpack
+from cocaine import concurrent
 from cocaine.services import Service
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-def example_SynchronousFetching():
-    for chunk in service.perform_sync('enqueue', 'doIt', 'SomeMessage'):
-        print('example_SynchronousFetching: Response received - {0}'.format(msgpack.loads(chunk)))
-
-
-def example_Synchronous():
-    message = service.enqueue('doIt', 'SomeMessage').get()
-    print('example_Synchronous: Response received - {0}'.format(msgpack.loads(message)))
-
-
-def example_AsynchronousYielding():
-    message = yield service.enqueue('doIt', 'SomeMessage')
-    print('example_AsynchronousYielding: Response received - {0}'.format(msgpack.loads(message)))
-
-
-def example_AsynchronousChaining():
-    return service.enqueue('doIt', 'SomeMessage')
+@concurrent.engine
+def ping(message):
+    try:
+        channel = echo.enqueue('ping')
+        response = yield channel.write(message)
+        print(response)
+    except Exception as err:
+        print(err)
+    finally:
+        IOLoop.current().stop()
 
 
 if __name__ == '__main__':
-    service = Service('Echo')
-    example_SynchronousFetching()
-    example_Synchronous()
-    Chain([example_AsynchronousYielding]).wait()
-    example_AsynchronousChaining()\
-        .then(lambda r: msgpack.loads(r.get()))\
-        .then(lambda r: sys.stdout.write('example_AsynchronousChaining: Response received - {0}\n'.format(r.get())))\
-        .wait()
-    sys.stdout.flush()
+    echo = Service('echo')
+    ping('Hi!')
+    IOLoop.current().start()
