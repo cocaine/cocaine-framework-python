@@ -1,5 +1,5 @@
 #
-#   Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
+#    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
 #    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
 #
 #    This file is part of Cocaine.
@@ -18,7 +18,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .service import Service
+from .service import Service, Locator
 
-__all__ = ["Service"]
+__all__ = ['Service', 'Locator']
 

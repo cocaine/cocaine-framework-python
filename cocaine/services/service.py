@@ -1,18 +1,42 @@
+#
+#    Copyright (c) 2013+ Evgeny Safronov <division494@gmail.com>
+#    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
+#
+#    This file is part of Cocaine.
+#
+#    Cocaine is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU Lesser General Public License as published
+#    by the Free Software Foundation; either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Cocaine is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#    GNU Lesser General Public License for more details.
+#
+#    You should have received a copy of the GNU Lesser General Public License
+#    along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+
 import contextlib
 import logging
 import socket
 import sys
 import time
+import itertools
 import msgpack
 
 from cocaine import concurrent
 from cocaine.concurrent import Deferred, return_
-from cocaine.exceptions import ServiceError
 from cocaine.asio.exceptions import *
 from cocaine.asio.pipe import Pipe
-from cocaine.asio import message
-from cocaine.asio.message import Message
+from cocaine.asio.message import Message, RPC
 from cocaine.asio.stream import WritableStream, ReadableStream
+from cocaine.protocol import ChokeEvent
+
+from .exceptions import ServiceError
+from .session import Session
+from .state import StateBuilder, RootState
 
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -31,47 +55,6 @@ if '--locator' in sys.argv:
         LOCATOR_DEFAULT_HOST = host
     if port.isdigit():
         LOCATOR_DEFAULT_PORT = int(port)
-
-
-class StateBuilder(object):
-    def build(self, api):
-        root = RootState()
-        self._build(root, api)
-        return root
-
-    def _build(self, parent, api):
-        for id_, (name, api) in api.items():
-            if api is None:
-                return
-            state = State(id_, name, parent)
-            self._build(state, api)
-
-
-class State(object):
-    def __init__(self, id_, name, parent=None):
-        self.id_ = id_
-        self.name = name
-        self.children = []
-        if parent is not None:
-            parent.children.append(self)
-
-    def __str__(self):
-        return 'State(id={0}, name={1}, children={2})'.format(self.id_, self.name, self.children)
-
-    def __repr__(self):
-        return '<{0}>'.format(str(self))
-
-    def __eq__(self, other):
-        if other is None:
-            return False
-        return all([self.id_ == other.id_,
-                    self.name == other.name,
-                    self.children == other.children])
-
-
-class RootState(State):
-    def __init__(self):
-        super(RootState, self).__init__(0, '/', None)
 
 
 class strategy:
@@ -152,8 +135,8 @@ class AbstractService(object):
         self._writableStream = None
         self._readableStream = None
 
-        self._subscribers = {}
-        self._session = 0
+        self._counter = itertools.count()
+        self._sessions = {}
 
         self.version = 0
         self.api = {}
@@ -169,13 +152,13 @@ class AbstractService(object):
 
         It the service is not connected this method returns tuple `('NOT_CONNECTED', 0)`.
         """
-        return self._pipe.address if self.isConnected() else ('NOT_CONNECTED', 0)
+        return self._pipe.address if self.connected() else ('NOT_CONNECTED', 0)
 
-    def isConnecting(self):
+    def connecting(self):
         """Return true if the service is in connecting state."""
         return self._pipe is not None and self._pipe.isConnecting()
 
-    def isConnected(self):
+    def connected(self):
         """Return true if the service is in connected state."""
         return self._pipe is not None and self._pipe.isConnected()
 
@@ -190,8 +173,8 @@ class AbstractService(object):
         self._pipe = None
 
     @strategy.coroutine
-    def _connectToEndpoint(self, host, port, timeout, blocking=False):
-        if self.isConnected():
+    def _connect_to_endpoint(self, host, port, timeout, blocking=False):
+        if self.connected():
             raise IllegalStateError('service "{0}" is already connected'.format(self.name))
 
         addressInfoList = socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM)
@@ -237,41 +220,74 @@ class AbstractService(object):
         raise ConnectionError((host, port), reason)
 
     def _on_message(self, args):
-        msg = Message.initialize(args)
-        if msg is None:
-            return
+        message = Message.initialize(args)
+        assert message.id in (RPC.CHUNK, RPC.ERROR, RPC.CHOKE), 'unexpected message id: {0}'.format(message.id)
 
-        try:
-            if msg.id == message.RPC_CHUNK:
-                self._subscribers[msg.session].trigger(msgpack.unpackb(msg.data))
-            elif msg.id == message.RPC_CHOKE:
-                future = self._subscribers.pop(msg.session, None)
-                assert future is not None, 'one of subscribers has suddenly disappeared'
-                future.close()
-            elif msg.id == message.RPC_ERROR:
-                self._subscribers[msg.session].error(ServiceError(self.name, msg.message, msg.code))
-        except Exception as err:
-            log.warning('"_on_message" method has caught an error - %s', err)
-            raise err
+        deferred = self._sessions[message.session]
+        if message.id == RPC.CHUNK:
+            chunk = msgpack.loads(message.data)
+            deferred.trigger(chunk)
+        elif message.id == RPC.ERROR:
+            deferred.error(ServiceError(message.errno, message.reason))
+        elif message.id == RPC.CHOKE:
+            deferred.error(ChokeEvent())
+            self._sessions.pop(message.session)
+            deferred.close()
 
-    def _invoke(self, methodId):
-        def wrapper(*args, **kwargs):
-            deferred = Deferred()
-            timeout = kwargs.get('timeout', None)
-            if timeout is not None:
-                timeoutId = self._ioLoop.add_timeout(time.time() + timeout,
-                                                     lambda: deferred.error(TimeoutError(timeout)))
+    # def _invoke(self, methodId):
+    #     def wrapper(*args, **kwargs):
+    #         deferred = Deferred()
+    #         timeout = kwargs.get('timeout', None)
+    #         if timeout is not None:
+    #             timeoutId = self._ioLoop.add_timeout(time.time() + timeout,
+    #                                                  lambda: deferred.error(TimeoutError(timeout)))
+    #
+    #             def timeoutRemover(func):
+    #                 def wrapper(*args, **kwargs):
+    #                     self._ioLoop.remove_timeout(timeoutId)
+    #                     return func(*args, **kwargs)
+    #                 return wrapper
+    #             deferred.close = timeoutRemover(deferred.close)
+    #         self._session += 1
+    #         self._writableStream.write([methodId, self._session, args])
+    #         self._subscribers[self._session] = deferred
+    #         return deferred
+    #     return wrapper
 
-                def timeoutRemover(func):
-                    def wrapper(*args, **kwargs):
-                        self._ioLoop.remove_timeout(timeoutId)
-                        return func(*args, **kwargs)
-                    return wrapper
-                deferred.close = timeoutRemover(deferred.close)
-            self._session += 1
-            self._writableStream.write([methodId, self._session, args])
-            self._subscribers[self._session] = deferred
+    def _invoke(self, method_id, state, *args):
+        log.debug('invoking [%d, %s]', method_id, args)
+        session = self._counter.next()
+        deferred = self._chunk(method_id, session, *args)
+        if len(state.substates) == 0:  # Non-Switching, pure invocation with deferreds and whores.
             return deferred
+        else:  # Switching
+            return Session(state, session, self)
+
+    def _chunk(self, method_id, session, *args):
+        log.debug('sending chunk [%d, %d, %s]', method_id, session, args)
+        deferred = self.send_data(session, [method_id, session, args])
+        return deferred
+
+    def send_data(self, session, data):
+        deferred = self._sessions.get(session)
+        if deferred is None:
+            deferred = Deferred()
+            self._sessions[session] = deferred
+        self._writableStream.write(data)
+        return deferred
+
+    def _make_invokable(self, state):
+        def wrapper(*args, **kwargs):
+            if not self.connected():
+                raise IllegalStateError('service "%s" is not connected', self.name)
+            return self._invoke(state.id, state, *args, **kwargs)
+        return wrapper
+
+    def _make_chunk(self, method_id, session):
+        def wrapper(*args, **kwargs):
+            if not self.connected():
+                raise IllegalStateError('service "%s" is not connected', self.name)
+            return self._chunk(method_id, session, *args, **kwargs)
         return wrapper
 
     def perform_sync(self, method, *args, **kwargs):
@@ -287,7 +303,7 @@ class AbstractService(object):
                   to the summoning of Satan.
         .. warning:: Do not mix synchronous and asynchronous usage of service!
         """
-        if not self.isConnected():
+        if not self.connected():
             raise IllegalStateError('service "{0}" is not connected'.format(self.name))
 
         if method not in self.api:
@@ -298,8 +314,8 @@ class AbstractService(object):
             raise ValueError('timeout must be positive number')
 
         with scope.socket.timeout(self._pipe.sock, timeout) as sock:
-            self._session += 1
-            sock.send(msgpack.dumps([self.api[method], self._session, args]))
+            session = self._counter.next()
+            sock.send(msgpack.dumps([self.api[method], session, args]))
             unpacker = msgpack.Unpacker()
             error = None
             while True:
@@ -309,12 +325,12 @@ class AbstractService(object):
                     msg = Message.initialize(chunk)
                     if msg is None:
                         continue
-                    if msg.id == message.RPC_CHUNK:
+                    if msg.id == RPC.CHUNK:
                         yield msgpack.loads(msg.data)
-                    elif msg.id == message.RPC_CHOKE:
+                    elif msg.id == RPC.CHOKE:
                         raise error or StopIteration
-                    elif msg.id == message.RPC_ERROR:
-                        error = ServiceError(self.name, msg.message, msg.code)
+                    elif msg.id == RPC.ERROR:
+                        error = ServiceError(msg.code, msg.message)
 
 
 class Locator(AbstractService):
@@ -326,14 +342,12 @@ class Locator(AbstractService):
               services endpoints.
     """
     RESOLVE_METHOD_ID, SYNC_METHOD_ID, REPORTS_METHOD_ID, REFRESH_METHOD_ID = range(4)
+    ROOT_STATE = RootState()
 
     def __init__(self):
         super(Locator, self).__init__('locator')
         self.api = {
-            'resolve': self.RESOLVE_METHOD_ID,
-            'sync': self.SYNC_METHOD_ID,
-            'reports': self.REPORTS_METHOD_ID,
-            'refresh': self.REFRESH_METHOD_ID,
+            'resolve': 0
         }
 
     def connect(self, host, port, timeout, blocking):
@@ -348,7 +362,7 @@ class Locator(AbstractService):
                          connection will be used. Otherwise this method returns `cocaine.futures.chain.Chain` object,
                          which is normally requires event loop running.
         """
-        return self._connectToEndpoint(host, port, timeout, blocking=blocking)
+        return self._connect_to_endpoint(host, port, timeout, blocking=blocking)
 
     def resolve(self, name, timeout, blocking):
         """Resolve service by its `name`.
@@ -364,15 +378,15 @@ class Locator(AbstractService):
                          usage will be selected. Otherwise this method returns `cocaine.futures.chain.Chain` object,
                          which is normally requires event loop running.
         """
+        log.debug('resolving %s', name)
         if blocking:
             (endpoint, version, api), = [chunk for chunk in self.perform_sync('resolve', name, timeout=timeout)]
             return endpoint, version, api
         else:
-            return self._invoke(self.RESOLVE_METHOD_ID)(name, timeout=timeout)
+            return self._invoke(self.RESOLVE_METHOD_ID, self.ROOT_STATE, name)
 
-    @concurrent.engine
     def refresh(self, name, timeout=None):
-        return self._invoke(self.REFRESH_METHOD_ID)(name, timeout=timeout)
+        return self._invoke(self.REFRESH_METHOD_ID, self.ROOT_STATE, name)
 
 
 class Service(AbstractService):
@@ -460,19 +474,19 @@ class Service(AbstractService):
         except ServiceError as err:
             raise LocatorResolveError(self.name, locator.address, err)
 
-        for id_, (name, dispatch) in api.items():
-            invoke = self._make_reconnectable(self._invoke(id_), locator)
-            self.api[name] = id_
-            setattr(self, name, invoke)
+        self.states = StateBuilder.build(api).substates
+        for state in self.states.values():
+            self.api[state.name] = state.id
+            invoke = self._make_invokable(state)
+            invoke = self._make_reconnectable(invoke, locator)
+            setattr(self, state.name, invoke)
 
-        builder = StateBuilder()
-        self.states = builder.build(api).children
-        yield self._connectToEndpoint(*endpoint, timeout=timeout, blocking=blocking)
+        yield self._connect_to_endpoint(*endpoint, timeout=timeout, blocking=blocking)
 
     def _make_reconnectable(self, func, locator):
         @strategy.coroutine
         def wrapper(*args, **kwargs):
-            if not self.isConnected():
+            if not self.connected():
                 yield self.connectThroughLocator(locator)
 
             try:

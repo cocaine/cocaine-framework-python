@@ -29,8 +29,7 @@ from cocaine.asio.pipe import Pipe
 from cocaine.asio.stream import ReadableStream
 from cocaine.asio.stream import WritableStream
 from cocaine.asio.stream import Decoder
-from cocaine.asio import message
-from cocaine.asio.message import Message
+from cocaine.asio.message import Message, RPC
 from cocaine.concurrent import Deferred
 
 from cocaine.sessioncontext import Sandbox
@@ -38,7 +37,6 @@ from cocaine.sessioncontext import Stream
 from cocaine.sessioncontext import Request
 
 from cocaine.logging.log import core_log
-from cocaine.exceptions import RequestError
 
 
 class Worker(object):
@@ -104,7 +102,7 @@ class Worker(object):
         self.loop.run()
 
     def terminate(self, reason, msg):
-        self.w_stream.write(Message(message.RPC_TERMINATE, 0, reason, msg).pack())
+        self.w_stream.write(Message(RPC.TERMINATE, 0, reason, msg).pack())
         self.loop.stop()
         exit(1)
 
@@ -120,8 +118,7 @@ class Worker(object):
         msg = Message.initialize(args)
         if msg is None:
             return
-
-        elif msg.id == message.RPC_INVOKE:
+        elif msg.id == RPC.INVOKE:
             d = Deferred()
             request = Request(d)
             stream = Stream(msg.session, self, msg.event)
@@ -135,8 +132,7 @@ class Worker(object):
                 self._logger.error("On invoke error: %s" % err)
                 traceback.print_stack()
                 stream.error(1, "Invocation error")
-
-        elif msg.id == message.RPC_CHUNK:
+        elif msg.id == RPC.CHUNK:
             self._logger.debug("Receive chunk: %d" % msg.session)
             try:
                 _session = self.sessions[msg.session]
@@ -145,26 +141,22 @@ class Worker(object):
                 self._logger.error("On push error: %s" % str(err))
                 self.terminate(1, "Push error: %s" % str(err))
                 return
-
-        elif msg.id == message.RPC_CHOKE:
+        elif msg.id == RPC.CHOKE:
             self._logger.debug("Receive choke: %d" % msg.session)
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
                 _session.close()
                 self.sessions.pop(msg.session)
-
-        elif msg.id == message.RPC_HEARTBEAT:
+        elif msg.id == RPC.HEARTBEAT:
             self._logger.debug("Receive heartbeat. Stop disown timer")
             self.disown_timer.stop()
-
-        elif msg.id == message.RPC_TERMINATE:
+        elif msg.id == RPC.TERMINATE:
             self._logger.debug("Receive terminate. %s, %s" % (msg.reason, msg.message))
             self.terminate(msg.reason, msg.message)
-
-        elif msg.id == message.RPC_ERROR:
+        elif msg.id == RPC.ERROR:
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
-                _session.error(RequestError(msg.message))
+                _session.error(Exception(msg.message))
 
     def on_disown(self):
         try:
@@ -174,18 +166,18 @@ class Worker(object):
 
     # Private:
     def _send_handshake(self):
-        self.w_stream.write(Message(message.RPC_HANDSHAKE, 0, self.id).pack())
+        self.w_stream.write(Message(RPC.HANDSHAKE, 0, self.id).pack())
 
     def _send_heartbeat(self):
         self.disown_timer.start()
         self._logger.debug("Send heartbeat. Start disown timer")
-        self.w_stream.write(Message(message.RPC_HEARTBEAT, 0).pack())
+        self.w_stream.write(Message(RPC.HEARTBEAT, 0).pack())
 
     def send_choke(self, session):
-        self.w_stream.write(Message(message.RPC_CHOKE, session).pack())
+        self.w_stream.write(Message(RPC.CHOKE, session).pack())
 
     def send_chunk(self, session, data):
-        self.w_stream.write(Message(message.RPC_CHUNK, session, data).pack())
+        self.w_stream.write(Message(RPC.CHUNK, session, data).pack())
 
     def send_error(self, session, code, msg):
-        self.w_stream.write(Message(message.RPC_ERROR, session, code, msg).pack())
+        self.w_stream.write(Message(RPC.ERROR, session, code, msg).pack())

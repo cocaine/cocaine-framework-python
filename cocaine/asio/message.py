@@ -1,4 +1,3 @@
-# encoding: utf-8
 #
 #    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
 #    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
@@ -25,60 +24,49 @@ try:
 except ImportError:
     izip = zip
 
-#
-#   Answer to C++ templates
-#
 
-#PROTOCOL_LIST = (
-#    "rpc::handshake",   #0
-#    "rpc::heartbeat",   #1
-#    "rpc::terminate",   #2
-#    "rpc::invoke",      #3
-#    "rpc::chunk",       #4
-#    "rpc::error",       #5
-#    "rpc::choke",       #6
-#    )
-
-PROTOCOL_LIST = (
-    RPC_HANDSHAKE,
-    RPC_HEARTBEAT,
-    RPC_TERMINATE,
-    RPC_INVOKE,
-    RPC_CHUNK,
-    RPC_ERROR,
-    RPC_CHOKE) = range(7)
+class RPC:
+    PROTOCOL_LIST = (
+        HANDSHAKE,
+        HEARTBEAT,
+        TERMINATE,
+        INVOKE,
+        CHUNK,
+        ERROR,
+        CHOKE) = range(7)
 
 
 PROTOCOL = {
-    RPC_HANDSHAKE: {
-        "id" : RPC_HANDSHAKE, #PROTOCOL_LIST.index("rpc::handshake"),
+    RPC.HANDSHAKE: {
+        "id": RPC.HANDSHAKE,
         "tuple_type": ("uuid",)
     },
-    RPC_HEARTBEAT: {
-        "id" : RPC_HEARTBEAT, #PROTOCOL_LIST.index("rpc::heartbeat"),
+    RPC.HEARTBEAT: {
+        "id": RPC.HEARTBEAT,
         "tuple_type": ()
     },
-    RPC_TERMINATE : {
-        "id" : RPC_TERMINATE, #PROTOCOL_LIST.index("rpc::terminate"),
+    RPC.TERMINATE: {
+        "id": RPC.TERMINATE,
         "tuple_type": ("reason", "message")
     },
-    RPC_INVOKE   : {
-        "id" : RPC_INVOKE, #PROTOCOL_LIST.index("rpc::invoke"),
+    RPC.INVOKE: {
+        "id": RPC.INVOKE,
         "tuple_type": ("event",)
     },
-    RPC_CHUNK    : {
-        "id" : RPC_CHUNK, #PROTOCOL_LIST.index("rpc::chunk"),
+    RPC.CHUNK: {
+        "id": RPC.CHUNK,
         "tuple_type": ("data",)
     },
-    RPC_ERROR   : {
-        "id" : RPC_ERROR, #PROTOCOL_LIST.index("rpc::error"),
+    RPC.ERROR: {
+        "id": RPC.ERROR,
         "tuple_type": ("code", "message")
     },
-    RPC_CHOKE   : {
-        "id" : RPC_CHOKE, #PROTOCOL_LIST.index("rpc::choke"),
+    RPC.CHOKE: {
+        "id": RPC.CHOKE,
         "tuple_type": ()
     }
 }
+
 
 def closure(m_id, m_session, args):
     def _wrapper():
@@ -87,14 +75,14 @@ def closure(m_id, m_session, args):
 
 
 class MessageInit(type):
-
     def __call__(cls, rpc_tag, session, *tuple_types):
         obj_dict = PROTOCOL[rpc_tag]
         msg = object.__new__(cls)
         msg.__init__()
         setattr(msg, "id", obj_dict["id"])
         setattr(msg, "session", session)
-        [setattr(msg, attr, value) for attr, value in izip(obj_dict["tuple_type"], tuple_types)]
+        for attr, value in izip(obj_dict["tuple_type"], tuple_types):
+            setattr(msg, attr, value)
         setattr(msg, "pack", closure(msg.id, msg.session, tuple_types))
         return msg
 
@@ -104,11 +92,7 @@ class Message(object):
 
     @staticmethod
     def initialize(unpacked_data):
-        try:
-            _id = unpacked_data[0]
-            session = unpacked_data[1]
-            args = unpacked_data[2]  #if unpacked_data[1] is not None else list()
-            return Message(PROTOCOL_LIST[_id], session, *args)
-        except Exception as err:
-            #print str(err)
-            return None
+        _id = unpacked_data[0]
+        session = unpacked_data[1]
+        args = unpacked_data[2]
+        return Message(RPC.PROTOCOL_LIST[_id], session, *args)
