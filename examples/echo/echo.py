@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from cocaine.server.worker import Worker
-from cocaine.logging import log
+from cocaine.logging.defaults import log
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
