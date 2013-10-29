@@ -267,4 +267,4 @@ class AbstractService(object):
                     elif msg.id == RPC.CHOKE:
                         raise error or StopIteration
                     elif msg.id == RPC.ERROR:
-                        error = ServiceError(msg.code, msg.message)
+                        error = ServiceError(msg.errno, msg.reason)
