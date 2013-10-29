@@ -58,7 +58,7 @@ class ReadableStream(object):
         self._callback = None
         self._attached = False
         self._buffer = msgpack.Unpacker()
-        self._tmp_buff = bytearray('\0' * self.START_CHUNK_SIZE) # array.array('c', '\0' * self.START_CHUNK_SIZE)
+        self._tmp_buff = bytearray('\0' * self.START_CHUNK_SIZE)
         self._lock = threading.Lock()
 
     def bind(self, callback):
