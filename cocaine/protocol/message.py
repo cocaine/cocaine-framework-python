@@ -63,26 +63,25 @@ PROTOCOL = {
 
 
 def closure(m_id, m_session, args):
-    def _wrapper():
+    def wrapper():
         return m_id, m_session, args
-    return _wrapper
+    return wrapper
 
 
-class BaseMessage(type):
-    def __call__(cls, id_, session, *tuple_types):
-        prototype = PROTOCOL[id_]
-        msg = object.__new__(cls)
-        msg.__init__()
-        setattr(msg, "id", prototype["id"])
-        setattr(msg, "session", session)
-        for attr, value in zip(prototype["tuple_type"], tuple_types):
-            setattr(msg, attr, value)
-        setattr(msg, "pack", closure(msg.id, msg.session, tuple_types))
-        return msg
+class BaseMessage(object):
+    def __init__(self, protocol, id_, session, *args):
+        prototype = protocol[id_]
+        self.id = prototype['id']
+        self.session = session
+        for attr, value in zip(prototype['tuple_type'], args):
+            setattr(self, attr, value)
+
+        setattr(self, 'pack', closure(self.id, session, args))
 
 
-class Message(object):
-    __metaclass__ = BaseMessage
+class Message(BaseMessage):
+    def __init__(self, id_, session, *args):
+        super(Message, self).__init__(PROTOCOL, id_, session, *args)
 
     @staticmethod
     def initialize(data):
