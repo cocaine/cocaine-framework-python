@@ -28,7 +28,7 @@ PROTOCOL_LIST = (
 PROTOCOL = {
     "Message": {
         "id": PROTOCOL_LIST.index("Message"),
-        "tuple_type": ("level", "appname", "content")
+        "tuple_type": ("level", "target", "content")
     }
 }
 
@@ -41,7 +41,7 @@ def closure(m_id, session, args):
 
 class MessageInit(type):
 
-    def __call__(cls, rpc_tag, session,  *tuple_types):
+    def __call__(cls, rpc_tag, session, *tuple_types):
         obj_dict = PROTOCOL[rpc_tag]
         msg = object.__new__(cls)
         msg.__init__()

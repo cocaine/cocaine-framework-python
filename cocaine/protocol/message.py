@@ -68,21 +68,21 @@ def closure(m_id, m_session, args):
     return _wrapper
 
 
-class MessageInit(type):
+class BaseMessage(type):
     def __call__(cls, rpc_tag, session, *tuple_types):
-        obj_dict = PROTOCOL[rpc_tag]
+        prototype = PROTOCOL[rpc_tag]
         msg = object.__new__(cls)
         msg.__init__()
-        setattr(msg, "id", obj_dict["id"])
+        setattr(msg, "id", prototype["id"])
         setattr(msg, "session", session)
-        for attr, value in zip(obj_dict["tuple_type"], tuple_types):
+        for attr, value in zip(prototype["tuple_type"], tuple_types):
             setattr(msg, attr, value)
         setattr(msg, "pack", closure(msg.id, msg.session, tuple_types))
         return msg
 
 
 class Message(object):
-    __metaclass__ = MessageInit
+    __metaclass__ = BaseMessage
 
     @staticmethod
     def initialize(data):
