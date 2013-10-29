@@ -56,12 +56,6 @@ class Message(object):
     __metaclass__ = MessageInit
 
     @staticmethod
-    def initialize(unpacked_data):
-        try:
-            _id = unpacked_data[0]
-            session = unpacked_data[1]
-            args = unpacked_data[2] #if unpacked_data[1] is not None else list()
-            return Message(PROTOCOL_LIST[_id], *args)
-        except Exception as err:
-            #print str(err)
-            return None
+    def initialize(data):
+        id_, session, args = data
+        return Message(PROTOCOL_LIST[id_], *args)

@@ -69,8 +69,8 @@ def closure(m_id, m_session, args):
 
 
 class BaseMessage(type):
-    def __call__(cls, rpc_tag, session, *tuple_types):
-        prototype = PROTOCOL[rpc_tag]
+    def __call__(cls, id_, session, *tuple_types):
+        prototype = PROTOCOL[id_]
         msg = object.__new__(cls)
         msg.__init__()
         setattr(msg, "id", prototype["id"])
