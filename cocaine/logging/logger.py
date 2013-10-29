@@ -23,7 +23,7 @@ import threading
 
 from ..services import Service
 
-from .message import Message
+from .message import Message, RPC
 
 __all__ = ["Logger"]
 
@@ -64,7 +64,7 @@ def _construct_logger_methods(cls, verbosity_level):
             def func(data):
                 with cls._lock:
                     cls._counter += 1
-                    cls._logger._writableStream.write(Message("Message", cls._counter, _lvl,  cls.target, str(data)).pack())
+                    cls._logger._writableStream.write(Message(RPC.EMIT, cls._counter, _lvl,  cls.target, str(data)).pack())
             return func
         else:
             def func(data):

@@ -1,4 +1,3 @@
-# encoding: utf-8
 #
 #    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
 #    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
@@ -19,43 +18,23 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-from itertools import izip
+from ..protocol.message import BaseMessage
 
-PROTOCOL_LIST = (
-    "Message",
-)
+
+class RPC:
+    PROTOCOL_LIST = (
+        EMIT,
+    ) = range(1)
+
 
 PROTOCOL = {
-    "Message": {
-        "id": PROTOCOL_LIST.index("Message"),
+    RPC.EMIT: {
+        "id": RPC.EMIT,
         "tuple_type": ("level", "target", "content")
     }
 }
 
 
-def closure(m_id, session, args):
-    def _wrapper():
-        return m_id, session, args
-    return _wrapper
-
-
-class MessageInit(type):
-
-    def __call__(cls, rpc_tag, session, *tuple_types):
-        obj_dict = PROTOCOL[rpc_tag]
-        msg = object.__new__(cls)
-        msg.__init__()
-        setattr(msg, "id", obj_dict["id"])
-        setattr(msg, "session", session)
-        [setattr(msg, attr, value) for attr, value in izip(obj_dict["tuple_type"], tuple_types)]
-        setattr(msg, "pack", closure(msg.id, session, tuple_types))
-        return msg
-
-
-class Message(object):
-    __metaclass__ = MessageInit
-
-    @staticmethod
-    def initialize(data):
-        id_, session, args = data
-        return Message(PROTOCOL_LIST[id_], *args)
+class Message(BaseMessage):
+    def __init__(self, id_, session, *args):
+        super(Message, self).__init__(PROTOCOL, id_, session, *args)
