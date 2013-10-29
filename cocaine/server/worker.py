@@ -1,5 +1,6 @@
 #
 #    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
+#    Copyright (c) 2013+ Evgeny Safronov <division494@gmail.com>
 #    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
 #
 #    This file is part of Cocaine.
@@ -35,142 +36,184 @@ from .response import Response
 from .sandbox import Sandbox
 
 
-class Worker(object):
+class WorkerConnection(object):
+    def __init__(self, endpoint, on_message, io_loop):
+        self._io_loop = io_loop
 
-    def __init__(self, init_args=None, disown_timeout=2, heartbeat_timeout=20):
-        self._init_endpoint(init_args or sys.argv)
-
-        self.sessions = dict()
-        self.sandbox = Sandbox()
-
-        self.loop = ev.Loop()
-
-        self.disown_timer = ev.Timer(self.on_disown, disown_timeout, self.loop)
-        self.heartbeat_timer = ev.Timer(self.on_heartbeat, heartbeat_timeout, self.loop)
-        self.heartbeat_timer.start()
-
-        if isinstance(self.endpoint, types.TupleType) or isinstance(self.endpoint, types.ListType):
-            if len(self.endpoint) == 2:
+        if isinstance(endpoint, types.TupleType) or isinstance(endpoint, types.ListType):
+            if len(endpoint) == 2:
                 socket_type = socket.AF_INET
-            elif len(self.endpoint) == 4:
+            elif len(endpoint) == 4:
                 socket_type = socket.AF_INET6
             else:
                 raise ValueError('invalid endpoint')
-        elif isinstance(self.endpoint, types.StringType):
+        elif isinstance(endpoint, types.StringType):
             socket_type = socket.AF_UNIX
         else:
             raise ValueError('invalid endpoint')
-        sock = socket.socket(socket_type)
-        self.pipe = Pipe(sock)
-        self.pipe.connect(self.endpoint, blocking=True)
-        self.loop.bind_on_fd(self.pipe.fileno())
+
+        self.pipe = Pipe(socket.socket(socket_type))
+        self.pipe.connect(endpoint, blocking=True)
+        self._io_loop.bind_on_fd(self.pipe.fileno())
 
         self.decoder = Decoder()
-        self.decoder.bind(self.on_message)
+        self.decoder.bind(on_message)
 
-        self.w_stream = WritableStream(self.loop, self.pipe)
-        self.r_stream = ReadableStream(self.loop, self.pipe)
+        self.w_stream = WritableStream(self._io_loop, self.pipe)
+        self.r_stream = ReadableStream(self._io_loop, self.pipe)
         self.r_stream.bind(self.decoder.decode)
 
-        self.loop.register_read_event(self.r_stream._on_event,
-                                      self.pipe.fileno())
-        log.debug("Worker with %s send handshake" % self.id)
-        # Send both messages - to run timers properly. This messages will be sent
-        # only after all initialization, so they have same purpose.
-        self._send_handshake()
-        self._send_heartbeat()
+        self._io_loop.register_read_event(self.r_stream._on_event, self.pipe.fileno())
 
-    def _init_endpoint(self, init_args):
+    def connect(self):
+        d = Deferred()
+        d.trigger()
+        return d
+
+    def send_data(self, data):
+        self.w_stream.write(data)
+
+
+class Timer(object):
+    def __init__(self, timeout, callback):
+        self.timeout = timeout
+        self.callback = callback
+
+
+class HealthManager(object):
+    def __init__(self, disown_timeout, heartbeat_timeout, heartbeat_callback, io_loop):
+        self._heartbeat_callback = heartbeat_callback
+        self._io_loop = io_loop
+
+        self._disown_timer = ev.Timer(self._on_disown, disown_timeout, self._io_loop)
+        self._heartbeat_timer = ev.Timer(self._on_heartbeat, heartbeat_timeout, self._io_loop)
+
+    def start(self):
+        self._heartbeat_timer.start()
+
+    def breath(self):
+        self._disown_timer.stop()
+
+    def _on_disown(self):
+        log.error('disowned')
+        self._io_loop.stop()
+
+    def _on_heartbeat(self, session=0):
+        self._disown_timer.start()
+        self._heartbeat_callback(session)
+
+
+class Worker(object):
+    class TimeoutControl:
+        def __init__(self, disown, heartbeat):
+            self.disown = disown
+            self.heartbeat = heartbeat
+
+    def __init__(self, uuid=None, endpoint=None):
         try:
-            self.id = init_args[init_args.index("--uuid") + 1]
-            # app_name = init_args[init_args.index("--app") + 1]
-            self.endpoint = init_args[init_args.index("--endpoint") + 1]
-        except Exception as err:
-            log.error("Wrong cmdline arguments: %s " % err)
-            raise RuntimeError("Wrong cmdline arguments")
+            self.uuid = uuid or sys.argv[sys.argv.index('--uuid') + 1]
+            self.endpoint = endpoint or sys.argv[sys.argv.index('--endpoint') + 1]
+        except KeyError:
+            raise ValueError('wrong command line arguments: {0}'.format(sys.argv))
+
+        self._io_loop = ev.Loop()
+
+        # Dispatching
+        self._sandbox = Sandbox()
+
+        # Health control
+        self._health = HealthManager(5.0, 20.0, self._send_heartbeat, self._io_loop)
+
+        # Connection control
+        self._sessions = {}
+        self._connection = WorkerConnection(self.endpoint, on_message=self._on_message, io_loop=self._io_loop)
+        deferred = self._connection.connect()
+        deferred.add_callback(self._on_connect)
+
+    def on(self, event, callback):
+        self._sandbox.on(event, callback)
 
     def run(self, binds=None):
         if not binds:
             binds = {}
-        for event, name in binds.iteritems():
+        for event, name in binds.items():
             self.on(event, name)
-        self.loop.run()
 
-    def terminate(self, errno, reason):
-        self.w_stream.write(Message(RPC.TERMINATE, 0, errno, reason).pack())
-        self.loop.stop()
-        exit(1)
+        self._io_loop.run()
 
-    # Event machine
-    def on(self, event, callback):
-        self.sandbox.on(event, callback)
+    def terminate(self, session, errno, reason):
+        self._send_terminate(session, errno, reason)
+        self._io_loop.stop()
+        exit(errno)
 
-    # Events
-    def on_heartbeat(self):
-        self._send_heartbeat()
+    def _on_connect(self, result):
+        try:
+            result.get()
+        except Exception as err:
+            log.error('failed to connect worker with cocaine-runtime: %s', err)
+        else:
+            self._send_handshake()
+            self._send_heartbeat()
+            self._health.start()
 
-    def on_message(self, args):
+    def _on_message(self, args):
         msg = Message.initialize(args)
-        if msg is None:
-            return
+        log.debug('[->] %s', msg)
+        if msg.id == RPC.HEARTBEAT:
+            self._health.breath()
+        elif msg.id == RPC.TERMINATE:
+            self.terminate(msg.session, msg.errno, msg.reason)
         elif msg.id == RPC.INVOKE:
             deferred = Deferred()
             request = Request(deferred)
             response = Response(msg.session, self)
             try:
-                self.sandbox.invoke(msg.event, request, response)
-                self.sessions[msg.session] = deferred
+                self._sandbox.invoke(msg.event, request, response)
+                self._sessions[msg.session] = deferred
             except (ImportError, SyntaxError) as err:
                 response.error(2, "unrecoverable error: %s " % str(err))
-                self.terminate(1, "Bad code")
+                self.terminate(msg.session, 1, "Bad code")
             except Exception as err:
                 log.error("On invoke error: %s" % err)
                 traceback.print_stack()
                 response.error(1, "Invocation error")
         elif msg.id == RPC.CHUNK:
-            log.debug("Receive chunk: %d" % msg.session)
             try:
-                _session = self.sessions[msg.session]
-                _session.trigger(msg.data)
+                deferred = self._sessions[msg.session]
+                deferred.trigger(msg.data)
             except Exception as err:
                 log.error("On push error: %s" % str(err))
-                self.terminate(1, "Push error: %s" % str(err))
+                self.terminate(msg.session, 1, "Push error: %s" % str(err))
                 return
-        elif msg.id == RPC.CHOKE:
-            log.debug("Receive choke: %d" % msg.session)
-            _session = self.sessions.get(msg.session, None)
-            if _session is not None:
-                _session.close()
-                self.sessions.pop(msg.session)
-        elif msg.id == RPC.HEARTBEAT:
-            log.debug("Receive heartbeat. Stop disown timer")
-            self.disown_timer.stop()
-        elif msg.id == RPC.TERMINATE:
-            log.debug("Receive terminate. %s, %s" % (msg.errno, msg.reason))
-            self.terminate(msg.errno, msg.reason)
         elif msg.id == RPC.ERROR:
-            _session = self.sessions.get(msg.session, None)
-            if _session is not None:
-                _session.error(Exception(msg.reason))
+            deferred = self._sessions.get(msg.session, None)
+            if deferred is not None:
+                deferred.error(Exception(msg.reason))
+        elif msg.id == RPC.CHOKE:
+            deferred = self._sessions.get(msg.session, None)
+            if deferred is not None:
+                deferred.close()
+                self._sessions.pop(msg.session)
 
-    def on_disown(self):
-        log.error("Disowned")
-        self.loop.stop()
+    def _send_handshake(self, session=0):
+        log.debug('[<-] handshake')
+        self._send(RPC.HANDSHAKE, session, self.uuid)
 
-    # Private:
-    def _send_handshake(self):
-        self.w_stream.write(Message(RPC.HANDSHAKE, 0, self.id).pack())
+    def _send_heartbeat(self, session=0):
+        log.debug('[<-] heartbeat')
+        self._send(RPC.HEARTBEAT, session)
 
-    def _send_heartbeat(self):
-        self.disown_timer.start()
-        log.debug("Send heartbeat. Start disown timer")
-        self.w_stream.write(Message(RPC.HEARTBEAT, 0).pack())
+    def _send_terminate(self, session, errno, reason):
+        self._send(RPC.TERMINATE, session, errno, reason)
 
     def _send_choke(self, session):
-        self.w_stream.write(Message(RPC.CHOKE, session).pack())
+        self._send(RPC.CHOKE, session)
 
     def _send_chunk(self, session, data):
-        self.w_stream.write(Message(RPC.CHUNK, session, data).pack())
+        self._send(RPC.CHUNK, session, data)
 
-    def _send_error(self, session, code, msg):
-        self.w_stream.write(Message(RPC.ERROR, session, code, msg).pack())
+    def _send_error(self, session, errno, reason):
+        self._send(RPC.ERROR, session, errno, reason)
+
+    def _send(self, id_, session, *args):
+        self._connection.send_data(Message(id_, session, *args).pack())
