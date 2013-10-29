@@ -18,7 +18,7 @@ def ping(message):
         print(response)
         assert response == ['Hi!', 'Whatever.', 'Another message.', 'Bye.']
     except Exception as err:
-        print(err)
+        print(repr(err))
     finally:
         IOLoop.current().stop()
 
