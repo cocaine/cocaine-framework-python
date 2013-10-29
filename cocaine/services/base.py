@@ -210,7 +210,7 @@ class AbstractService(object):
         if deferred is None:
             deferred = CocaineDeferred()
             self._sessions[session] = deferred
-        self._writableStream.write(data)
+        self._writableStream.write(msgpack.dumps(data))
         return deferred
 
     def _make_invokable(self, state):

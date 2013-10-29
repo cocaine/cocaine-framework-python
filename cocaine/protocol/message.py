@@ -18,6 +18,8 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
+import msgpack
+
 
 class RPC:
     PROTOCOL_LIST = (
@@ -69,9 +71,9 @@ PROTOCOL = {
 }
 
 
-def closure(m_id, m_session, args):
+def _make_packable(m_id, m_session, args):
     def wrapper():
-        return m_id, m_session, args
+        return msgpack.dumps([m_id, m_session, args])
     return wrapper
 
 
@@ -87,7 +89,7 @@ class BaseMessage(object):
         for attr, value in zip(prototype['tuple_type'], args):
             setattr(self, attr, value)
 
-        setattr(self, 'pack', closure(self.id, session, args))
+        setattr(self, 'pack', _make_packable(self.id, session, args))
 
     def __str__(self):
         return '{0}({1}, {2}, {3})'.format(self.__class__.__name__, self.id, self.session, self.args)
