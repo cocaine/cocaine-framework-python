@@ -28,8 +28,8 @@ __all__ = ['CocaineHandler', 'log', 'core']
 handler = CocaineHandler()
 handler.setLevel(logging.DEBUG)
 
-core = logging.getLogger('cocaine')
-core.setLevel(logging.ERROR)
+core = logging.getLogger('core')
+core.setLevel(logging.DEBUG)
 core.addHandler(handler)
 
 log = logging.getLogger('worker')
