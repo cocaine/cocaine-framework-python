@@ -32,32 +32,39 @@ class RPC:
 
 PROTOCOL = {
     RPC.HANDSHAKE: {
-        "id": RPC.HANDSHAKE,
-        "tuple_type": ("uuid",)
+        'name': 'Handshake',
+        'id': RPC.HANDSHAKE,
+        'tuple_type': ('uuid',)
     },
     RPC.HEARTBEAT: {
-        "id": RPC.HEARTBEAT,
-        "tuple_type": ()
+        'name': 'Heartbeat',
+        'id': RPC.HEARTBEAT,
+        'tuple_type': ()
     },
     RPC.TERMINATE: {
-        "id": RPC.TERMINATE,
-        "tuple_type": ("errno", "reason")
+        'name': 'Terminate',
+        'id': RPC.TERMINATE,
+        'tuple_type': ('errno', 'reason')
     },
     RPC.INVOKE: {
-        "id": RPC.INVOKE,
-        "tuple_type": ("event",)
+        'name': 'Invoke',
+        'id': RPC.INVOKE,
+        'tuple_type': ('event',)
     },
     RPC.CHUNK: {
-        "id": RPC.CHUNK,
-        "tuple_type": ("data",)
+        'name': 'Chunk',
+        'id': RPC.CHUNK,
+        'tuple_type': ('data',)
     },
     RPC.ERROR: {
-        "id": RPC.ERROR,
-        "tuple_type": ("errno", "reason")
+        'name': 'Error',
+        'id': RPC.ERROR,
+        'tuple_type': ('errno', 'reason')
     },
     RPC.CHOKE: {
-        "id": RPC.CHOKE,
-        "tuple_type": ()
+        'name': 'Choke',
+        'id': RPC.CHOKE,
+        'tuple_type': ()
     }
 }
 
@@ -71,12 +78,19 @@ def closure(m_id, m_session, args):
 class BaseMessage(object):
     def __init__(self, protocol, id_, session, *args):
         prototype = protocol[id_]
+
         self.id = prototype['id']
         self.session = session
+        self.args = args
+
+        self.__class__.__name__ = prototype['name']
         for attr, value in zip(prototype['tuple_type'], args):
             setattr(self, attr, value)
 
         setattr(self, 'pack', closure(self.id, session, args))
+
+    def __str__(self):
+        return '{0}({1}, {2}, {3})'.format(self.__class__.__name__, self.id, self.session, self.args)
 
 
 class Message(BaseMessage):
