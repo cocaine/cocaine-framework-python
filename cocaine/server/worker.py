@@ -1,4 +1,3 @@
-# encoding: utf-8
 #
 #    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
 #    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
@@ -18,6 +17,7 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+
 import socket
 import sys
 import traceback
@@ -97,8 +97,8 @@ class Worker(object):
             self.on(event, name)
         self.loop.run()
 
-    def terminate(self, reason, msg):
-        self.w_stream.write(Message(RPC.TERMINATE, 0, reason, msg).pack())
+    def terminate(self, errno, reason):
+        self.w_stream.write(Message(RPC.TERMINATE, 0, errno, reason).pack())
         self.loop.stop()
         exit(1)
 
@@ -147,12 +147,12 @@ class Worker(object):
             self._logger.debug("Receive heartbeat. Stop disown timer")
             self.disown_timer.stop()
         elif msg.id == RPC.TERMINATE:
-            self._logger.debug("Receive terminate. %s, %s" % (msg.reason, msg.message))
-            self.terminate(msg.reason, msg.message)
+            self._logger.debug("Receive terminate. %s, %s" % (msg.errno, msg.reason))
+            self.terminate(msg.errno, msg.reason)
         elif msg.id == RPC.ERROR:
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
-                _session.error(Exception(msg.message))
+                _session.error(Exception(msg.reason))
 
     def on_disown(self):
         try:
