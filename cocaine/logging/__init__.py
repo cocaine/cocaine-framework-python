@@ -18,21 +18,4 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import logging
-
-from .hanlders import CocaineHandler
-
-__all__ = ['CocaineHandler', 'log', 'core']
-
-
-handler = CocaineHandler()
-handler.setLevel(logging.DEBUG)
-
-core = logging.getLogger('core')
-core.setLevel(logging.DEBUG)
-core.addHandler(handler)
-
-log = logging.getLogger('worker')
-log.setLevel(logging.ERROR)
-log.addHandler(handler)
-
+__author__ = 'Evgeny Safronov <division494@gmail.com>'

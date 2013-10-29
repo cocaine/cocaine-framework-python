@@ -18,42 +18,22 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import functools
 import logging
 
-from ..services.logger import Logger
-
+from .hanlders import CocaineHandler
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
-
-VERBOSITY_LEVELS = {
-    0: 'ignore',
-    1: 'error',
-    2: 'warn',
-    3: 'info',
-    4: 'debug',
-}
-
-VERBOSITY_MAP = {
-    logging.DEBUG: 4,
-    logging.INFO: 3,
-    logging.WARN: 2,
-    logging.ERROR: 1,
-}
+__all__ = ['CocaineHandler', 'log', 'core']
 
 
-class CocaineHandler(logging.Handler):
-    def __init__(self):
-        super(CocaineHandler, self).__init__()
-        self._log = Logger.instance()
-        self._dispatch = {}
-        for level in VERBOSITY_LEVELS:
-            self._dispatch[level] = functools.partial(self._log.emit, level)
+handler = CocaineHandler()
+handler.setLevel(logging.DEBUG)
 
-        self.devnull = lambda msg: None
+core = logging.getLogger('core')
+core.setLevel(logging.ERROR)
+core.addHandler(handler)
 
-    def emit(self, record):
-        msg = self.format(record)
-        level = VERBOSITY_MAP.get(record.levelno, 0)
-        self._dispatch.get(level, self.devnull)(msg)
+log = logging.getLogger('worker')
+log.setLevel(logging.ERROR)
+log.addHandler(handler)

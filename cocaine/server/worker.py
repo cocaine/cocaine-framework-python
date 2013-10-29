@@ -28,7 +28,7 @@ from ..asio import ev
 from ..asio.pipe import Pipe
 from ..asio.stream import ReadableStream, WritableStream, Decoder
 from ..concurrent import Deferred
-from ..logging import core as log
+from ..logging.defaults import core as log
 from ..protocol.message import Message, RPC
 
 from .request import Request
