@@ -2,8 +2,13 @@ from tornado.ioloop import IOLoop
 
 from cocaine import concurrent
 from cocaine.services import Service
+from cocaine.services.logger import Logger
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
+
+log = Logger('omg')
+print(log.verbosity)
+log.emit(3, 'Hi, %s', 'hui pizda')
 
 
 @concurrent.engine

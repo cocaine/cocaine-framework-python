@@ -27,7 +27,7 @@ from ..asio import ev
 from ..asio.pipe import Pipe
 from ..asio.stream import ReadableStream, WritableStream, Decoder
 from ..concurrent import Deferred
-from ..logging.log import core_log
+from ..logging import core as log
 from ..protocol.message import Message, RPC
 
 from .request import Request
@@ -38,7 +38,6 @@ from .sandbox import Sandbox
 class Worker(object):
 
     def __init__(self, init_args=None, disown_timeout=2, heartbeat_timeout=20):
-        self._logger = core_log
         self._init_endpoint(init_args or sys.argv)
 
         self.sessions = dict()
@@ -75,7 +74,7 @@ class Worker(object):
 
         self.loop.register_read_event(self.r_stream._on_event,
                                       self.pipe.fileno())
-        self._logger.debug("Worker with %s send handshake" % self.id)
+        log.debug("Worker with %s send handshake" % self.id)
         # Send both messages - to run timers properly. This messages will be sent
         # only after all initialization, so they have same purpose.
         self._send_handshake()
@@ -87,7 +86,7 @@ class Worker(object):
             # app_name = init_args[init_args.index("--app") + 1]
             self.endpoint = init_args[init_args.index("--endpoint") + 1]
         except Exception as err:
-            self._logger.error("Wrong cmdline arguments: %s " % err)
+            log.error("Wrong cmdline arguments: %s " % err)
             raise RuntimeError("Wrong cmdline arguments")
 
     def run(self, binds=None):
@@ -125,29 +124,29 @@ class Worker(object):
                 response.error(2, "unrecoverable error: %s " % str(err))
                 self.terminate(1, "Bad code")
             except Exception as err:
-                self._logger.error("On invoke error: %s" % err)
+                log.error("On invoke error: %s" % err)
                 traceback.print_stack()
                 response.error(1, "Invocation error")
         elif msg.id == RPC.CHUNK:
-            self._logger.debug("Receive chunk: %d" % msg.session)
+            log.debug("Receive chunk: %d" % msg.session)
             try:
                 _session = self.sessions[msg.session]
                 _session.trigger(msg.data)
             except Exception as err:
-                self._logger.error("On push error: %s" % str(err))
+                log.error("On push error: %s" % str(err))
                 self.terminate(1, "Push error: %s" % str(err))
                 return
         elif msg.id == RPC.CHOKE:
-            self._logger.debug("Receive choke: %d" % msg.session)
+            log.debug("Receive choke: %d" % msg.session)
             _session = self.sessions.get(msg.session, None)
             if _session is not None:
                 _session.close()
                 self.sessions.pop(msg.session)
         elif msg.id == RPC.HEARTBEAT:
-            self._logger.debug("Receive heartbeat. Stop disown timer")
+            log.debug("Receive heartbeat. Stop disown timer")
             self.disown_timer.stop()
         elif msg.id == RPC.TERMINATE:
-            self._logger.debug("Receive terminate. %s, %s" % (msg.errno, msg.reason))
+            log.debug("Receive terminate. %s, %s" % (msg.errno, msg.reason))
             self.terminate(msg.errno, msg.reason)
         elif msg.id == RPC.ERROR:
             _session = self.sessions.get(msg.session, None)
@@ -155,10 +154,8 @@ class Worker(object):
                 _session.error(Exception(msg.reason))
 
     def on_disown(self):
-        try:
-            self._logger.error("Disowned")
-        finally:
-            self.loop.stop()
+        log.error("Disowned")
+        self.loop.stop()
 
     # Private:
     def _send_handshake(self):
@@ -166,7 +163,7 @@ class Worker(object):
 
     def _send_heartbeat(self):
         self.disown_timer.start()
-        self._logger.debug("Send heartbeat. Start disown timer")
+        log.debug("Send heartbeat. Start disown timer")
         self.w_stream.write(Message(RPC.HEARTBEAT, 0).pack())
 
     def _send_choke(self, session):

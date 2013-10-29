@@ -18,21 +18,28 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import logging
+import sys
 
-from .hanlders import CocaineHandler
+from ..logging.message import RPC
+from ..utils import ThreadLocalMixin
 
-__all__ = ['CocaineHandler', 'log', 'core']
+from .service import Service
+from .state import RootState
+
+__author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-handler = CocaineHandler()
-handler.setLevel(logging.DEBUG)
+class Logger(Service, ThreadLocalMixin):
+    ROOT_STATE = RootState()
 
-core = logging.getLogger('cocaine')
-core.setLevel(logging.ERROR)
-core.addHandler(handler)
-
-log = logging.getLogger('worker')
-log.setLevel(logging.ERROR)
-log.addHandler(handler)
-
+    def __init__(self, app=None):
+        super(Logger, self).__init__('logging')
+        if not app:
+            try:
+                app = sys.argv[sys.argv.index('--app') + 1]
+            except ValueError:
+                app = 'standalone'
+        self.target = 'app/{0}'.format(app)
+        self.verbosity, = [chunk for chunk in self.perform_sync('verbosity')]
+        self.emit = lambda level, message, *args:\
+            self._invoke(RPC.EMIT, self.ROOT_STATE, level, self.target, message % args)

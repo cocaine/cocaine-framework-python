@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 
 from cocaine.server.worker import Worker
-from cocaine.logging import Logger
+from cocaine.logging import log
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
-
-log = Logger()
 
 
 def echo(request, response):

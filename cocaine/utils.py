@@ -19,17 +19,39 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-from weakref import proxy
-from types import MethodType
+import threading
+import types
+import weakref
 
 
 class weakmethod(object):
-    __slots__ = ["func"]
+    __slots__ = ['func']
 
     def __init__(self, func):
         self.func = func
 
     def __get__(self, obj, cls):
         if obj is not None:
-            obj = proxy(obj)
-        return MethodType(self.func, obj, cls)
+            obj = weakref.proxy(obj)
+        return types.MethodType(self.func, obj, cls)
+
+
+class ThreadLocalMixin(object):
+    __instance_lock = threading.Lock()
+    __instance = None
+    __current = threading.local()
+
+    @classmethod
+    def instance(cls):
+        if not cls.__instance:
+            with cls.__instance_lock:
+                if not cls.__instance:
+                    cls.__instance = cls()
+        return cls.__instance
+
+    @classmethod
+    def current(cls):
+        current = getattr(cls.__current, 'instance', None)
+        if current is None:
+            return cls.instance()
+        return current
