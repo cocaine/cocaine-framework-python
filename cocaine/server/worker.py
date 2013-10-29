@@ -171,19 +171,19 @@ class Worker(object):
                 self._sandbox.invoke(msg.event, request, response)
                 self._sessions[msg.session] = deferred
             except (ImportError, SyntaxError) as err:
-                response.error(2, "unrecoverable error: %s " % str(err))
-                self.terminate(msg.session, 1, "Bad code")
+                response.error(2, 'unrecoverable error: %s ' % str(err))
+                self.terminate(msg.session, 1, 'Bad code')
             except Exception as err:
-                log.error("On invoke error: %s" % err)
+                log.error('On invoke error: %s' % err)
                 traceback.print_stack()
-                response.error(1, "Invocation error")
+                response.error(1, 'Invocation error')
         elif msg.id == RPC.CHUNK:
             try:
                 deferred = self._sessions[msg.session]
                 deferred.trigger(msg.data)
             except Exception as err:
-                log.error("On push error: %s" % str(err))
-                self.terminate(msg.session, 1, "Push error: %s" % str(err))
+                log.error('On push error: %s' % str(err))
+                self.terminate(msg.session, 1, 'Push error: %s' % str(err))
                 return
         elif msg.id == RPC.ERROR:
             deferred = self._sessions.get(msg.session, None)
