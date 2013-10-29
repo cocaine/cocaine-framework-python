@@ -21,7 +21,6 @@
 
 import socket
 import sys
-import traceback
 import types
 
 from ..asio import ev
@@ -120,13 +119,21 @@ class Worker(object):
 
         # Dispatching
         self._sandbox = Sandbox()
+        self._dispatcher = {
+            RPC.HEARTBEAT: self._dispatch_heartbeat,
+            RPC.TERMINATE: self._dispatch_terminate,
+            RPC.INVOKE: self._dispatch_invoke,
+            RPC.CHUNK: self._dispatch_chunk,
+            RPC.ERROR: self._dispatch_error,
+            RPC.CHOKE: self._dispatch_choke
+        }
 
         # Health control
         self._health = HealthManager(5.0, 20.0, self._send_heartbeat, self._io_loop)
 
         # Connection control
         self._sessions = {}
-        self._connection = WorkerConnection(self.endpoint, on_message=self._on_message, io_loop=self._io_loop)
+        self._connection = WorkerConnection(self.endpoint, on_message=self._dispatch, io_loop=self._io_loop)
         deferred = self._connection.connect()
         deferred.add_callback(self._on_connect)
 
@@ -156,45 +163,6 @@ class Worker(object):
             self._send_heartbeat()
             self._health.start()
 
-    def _on_message(self, args):
-        msg = Message.initialize(args)
-        log.debug('[->] %s', msg)
-        if msg.id == RPC.HEARTBEAT:
-            self._health.breath()
-        elif msg.id == RPC.TERMINATE:
-            self.terminate(msg.session, msg.errno, msg.reason)
-        elif msg.id == RPC.INVOKE:
-            deferred = Deferred()
-            request = Request(deferred)
-            response = Response(msg.session, self)
-            try:
-                self._sandbox.invoke(msg.event, request, response)
-                self._sessions[msg.session] = deferred
-            except (ImportError, SyntaxError) as err:
-                response.error(2, 'unrecoverable error: %s ' % str(err))
-                self.terminate(msg.session, 1, 'Bad code')
-            except Exception as err:
-                log.error('On invoke error: %s' % err)
-                traceback.print_stack()
-                response.error(1, 'Invocation error')
-        elif msg.id == RPC.CHUNK:
-            try:
-                deferred = self._sessions[msg.session]
-                deferred.trigger(msg.data)
-            except Exception as err:
-                log.error('On push error: %s' % str(err))
-                self.terminate(msg.session, 1, 'Push error: %s' % str(err))
-                return
-        elif msg.id == RPC.ERROR:
-            deferred = self._sessions.get(msg.session, None)
-            if deferred is not None:
-                deferred.error(Exception(msg.reason))
-        elif msg.id == RPC.CHOKE:
-            deferred = self._sessions.get(msg.session, None)
-            if deferred is not None:
-                deferred.close()
-                self._sessions.pop(msg.session)
-
     def _send_handshake(self, session=0):
         log.debug('[<-] handshake')
         self._send(RPC.HANDSHAKE, session, self.uuid)
@@ -217,3 +185,53 @@ class Worker(object):
 
     def _send(self, id_, session, *args):
         self._connection.send_data(Message(id_, session, *args).pack())
+
+    def _dispatch(self, data):
+        message = Message.initialize(data)
+        log.debug('[->] %s', message)
+        assert message.id in self._dispatcher, 'unexpected message: {0}'.format(message.id)
+        log.debug('dispatching %s', message)
+        dispatch = self._dispatcher[message.id]
+        dispatch(message)
+
+    def _dispatch_heartbeat(self, message):
+        self._health.breath()
+
+    def _dispatch_terminate(self, message):
+        self._send_terminate(message.session, message.errno, message.reason)
+
+    def _dispatch_invoke(self, message):
+        deferred = Deferred()
+        request = Request(deferred)
+        response = Response(message.session, self)
+        try:
+            self._sandbox.invoke(message.event, request, response)
+            self._sessions[message.session] = deferred
+        except (ImportError, SyntaxError) as err:
+            response.error(2, 'unrecoverable error: %s ', err)
+            self._send_terminate(message.session, 1, 'programming error')
+        except Exception as err:
+            log.error('on invoke error: %s', err, print_exc=True)
+            response.error(1, 'invocation error')
+
+    def _dispatch_chunk(self, message):
+        log.debug('receive chunk: %d', message.session)
+        try:
+            deferred = self._sessions[message.session]
+            deferred.trigger(message.data)
+        except Exception as err:
+            log.error('push error: %s', err)
+            self._send_terminate(message.session, 1, 'push error: {0}'.format(err))
+
+    def _dispatch_error(self, message):
+        deferred = self._sessions.get(message.session, None)
+        if deferred is not None:
+            deferred.error(Exception(message.reason))
+
+    def _dispatch_choke(self, message):
+        log.debug('receive choke: %d', message.session)
+        try:
+            deferred = self._sessions.pop(message.session)
+            deferred.close()
+        except KeyError:
+            pass
