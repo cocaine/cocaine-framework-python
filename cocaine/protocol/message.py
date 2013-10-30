@@ -34,38 +34,38 @@ class RPC:
 
 PROTOCOL = {
     RPC.HANDSHAKE: {
-        'name': 'Handshake',
         'id': RPC.HANDSHAKE,
+        'alias': 'Handshake',
         'tuple_type': ('uuid',)
     },
     RPC.HEARTBEAT: {
-        'name': 'Heartbeat',
         'id': RPC.HEARTBEAT,
+        'alias': 'Heartbeat',
         'tuple_type': ()
     },
     RPC.TERMINATE: {
-        'name': 'Terminate',
         'id': RPC.TERMINATE,
+        'alias': 'Terminate',
         'tuple_type': ('errno', 'reason')
     },
     RPC.INVOKE: {
-        'name': 'Invoke',
         'id': RPC.INVOKE,
+        'alias': 'Invoke',
         'tuple_type': ('event',)
     },
     RPC.CHUNK: {
-        'name': 'Chunk',
         'id': RPC.CHUNK,
+        'alias': 'Chunk',
         'tuple_type': ('data',)
     },
     RPC.ERROR: {
-        'name': 'Error',
         'id': RPC.ERROR,
+        'alias': 'Error',
         'tuple_type': ('errno', 'reason')
     },
     RPC.CHOKE: {
-        'name': 'Choke',
         'id': RPC.CHOKE,
+        'alias': 'Choke',
         'tuple_type': ()
     }
 }
@@ -85,7 +85,7 @@ class BaseMessage(object):
         self.session = session
         self.args = args
 
-        self.__class__.__name__ = prototype['name']
+        self.__class__.__name__ = prototype['alias']
         for attr, value in zip(prototype['tuple_type'], args):
             setattr(self, attr, value)
 
