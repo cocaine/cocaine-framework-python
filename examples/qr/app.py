@@ -9,6 +9,15 @@ from cocaine.server.worker import Worker
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
+"""
+This example shows how to make simple HTTP Cocaine application using Cocaine Python Framework.
+
+After waiting for http request, we read it and get some message from query string (?message=...). Then QR code
+generation comes into.
+Generated image is sending back via `response` stream.
+"""
+
+
 @http
 def generate(request, response):
     request = yield request.read()
