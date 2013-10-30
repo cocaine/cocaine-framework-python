@@ -6,7 +6,14 @@ from cocaine.logging.defaults import log
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
 
-def echo(request, response):
+def echoV0(request, response):
+    message = yield request.read()
+    log.debug('Message received: \'{0}\'. Sending it back ...'.format(message))
+    response.write(message)
+    response.close()
+
+
+def echoV1(request, response):
     response.write('Hi!')
     message = yield request.read()
     log.debug('Message received: \'{0}\'. Sending it back ...'.format(message))
@@ -20,5 +27,6 @@ def echo(request, response):
 
 worker = Worker()
 worker.run({
-    'ping': echo,
+    'pingV0': echoV0,
+    'pingV1': echoV1,
 })
