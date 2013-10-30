@@ -45,12 +45,11 @@ VERBOSITY_MAP = {
 
 class CocaineHandler(logging.Handler):
     def __init__(self):
-        super(CocaineHandler, self).__init__()
+        logging.Handler.__init__(self)
         self._log = Logger.instance()
         self._dispatch = {}
         for level in VERBOSITY_LEVELS:
             self._dispatch[level] = functools.partial(self._log.emit, level)
-
         self.devnull = lambda msg: None
 
     def emit(self, record):
