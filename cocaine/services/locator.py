@@ -29,6 +29,15 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 log = logging.getLogger(__name__)
 
 
+class RPC:
+    PROTOCOL_LIST = (
+        RESOLVE,
+        SYNC,
+        REPORTS,
+        REFRESH,
+    ) = range(4)
+
+
 class Locator(AbstractService):
     """Represents locator service.
 
@@ -37,14 +46,10 @@ class Locator(AbstractService):
     .. note:: Normally, you shouldn't use this class directly - it is using behind the scene for resolving other
               services endpoints.
     """
-    RESOLVE_METHOD_ID, SYNC_METHOD_ID, REPORTS_METHOD_ID, REFRESH_METHOD_ID = range(4)
     ROOT_STATE = RootState()
 
     def __init__(self):
         super(Locator, self).__init__('locator')
-        self.api = {
-            'resolve': 0
-        }
 
     def connect(self, host, port, timeout, blocking):
         """Connects to the locator at specified host and port.
@@ -79,7 +84,7 @@ class Locator(AbstractService):
             (endpoint, version, api), = [chunk for chunk in self._invoke_sync_by_id(RPC.RESOLVE, name, timeout=timeout)]
             return endpoint, version, api
         else:
-            return self._invoke(self.RESOLVE_METHOD_ID, self.ROOT_STATE, name)
+            return self._invoke(RPC.RESOLVE, self.ROOT_STATE, name)
 
     def refresh(self, name, timeout=None):
-        return self._invoke(self.REFRESH_METHOD_ID, self.ROOT_STATE, name)
+        return self._invoke(RPC.REFRESH, self.ROOT_STATE, name)
