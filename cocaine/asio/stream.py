@@ -1,4 +1,3 @@
-# encoding: utf-8
 #
 #    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
 #    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
@@ -19,12 +18,29 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-import threading
-
 import msgpack
+import sys
+import threading
 
 from cocaine.asio.exceptions import IllegalStateError
 from cocaine.utils import weakmethod
+
+
+major = sys.version_info[0]
+minor = sys.version_info[1]
+if  major == 2 and minor < 7:
+    import array
+
+    class Buffer(array.array):
+        def __new__(cls, size):
+            return array.array.__new__(cls, 'c', '\0' * size)
+
+        def __len__(self):
+            return self.buffer_info()[1]
+else:
+    class Buffer(bytearray):
+        def __init__(self, size):
+            super(Buffer, self).__init__('\0' * size)
 
 
 class Decoder(object):
@@ -58,7 +74,7 @@ class ReadableStream(object):
         self._callback = None
         self._attached = False
         self._buffer = msgpack.Unpacker()
-        self._tmp_buff = bytearray('\0' * self.START_CHUNK_SIZE) # array.array('c', '\0' * self.START_CHUNK_SIZE)
+        self._tmp_buff = Buffer(self.START_CHUNK_SIZE)
         self._lock = threading.Lock()
 
     def bind(self, callback):
