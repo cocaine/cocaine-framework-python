@@ -213,20 +213,6 @@ class AbstractService(object):
         self._writableStream.write(msgpack.dumps(data))
         return deferred
 
-    def _make_invokable(self, state):
-        def wrapper(*args, **kwargs):
-            if not self.connected():
-                raise IllegalStateError('service "%s" is not connected', self.name)
-            return self._invoke(state.id, state, *args, **kwargs)
-        return wrapper
-
-    def _make_chunk(self, method_id, session):
-        def wrapper(*args, **kwargs):
-            if not self.connected():
-                raise IllegalStateError('service "%s" is not connected', self.name)
-            return self._chunk(method_id, session, *args, **kwargs)
-        return wrapper
-
     def _invoke_sync(self, method, *args, **kwargs):
         """Performs synchronous method invocation via direct socket usage without the participation of the event loop.
 
