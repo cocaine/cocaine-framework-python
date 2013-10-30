@@ -29,12 +29,19 @@ class StateBuilder(object):
         return root
 
     @classmethod
-    def _build(cls, parent, api):
+    def _build(cls, parent, api=None):
         if api is None:
             return
-        for id_, (name, api) in api.items():
-            state = State(id_, name, parent)
-            cls._build(state, api)
+        try:
+            # Since V1.0
+            for id_, (name, api) in api.items():
+                state = State(id_, name, parent)
+                cls._build(state, api)
+        except ValueError:
+            # Up to v0.11
+            for id_, name in api.items():
+                state = State(id_, name, parent)
+                cls._build(state)
 
 
 class State(object):
