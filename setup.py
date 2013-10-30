@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# encoding: utf-8
 #
 #    Copyright (c) 2011-2012 Andrey Sibiryov <me@kobology.ru>
 #    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
