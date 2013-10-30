@@ -37,5 +37,5 @@ def pingV1():
 
 if __name__ == '__main__':
     echo = Service('echo')
-    pingV0()
+    pingV1()
     IOLoop.current().start()
