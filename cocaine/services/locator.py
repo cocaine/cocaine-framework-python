@@ -76,7 +76,7 @@ class Locator(AbstractService):
         """
         log.debug('resolving %s', name)
         if blocking:
-            (endpoint, version, api), = [chunk for chunk in self.perform_sync('resolve', name, timeout=timeout)]
+            (endpoint, version, api), = [chunk for chunk in self._invoke_sync_by_id(RPC.RESOLVE, name, timeout=timeout)]
             return endpoint, version, api
         else:
             return self._invoke(self.RESOLVE_METHOD_ID, self.ROOT_STATE, name)

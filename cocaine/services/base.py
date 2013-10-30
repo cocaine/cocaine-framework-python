@@ -227,7 +227,7 @@ class AbstractService(object):
             return self._chunk(method_id, session, *args, **kwargs)
         return wrapper
 
-    def perform_sync(self, method, *args, **kwargs):
+    def _invoke_sync(self, method, *args, **kwargs):
         """Performs synchronous method invocation via direct socket usage without the participation of the event loop.
 
         Returns generator of chunks.
@@ -240,11 +240,14 @@ class AbstractService(object):
                   to the summoning of Satan.
         .. warning:: Do not mix synchronous and asynchronous usage of service!
         """
-        if not self.connected():
-            raise IllegalStateError('service "{0}" is not connected'.format(self.name))
-
         if method not in self.api:
             raise ValueError('service "{0}" has no method named "{1}"'.format(self.name, method))
+
+        return self._invoke_sync_by_id(self.api[method], *args, **kwargs)
+
+    def _invoke_sync_by_id(self, method_id, *args, **kwargs):
+        if not self.connected():
+            raise IllegalStateError('service "{0}" is not connected'.format(self.name))
 
         timeout = kwargs.get('timeout', None)
         if timeout is not None and timeout <= 0:
@@ -252,7 +255,7 @@ class AbstractService(object):
 
         with scope.socket.timeout(self._pipe.sock, timeout) as sock:
             session = self._counter.next()
-            sock.send(msgpack.dumps([self.api[method], session, args]))
+            sock.send(msgpack.dumps([method_id, session, args]))
             unpacker = msgpack.Unpacker()
             error = None
             while True:
