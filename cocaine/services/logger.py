@@ -34,12 +34,17 @@ class Logger(Service, ThreadLocalMixin):
 
     def __init__(self, app=None):
         super(Logger, self).__init__('logging')
+        self.target = self.init_target(app)
         self.verbosity, = [chunk for chunk in self._invoke_sync_by_id(RPC.VERBOSITY)]
+        self.emit = lambda level, message, *args:\
+            self._invoke(RPC.EMIT, self.ROOT_STATE, level, self.target, message % args)
+
+    @staticmethod
+    def init_target(app):
         if not app:
             try:
                 app = sys.argv[sys.argv.index('--app') + 1]
             except ValueError:
                 app = 'standalone'
-        self.target = 'app/{0}'.format(app)
-        self.emit = lambda level, message, *args:\
-            self._invoke(RPC.EMIT, self.ROOT_STATE, level, self.target, message % args)
+        return 'app/{0}'.format(app)
+
