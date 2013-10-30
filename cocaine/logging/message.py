@@ -24,13 +24,20 @@ from ..protocol.message import BaseMessage
 class RPC:
     PROTOCOL_LIST = (
         EMIT,
-    ) = range(1)
+        VERBOSITY,
+    ) = range(2)
 
 
 PROTOCOL = {
     RPC.EMIT: {
-        "id": RPC.EMIT,
-        "tuple_type": ("level", "target", "content")
+        'id': RPC.EMIT,
+        'alias': 'emit',
+        'tuple_type': ('level', 'target', 'content')
+    },
+    RPC.VERBOSITY: {
+        'id': RPC.VERBOSITY,
+        'alias': 'verbosity',
+        'tuple_type': ('level',)
     }
 }
 
