@@ -13,10 +13,21 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
 @concurrent.engine
-def tick():
+def tickV0():
+    try:
+        response = yield service.enqueue('pingV0', 'Whatever.')
+        assert response == 'Whatever.'
+    except Exception as err:
+        print(repr(err))
+    finally:
+        c.inc()
+
+
+@concurrent.engine
+def tickV1():
     try:
         response = [0, 0, 0, 0]
-        channel = service.enqueue('ping')
+        channel = service.enqueue('pingV1')
         response[0] = yield channel.read()
         response[1] = yield channel.write('SomeMessage')
         response[2] = yield channel.read()
@@ -89,7 +100,7 @@ if __name__ == '__main__':
 
     print('Total requests: {0}'.format(c.maxRequests))
     loop = IOLoop.instance()
-    p = PeriodicCallback(tick, config['benchmark']['interval'], io_loop=loop)
+    p = PeriodicCallback(tickV0, config['benchmark']['interval'], io_loop=loop)
     p.start()
     loop.start()
     print('')
