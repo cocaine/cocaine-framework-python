@@ -18,41 +18,39 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import functools
-import logging
-
-from ..services.logger import Logger
-
-
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-VERBOSITY_LEVELS = {
-    0: 'ignore',
-    1: 'error',
-    2: 'warn',
-    3: 'info',
-    4: 'debug',
-}
-
-VERBOSITY_MAP = {
-    logging.DEBUG: 4,
-    logging.INFO: 3,
-    logging.WARN: 2,
-    logging.ERROR: 1,
-}
-
-
-class CocaineHandler(logging.Handler):
+class Future(object):
     def __init__(self):
-        logging.Handler.__init__(self)
-        self._log = Logger.instance()
-        self._dispatch = {}
-        for level in VERBOSITY_LEVELS:
-            self._dispatch[level] = functools.partial(self._log.emit, level)
-        self.devnull = lambda msg: None
+        self._result = None
+        self._is_error = False
 
-    def emit(self, record):
-        msg = self.format(record)
-        level = VERBOSITY_MAP.get(record.levelno, 0)
-        self._dispatch.get(level, self.devnull)(msg)
+    def set_value(self, result):
+        self._result = result
+        self._is_error = False
+
+    def set_error(self, error):
+        self._result = error
+        self._is_error = True
+
+    def get(self):
+        if self._is_error:
+            raise self._result
+        else:
+            return self._result
+
+    @staticmethod
+    def Value(value):
+        result = Future()
+        result.set_value(value)
+        return result
+
+    @staticmethod
+    def Error(err):
+        result = Future()
+        result.set_error(err)
+        return result
+
+    def __str__(self):
+        return 'Future(result={0})'.format(self._result)

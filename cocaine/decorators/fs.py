@@ -1,4 +1,3 @@
-# encoding: utf-8
 #
 #    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
 #    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
@@ -20,19 +19,19 @@
 #
 
 import posix
-
 import msgpack
 
-from _callablewrappers import proxy_factory
+from ..server._wrappers import proxy_factory
+
 
 __all__ = ['fs']
 
 
 def fs_request_decorator(obj):
     def dec(func):
-        def _stat_request_hadler(chunk):
+        def _stat_request_handler(chunk):
             return func(posix.stat_result(msgpack.unpackb(chunk)))
-        return _stat_request_hadler
+        return _stat_request_handler
     obj.push = dec(obj.push)
     return obj
 

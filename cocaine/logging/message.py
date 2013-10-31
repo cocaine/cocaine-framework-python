@@ -18,11 +18,30 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-from ..server._wrappers import proxy_factory
+from ..protocol.message import BaseMessage
 
 
-__all__ = ['timer']
+class RPC:
+    PROTOCOL_LIST = (
+        EMIT,
+        VERBOSITY,
+    ) = range(2)
 
 
-def timer(func):
-    return proxy_factory(func, None, None)
+PROTOCOL = {
+    RPC.EMIT: {
+        'id': RPC.EMIT,
+        'alias': 'emit',
+        'tuple_type': ('level', 'target', 'content')
+    },
+    RPC.VERBOSITY: {
+        'id': RPC.VERBOSITY,
+        'alias': 'verbosity',
+        'tuple_type': ('level',)
+    }
+}
+
+
+class Message(BaseMessage):
+    def __init__(self, id_, session, *args):
+        super(Message, self).__init__(PROTOCOL, id_, session, *args)

@@ -18,41 +18,17 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import functools
-import logging
-
-from ..services.logger import Logger
-
-
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-VERBOSITY_LEVELS = {
-    0: 'ignore',
-    1: 'error',
-    2: 'warn',
-    3: 'info',
-    4: 'debug',
-}
+class Session(object):
+    def __init__(self, state, session, service, deferred):
+        self._state = state
+        self._session = session
+        self._service = service
+        self._deferred = deferred
+        for substate in state.substates.values():
+            setattr(self, substate.name, service._make_chunk(substate.id, session))
 
-VERBOSITY_MAP = {
-    logging.DEBUG: 4,
-    logging.INFO: 3,
-    logging.WARN: 2,
-    logging.ERROR: 1,
-}
-
-
-class CocaineHandler(logging.Handler):
-    def __init__(self):
-        logging.Handler.__init__(self)
-        self._log = Logger.instance()
-        self._dispatch = {}
-        for level in VERBOSITY_LEVELS:
-            self._dispatch[level] = functools.partial(self._log.emit, level)
-        self.devnull = lambda msg: None
-
-    def emit(self, record):
-        msg = self.format(record)
-        level = VERBOSITY_MAP.get(record.levelno, 0)
-        self._dispatch.get(level, self.devnull)(msg)
+    def read(self):
+        return self._deferred

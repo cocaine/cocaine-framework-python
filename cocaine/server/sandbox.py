@@ -18,41 +18,38 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import functools
-import logging
+__author__ = 'Evgeny Safronov <division494@gmail.com>'
 
-from ..services.logger import Logger
+
+from ._log import log
+from ._wrappers import default
 
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-VERBOSITY_LEVELS = {
-    0: 'ignore',
-    1: 'error',
-    2: 'warn',
-    3: 'info',
-    4: 'debug',
-}
-
-VERBOSITY_MAP = {
-    logging.DEBUG: 4,
-    logging.INFO: 3,
-    logging.WARN: 2,
-    logging.ERROR: 1,
-}
-
-
-class CocaineHandler(logging.Handler):
+class Sandbox(object):
     def __init__(self):
-        logging.Handler.__init__(self)
-        self._log = Logger.instance()
-        self._dispatch = {}
-        for level in VERBOSITY_LEVELS:
-            self._dispatch[level] = functools.partial(self._log.emit, level)
-        self.devnull = lambda msg: None
+        self._events = {}
 
-    def emit(self, record):
-        msg = self.format(record)
-        level = VERBOSITY_MAP.get(record.levelno, 0)
-        self._dispatch.get(level, self.devnull)(msg)
+    def on(self, event, function):
+        try:
+            closure = function()
+        except Exception:
+            closure = default(function)()
+            if hasattr(closure, '_wrapped'):
+                function = default(function)
+        else:
+            if not hasattr(closure, '_wrapped'):
+                function = default(function)
+        self._events[event] = function
+
+    def invoke(self, event, request, response):
+        log.debug('invoking "%s" event', event)
+        try:
+            handler = self._events[event]
+        except KeyError:
+            log.warn('there is no handler for event %s', event)
+            response.error(-100, 'there is no handler for event %s', event)
+        else:
+            handler().invoke(request, response)

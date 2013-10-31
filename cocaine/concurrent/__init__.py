@@ -1,5 +1,5 @@
 #
-#   Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
+#    Copyright (c) 2013+ Evgeny Safronov <division494@gmail.com>
 #    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
 #
 #    This file is part of Cocaine.
@@ -18,16 +18,9 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import logging
+from .future import Future
+from .deferred import Deferred, engine, return_
 
-from cocaine.logging import LoggerHandler
+__author__ = 'Evgeny Safronov <division494@gmail.com>'
 
-__all__ = ["core_log"]
-
-core_log = logging.getLogger("cocaine")
-core_log.setLevel(logging.ERROR)
-
-_core_logger_handler = LoggerHandler()
-_core_logger_handler.setLevel(logging.DEBUG)
-
-core_log.addHandler(_core_logger_handler)
+__all__ = ['Future', 'Deferred', 'engine', 'return_']

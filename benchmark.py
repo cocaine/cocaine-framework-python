@@ -3,42 +3,41 @@ from time import time
 import numpy
 import objgraph
 import sys
-import msgpack
 
 from tornado.ioloop import IOLoop, PeriodicCallback
 
-from cocaine.futures.chain import Chain
+from cocaine import concurrent
 from cocaine.services import Service
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-def example_SynchronousFetching():
-    for chunk in service.perform_sync('enqueue', 'doIt', 'SomeMessage'):
-        # print('1. example_SynchronousFetching: Response received - {0}'.format(msgpack.loads(chunk)))
-        pass
-    pass
+@concurrent.engine
+def tickV0():
+    try:
+        response = yield service.enqueue('pingV0', 'Whatever.')
+        assert response == 'Whatever.'
+    except Exception as err:
+        print(repr(err))
+    finally:
+        c.inc()
 
 
-def example_Synchronous():
-    message = service.enqueue('doIt', 'SomeMessage').get()
-    # print('2. example_Synchronous: Response received - {0}'.format(msgpack.loads(message)))
-    pass
-
-
-def example_AsynchronousYielding():
-    message = yield service.enqueue('doIt', 'SomeMessage')
-    message = msgpack.loads(message)
-    assert message == 'SomeMessag'
-    c.inc()
-
-
-def example_AsynchronousChaining():
-    def printAsynchronousChaining(message):
-        assert message.get() == 'SomeMessage'
-    s = service.enqueue('doIt', 'SomeMessage')
-    s.then(lambda r: msgpack.loads(r.get())).then(printAsynchronousChaining)
-    c.inc()
+@concurrent.engine
+def tickV1():
+    try:
+        response = [0, 0, 0, 0]
+        channel = service.enqueue('pingV1')
+        response[0] = yield channel.read()
+        response[1] = yield channel.write('SomeMessage')
+        response[2] = yield channel.read()
+        response[3] = yield channel.write('Bye.')
+        assert response == ['SomeMessage', 'Whatever.', 'Another message.', 'Bye.']
+        assert response == [0, 'SomeMessage', 0, 0]
+    except Exception as err:
+        print(err)
+    finally:
+        c.inc()
 
 
 class Counter(object):
@@ -80,8 +79,8 @@ if __name__ == '__main__':
             'name': 'echo'
         },
         'benchmark': {
-            'interval': 0.01,
-            'maxRequests': 10000,
+            'interval': 1,
+            'maxRequests': 100000,
             'tickLimit': 0.1
         },
         'printObjectGraph': False,
@@ -101,7 +100,7 @@ if __name__ == '__main__':
 
     print('Total requests: {0}'.format(c.maxRequests))
     loop = IOLoop.instance()
-    p = PeriodicCallback(lambda: Chain([example_AsynchronousChaining]), config['benchmark']['interval'], io_loop=loop)
+    p = PeriodicCallback(tickV0, config['benchmark']['interval'], io_loop=loop)
     p.start()
     loop.start()
     print('')

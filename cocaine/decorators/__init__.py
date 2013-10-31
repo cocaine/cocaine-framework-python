@@ -1,4 +1,3 @@
-# encoding: utf-8
 #
 #    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
 #    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
@@ -19,7 +18,10 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>. 
 #
 
-from default import default
 from fs import fs
 from http import http
 from timer import timer
+from wsgi import wsgi
+
+
+__all__ = ['fs', 'http', 'timer', 'wsgi']

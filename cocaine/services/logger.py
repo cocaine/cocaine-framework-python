@@ -18,41 +18,33 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import functools
-import logging
+import sys
 
-from ..services.logger import Logger
+from ..logging.message import RPC
+from ..utils import ThreadLocalMixin
 
+from .service import Service
+from .state import RootState
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-VERBOSITY_LEVELS = {
-    0: 'ignore',
-    1: 'error',
-    2: 'warn',
-    3: 'info',
-    4: 'debug',
-}
+class Logger(Service, ThreadLocalMixin):
+    ROOT_STATE = RootState()
 
-VERBOSITY_MAP = {
-    logging.DEBUG: 4,
-    logging.INFO: 3,
-    logging.WARN: 2,
-    logging.ERROR: 1,
-}
+    def __init__(self, app=None):
+        super(Logger, self).__init__('logging')
+        self.target = self.init_target(app)
+        self.verbosity, = [chunk for chunk in self._invoke_sync_by_id(RPC.VERBOSITY)]
+        self.emit = lambda level, message, *args:\
+            self._invoke(RPC.EMIT, self.ROOT_STATE, level, self.target, message % args)
 
+    @staticmethod
+    def init_target(app):
+        if not app:
+            try:
+                app = sys.argv[sys.argv.index('--app') + 1]
+            except ValueError:
+                app = 'standalone'
+        return 'app/{0}'.format(app)
 
-class CocaineHandler(logging.Handler):
-    def __init__(self):
-        logging.Handler.__init__(self)
-        self._log = Logger.instance()
-        self._dispatch = {}
-        for level in VERBOSITY_LEVELS:
-            self._dispatch[level] = functools.partial(self._log.emit, level)
-        self.devnull = lambda msg: None
-
-    def emit(self, record):
-        msg = self.format(record)
-        level = VERBOSITY_MAP.get(record.levelno, 0)
-        self._dispatch.get(level, self.devnull)(msg)

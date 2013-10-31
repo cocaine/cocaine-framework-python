@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# encoding: utf-8
 #
 #    Copyright (c) 2011-2012 Andrey Sibiryov <me@kobology.ru>
 #    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
@@ -46,10 +45,12 @@ setup(
     packages=[
         "cocaine",
         "cocaine.asio",
+        "cocaine.concurrent",
         "cocaine.decorators",
-        "cocaine.services",
-        "cocaine.futures",
         "cocaine.logging",
+        "cocaine.protocol",
+        "cocaine.server",
+        "cocaine.services",
         "cocaine.testing",
     ],
     install_requires=["msgpack_python", "tornado"],

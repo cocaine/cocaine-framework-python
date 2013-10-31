@@ -18,41 +18,31 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import functools
-import logging
+import msgpack
 
-from ..services.logger import Logger
-
+from ._log import log
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-VERBOSITY_LEVELS = {
-    0: 'ignore',
-    1: 'error',
-    2: 'warn',
-    3: 'info',
-    4: 'debug',
-}
+class Response(object):
+    def __init__(self, session, worker):
+        self.session = session
+        self.worker = worker
+        self.closed = False
 
-VERBOSITY_MAP = {
-    logging.DEBUG: 4,
-    logging.INFO: 3,
-    logging.WARN: 2,
-    logging.ERROR: 1,
-}
+    def write(self, data):
+        if self.closed:
+            return log.error('stream is closed', exc_info=True)
+        self.worker._send_chunk(self.session, msgpack.dumps(data))
 
+    def close(self):
+        if self.closed:
+            return log.error('already closed', exc_info=True)
+        self.closed = True
+        self.worker._send_choke(self.session)
 
-class CocaineHandler(logging.Handler):
-    def __init__(self):
-        logging.Handler.__init__(self)
-        self._log = Logger.instance()
-        self._dispatch = {}
-        for level in VERBOSITY_LEVELS:
-            self._dispatch[level] = functools.partial(self._log.emit, level)
-        self.devnull = lambda msg: None
-
-    def emit(self, record):
-        msg = self.format(record)
-        level = VERBOSITY_MAP.get(record.levelno, 0)
-        self._dispatch.get(level, self.devnull)(msg)
+    def error(self, code, message, *args):
+        if not self.closed:
+            self.worker._send_error(self.session, code, message % args)
+            self.close()

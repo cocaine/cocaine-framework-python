@@ -1,7 +1,7 @@
 import json
 import time
 
-from cocaine.asio.service import Service
+from cocaine.services import Service
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 

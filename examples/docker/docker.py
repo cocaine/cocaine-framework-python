@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import msgpack
 
-from cocaine.worker import Worker
+from cocaine.server.worker import Worker
 from cocaine.logging import Logger
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'

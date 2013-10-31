@@ -168,7 +168,7 @@ class WritableStream(object):
 
     def write(self, data):
         with self._lock:
-            self._buffer.append(msgpack.dumps(data))
+            self._buffer.append(data)
             self._process_events()
 
             if not self._attached and self._pipe.isConnected():
