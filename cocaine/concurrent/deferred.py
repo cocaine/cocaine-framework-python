@@ -98,8 +98,8 @@ def _engine_closure(final_deferred):
         except _ReturnEvent as event:
             log.debug(event)
             final_deferred.trigger(event.value)
-        except StopIteration:
-            log.debug('StopIteration')
+        except StopIteration as err:
+            log.debug('StopIteration - %r', err)
             final_deferred.trigger()
         except Exception as err:
             log.debug('error occurred - %s', err)
