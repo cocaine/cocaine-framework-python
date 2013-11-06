@@ -7,6 +7,7 @@ from tornado.testing import AsyncTestCase
 
 from cocaine import concurrent
 from cocaine.concurrent import Deferred, return_
+from cocaine.concurrent.util import All, AllError
 from cocaine.testing import trigger_check, DeferredMock
 
 
@@ -386,4 +387,91 @@ class EngineTestCase(AsyncTestCase):
                 finally:
                     self.stop()
             inner()
+            self.wait()
+
+
+class AllTestCase(AsyncTestCase):
+    os.environ.setdefault('ASYNC_TEST_TIMEOUT', '0.5')
+
+    def test_AllSingleDeferred(self):
+        with trigger_check(self) as trigger:
+            @concurrent.engine
+            def test():
+                d = DeferredMock([1], io_loop=self.io_loop)
+                result = yield All([d])
+                self.assertEqual([1], result)
+                trigger.toggle()
+                self.stop()
+            test()
+            self.wait()
+
+    def test_AllMultipleDeferreds(self):
+        with trigger_check(self) as trigger:
+            @concurrent.engine
+            def test():
+                d1 = DeferredMock([1], io_loop=self.io_loop)
+                d2 = DeferredMock([2], io_loop=self.io_loop)
+                d3 = DeferredMock([3], io_loop=self.io_loop)
+                result = yield All([d1, d2, d3])
+                self.assertEqual([1, 2, 3], result)
+                trigger.toggle()
+                self.stop()
+            test()
+            self.wait()
+
+    def test_AllSingleDeferredWithError(self):
+        with trigger_check(self) as trigger:
+            @concurrent.engine
+            def test():
+                try:
+                    d = DeferredMock([ValueError('Error message')], io_loop=self.io_loop)
+                    yield All([d])
+                except AllError as err:
+                    self.assertEqual(1, len(err.results))
+                    self.assertTrue(isinstance(err.results[0], ValueError))
+                    self.assertEqual('Error message', err.results[0].message)
+                    trigger.toggle()
+                finally:
+                    self.stop()
+            test()
+            self.wait()
+
+    def test_AllMultipleDeferredWithError(self):
+        with trigger_check(self) as trigger:
+            @concurrent.engine
+            def test():
+                try:
+                    d1 = DeferredMock([ValueError()], io_loop=self.io_loop)
+                    d2 = DeferredMock([Exception()], io_loop=self.io_loop)
+                    d3 = DeferredMock([SyntaxError()], io_loop=self.io_loop)
+                    yield All([d1, d2, d3])
+                except AllError as err:
+                    self.assertEqual(3, len(err.results))
+                    self.assertTrue(isinstance(err.results[0], ValueError))
+                    self.assertTrue(isinstance(err.results[1], Exception))
+                    self.assertTrue(isinstance(err.results[2], SyntaxError))
+                    trigger.toggle()
+                finally:
+                    self.stop()
+            test()
+            self.wait()
+
+    def test_AllMultipleDeferredMixed(self):
+        with trigger_check(self) as trigger:
+            @concurrent.engine
+            def test():
+                try:
+                    d1 = DeferredMock([ValueError()], io_loop=self.io_loop)
+                    d2 = DeferredMock(['Ok'], io_loop=self.io_loop)
+                    d3 = DeferredMock([123], io_loop=self.io_loop)
+                    yield All([d1, d2, d3])
+                except AllError as err:
+                    self.assertEqual(3, len(err.results))
+                    self.assertTrue(isinstance(err.results[0], ValueError))
+                    self.assertEqual('Ok', err.results[1])
+                    self.assertEqual(123, err.results[2])
+                    trigger.toggle()
+                finally:
+                    self.stop()
+            test()
             self.wait()
