@@ -7,7 +7,7 @@ from tornado.testing import AsyncTestCase
 
 from cocaine import concurrent
 from cocaine.concurrent import Deferred, return_
-from cocaine.concurrent.util import All, AllError
+from cocaine.concurrent.util import All, AllError, Any, PackagedTaskError
 from cocaine.testing import trigger_check, DeferredMock
 
 
@@ -470,6 +470,93 @@ class AllTestCase(AsyncTestCase):
                     self.assertTrue(isinstance(err.results[0], ValueError))
                     self.assertEqual('Ok', err.results[1])
                     self.assertEqual(123, err.results[2])
+                    trigger.toggle()
+                finally:
+                    self.stop()
+            test()
+            self.wait()
+
+
+class AnyTestCase(AsyncTestCase):
+    os.environ.setdefault('ASYNC_TEST_TIMEOUT', 0.5)
+
+    def test_AnySingleDeferred(self):
+        with trigger_check(self) as trigger:
+            @concurrent.engine
+            def test():
+                d = DeferredMock([1], io_loop=self.io_loop)
+                result = yield Any([d])
+                self.assertEqual([1], result)
+                trigger.toggle()
+                self.stop()
+            test()
+            self.wait()
+
+    def test_AnyMultipleDeferreds(self):
+        with trigger_check(self) as trigger:
+            @concurrent.engine
+            def test():
+                d1 = DeferredMock([1], io_loop=self.io_loop)
+                d2 = DeferredMock([2], io_loop=self.io_loop)
+                d3 = DeferredMock([3], io_loop=self.io_loop)
+                result = yield Any([d1, d2, d3])
+                self.assertEqual([1, None, None], result)
+                trigger.toggle()
+                self.stop()
+            test()
+            self.wait()
+
+    def test_AnySingleDeferredWithError(self):
+        with trigger_check(self) as trigger:
+            @concurrent.engine
+            def test():
+                try:
+                    d = DeferredMock([ValueError('Error message')], io_loop=self.io_loop)
+                    yield Any([d])
+                except PackagedTaskError as err:
+                    self.assertEqual(1, len(err.results))
+                    self.assertTrue(isinstance(err.results[0], ValueError))
+                    self.assertEqual('Error message', err.results[0].message)
+                    trigger.toggle()
+                finally:
+                    self.stop()
+            test()
+            self.wait()
+
+    def test_AnyMultipleDeferredWithError(self):
+        with trigger_check(self) as trigger:
+            @concurrent.engine
+            def test():
+                try:
+                    d1 = DeferredMock([ValueError()], io_loop=self.io_loop)
+                    d2 = DeferredMock([Exception()], io_loop=self.io_loop)
+                    d3 = DeferredMock([SyntaxError()], io_loop=self.io_loop)
+                    yield Any([d1, d2, d3])
+                except PackagedTaskError as err:
+                    self.assertEqual(3, len(err.results))
+                    self.assertTrue(isinstance(err.results[0], ValueError))
+                    self.assertEqual(None, err.results[1])
+                    self.assertEqual(None, err.results[2])
+                    trigger.toggle()
+                finally:
+                    self.stop()
+            test()
+            self.wait()
+
+    def test_AnyMultipleDeferredMixed(self):
+        with trigger_check(self) as trigger:
+            @concurrent.engine
+            def test():
+                try:
+                    d2 = DeferredMock(['Ok'], io_loop=self.io_loop)
+                    d1 = DeferredMock([ValueError()], io_loop=self.io_loop)
+                    d3 = DeferredMock([123], io_loop=self.io_loop)
+                    results = yield Any([d1, d2, d3])
+
+                    self.assertEqual(3, len(results))
+                    self.assertEqual(None, results[0])
+                    self.assertEqual('Ok', results[1])
+                    self.assertEqual(None, results[2])
                     trigger.toggle()
                 finally:
                     self.stop()

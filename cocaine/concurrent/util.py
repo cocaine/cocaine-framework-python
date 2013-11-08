@@ -31,6 +31,12 @@ class AllError(Exception):
         self.results = results
 
 
+class PackagedTaskError(Exception):
+    def __init__(self, results):
+        super(PackagedTaskError, self).__init__()
+        self.results = results
+
+
 class All(Deferred):
     def __init__(self, deferreds):
         super(All, self).__init__()
@@ -51,4 +57,27 @@ class All(Deferred):
         if all(self.done):
             if any(map(lambda r: isinstance(r, Exception) and not isinstance(r, StopIteration), self.results)):
                 self.error(AllError(self.results))
+            self.trigger(self.results)
+
+
+class Any(Deferred):
+    def __init__(self, deferreds):
+        super(Any, self).__init__()
+        assert all(map(lambda df: isinstance(df, Deferred), deferreds)), 'all items must be `Deferred` or extend it'
+        self.deferreds = deferreds
+        self.results = [None] * len(deferreds)
+        self.done = [False] * len(deferreds)
+        for pos, df in enumerate(deferreds):
+            df.add_callback(functools.partial(self._collect, pos))
+
+    def _collect(self, pos, result):
+        try:
+            self.results[pos] = result.get()
+        except Exception as err:
+            self.results[pos] = err
+        self.done[pos] = True
+
+        if any(map(lambda r: isinstance(r, Exception) and not isinstance(r, StopIteration), self.results)):
+            self.error(PackagedTaskError(self.results))
+        else:
             self.trigger(self.results)
