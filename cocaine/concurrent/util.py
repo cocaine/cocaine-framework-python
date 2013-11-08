@@ -31,9 +31,9 @@ class PackagedTaskError(Exception):
         self.results = results
 
 
-class All(Deferred):
+class PackagedTask(Deferred):
     def __init__(self, deferreds):
-        super(All, self).__init__()
+        super(PackagedTask, self).__init__()
         assert all(map(lambda df: isinstance(df, Deferred), deferreds)), 'all items must be `Deferred` or extend it'
         self.deferreds = deferreds
         self.results = [None] * len(deferreds)
@@ -41,6 +41,14 @@ class All(Deferred):
         for pos, df in enumerate(deferreds):
             df.add_callback(functools.partial(self._collect, pos))
 
+    def _collect(self, pos, result):
+        raise NotImplementedError
+
+    def _has_errors(self):
+        return any(map(lambda r: isinstance(r, Exception) and not isinstance(r, StopIteration), self.results))
+
+
+class All(PackagedTask):
     def _collect(self, pos, result):
         try:
             self.results[pos] = result.get()
@@ -49,21 +57,12 @@ class All(Deferred):
         self.done[pos] = True
 
         if all(self.done):
-            if any(map(lambda r: isinstance(r, Exception) and not isinstance(r, StopIteration), self.results)):
+            if self._has_errors():
                 self.error(PackagedTaskError(self.results))
             self.trigger(self.results)
 
 
-class Any(Deferred):
-    def __init__(self, deferreds):
-        super(Any, self).__init__()
-        assert all(map(lambda df: isinstance(df, Deferred), deferreds)), 'all items must be `Deferred` or extend it'
-        self.deferreds = deferreds
-        self.results = [None] * len(deferreds)
-        self.done = [False] * len(deferreds)
-        for pos, df in enumerate(deferreds):
-            df.add_callback(functools.partial(self._collect, pos))
-
+class Any(PackagedTask):
     def _collect(self, pos, result):
         try:
             self.results[pos] = result.get()
@@ -71,7 +70,7 @@ class Any(Deferred):
             self.results[pos] = err
         self.done[pos] = True
 
-        if any(map(lambda r: isinstance(r, Exception) and not isinstance(r, StopIteration), self.results)):
+        if self._has_errors():
             self.error(PackagedTaskError(self.results))
         else:
             self.trigger(self.results)
