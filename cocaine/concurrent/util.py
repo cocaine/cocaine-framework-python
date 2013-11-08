@@ -25,12 +25,6 @@ from ..concurrent import Deferred
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-class AllError(Exception):
-    def __init__(self, results):
-        super(AllError, self).__init__()
-        self.results = results
-
-
 class PackagedTaskError(Exception):
     def __init__(self, results):
         super(PackagedTaskError, self).__init__()
@@ -56,7 +50,7 @@ class All(Deferred):
 
         if all(self.done):
             if any(map(lambda r: isinstance(r, Exception) and not isinstance(r, StopIteration), self.results)):
-                self.error(AllError(self.results))
+                self.error(PackagedTaskError(self.results))
             self.trigger(self.results)
 
 

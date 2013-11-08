@@ -7,7 +7,7 @@ from tornado.testing import AsyncTestCase
 
 from cocaine import concurrent
 from cocaine.concurrent import Deferred, return_
-from cocaine.concurrent.util import All, AllError, Any, PackagedTaskError
+from cocaine.concurrent.util import All, Any, PackagedTaskError
 from cocaine.testing import trigger_check, DeferredMock
 
 
@@ -426,7 +426,7 @@ class AllTestCase(AsyncTestCase):
                 try:
                     d = DeferredMock([ValueError('Error message')], io_loop=self.io_loop)
                     yield All([d])
-                except AllError as err:
+                except PackagedTaskError as err:
                     self.assertEqual(1, len(err.results))
                     self.assertTrue(isinstance(err.results[0], ValueError))
                     self.assertEqual('Error message', err.results[0].message)
@@ -445,7 +445,7 @@ class AllTestCase(AsyncTestCase):
                     d2 = DeferredMock([Exception()], io_loop=self.io_loop)
                     d3 = DeferredMock([SyntaxError()], io_loop=self.io_loop)
                     yield All([d1, d2, d3])
-                except AllError as err:
+                except PackagedTaskError as err:
                     self.assertEqual(3, len(err.results))
                     self.assertTrue(isinstance(err.results[0], ValueError))
                     self.assertTrue(isinstance(err.results[1], Exception))
@@ -465,7 +465,7 @@ class AllTestCase(AsyncTestCase):
                     d2 = DeferredMock(['Ok'], io_loop=self.io_loop)
                     d3 = DeferredMock([123], io_loop=self.io_loop)
                     yield All([d1, d2, d3])
-                except AllError as err:
+                except PackagedTaskError as err:
                     self.assertEqual(3, len(err.results))
                     self.assertTrue(isinstance(err.results[0], ValueError))
                     self.assertEqual('Ok', err.results[1])
