@@ -93,7 +93,7 @@ class AbstractService(object):
         self._writableStream = None
         self._readableStream = None
 
-        self._counter = itertools.count()
+        self._counter = itertools.count(1)
         self._sessions = {}
 
         self.version = 0
