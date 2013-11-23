@@ -48,6 +48,9 @@ class PipeTestCase(unittest.TestCase):
     def test_can_connect_to_socket(self):
         self.fail()
 
+    def test_can_make_socket_no_delay(self):
+        self.fail()
+
     def test_throws_exception_on_fail_to_connect_to_socket_sync(self):
         self.fail()
 
