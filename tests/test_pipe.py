@@ -18,14 +18,24 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import contextlib
+import errno
 import fcntl
+import logging
 import os
 import socket
+import threading
 import unittest
 
 from tornado.ioloop import IOLoop
+from tornado.tcpserver import TCPServer
+from tornado.testing import AsyncTestCase
+from cocaine.concurrent import Deferred
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
+
+
+log = logging.getLogger(__name__)
 
 
 class Pipe(object):
@@ -34,8 +44,66 @@ class Pipe(object):
         self.sock.setblocking(False)
         self.io_loop = io_loop
 
+        self._connect_deferred = None
 
-class PipeTestCase(unittest.TestCase):
+    def connect(self, address):
+        self._connect_deferred = Deferred()
+        try:
+            self.sock.connect(address)
+        except socket.error as err:
+            if err.errno not in (errno.EINPROGRESS, errno.EWOULDBLOCK):
+                log.warn('connect error on fd %d: %s', self.sock.fileno(), err)
+        return self._connect_deferred
+
+
+class SocketServerMock(object):
+    def __init__(self):
+        self.thread = None
+        self.lock = threading.Lock()
+        self.started = threading.Event()
+        self.actions = {}
+
+    def start(self, port):
+        self.thread = threading.Thread(target=self._start, args=(port,))
+        self.thread.start()
+        self.started.wait()
+
+    def stop(self):
+        if self.thread:
+            self.io_loop.stop()
+            self.thread.join()
+
+    def on_connect(self, action):
+        with self.lock:
+            self.actions['connected'] = action
+
+    def _start(self, port):
+        self.io_loop = IOLoop()
+        self.io_loop.make_current()
+        server = TCPServer(self.io_loop)
+        server.handle_stream = self._handle_stream
+        server.listen(port)
+        self.io_loop.add_callback(self.started.set)
+        self.io_loop.start()
+
+    def _handle_stream(self, stream, address):
+        with self.lock:
+            self.actions['connected']()
+
+
+@contextlib.contextmanager
+def serve(port):
+    server = SocketServerMock()
+    try:
+        server.start(port)
+        yield server
+    finally:
+        server.stop()
+
+
+class PipeTestCase(AsyncTestCase):
+    os.environ.setdefault('ASYNC_TEST_TIMEOUT', '0.5')
+
     def test_class(self):
         Pipe(socket.socket())
         Pipe(socket.socket(), IOLoop.current())
@@ -45,7 +113,7 @@ class PipeTestCase(unittest.TestCase):
         Pipe(sock)
         self.assertTrue(fcntl.fcntl(sock.fileno(), fcntl.F_GETFL) & os.O_NONBLOCK)
 
-    def test_can_connect_to_socket(self):
+    def test_can_connect_to_remote_address_sync(self):
         self.fail()
 
     def test_can_make_socket_no_delay(self):
@@ -54,7 +122,14 @@ class PipeTestCase(unittest.TestCase):
     def test_throws_exception_on_fail_to_connect_to_socket_sync(self):
         self.fail()
 
-    def test_can_connect_to_socket_async(self):
+    def test_can_connect_to_remote_address_async(self):
+        with serve(60000) as server:
+            pipe = Pipe(socket.socket(), self.io_loop)
+            pipe.connect(('127.0.0.1', 60000))
+            server.on_connect(self.stop)
+            self.wait()
+
+    def test_returns_deferred_when_connected_async(self):
         self.fail()
 
     def test_can_connect_to_socket_async_multiple_times(self):
