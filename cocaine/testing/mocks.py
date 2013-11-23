@@ -67,10 +67,45 @@ class FutureTestMock(Deferred):
         self.errorback(ChokeEvent())
 
 
-class RuntimeMockError(object):
+class _MessageMock(object):
+    def __init__(self, id_):
+        self.id = id_
+
+    def pack(self, session):
+        return msgpack.dumps([self.id, session, self._data()])
+
+    def _data(self):
+        return []
+
+    def __str__(self):
+        return '{0}({1})'.format(self.__class__.__name__, self._data())
+
+
+class Chunk(_MessageMock):
+    def __init__(self, data):
+        super(Chunk, self).__init__(RPC.CHUNK)
+        self.data = data
+
+    def _data(self):
+        return [msgpack.dumps(self.data)]
+
+    def __str__(self):
+        return '{0}({1})'.format(self.__class__.__name__, self.data)
+
+
+class Error(_MessageMock):
     def __init__(self, errno, reason):
+        super(Error, self).__init__(RPC.ERROR)
         self.errno = errno
         self.reason = reason
+
+    def _data(self):
+        return [self.errno, self.reason]
+
+
+class Choke(_MessageMock):
+    def __init__(self):
+        super(Choke, self).__init__(RPC.CHOKE)
 
 
 class Hook(object):
@@ -86,11 +121,65 @@ class Hook(object):
     def disconnected(self, action):
         self.callbacks['disconnected'] = action
 
-    def message(self, request, response, action=lambda: None):
-        self.callbacks[('message', msgpack.dumps(request))] = (response, action)
+    def invoke(self, event, *args):
+        class _Invoker(object):
+            def __init__(self, callbacks):
+                self._callbacks = callbacks
+
+            def answer(self, sequence):
+                self._callbacks[('invoke', event, args)] = sequence
+
+        return _Invoker(self.callbacks)
 
     def __getitem__(self, item):
         return self.callbacks[item]
+
+    def __contains__(self, item):
+        return item in self.callbacks
+
+
+class Connection(object):
+    def __init__(self, stream, hook):
+        self._stream = stream
+        self._hook = hook
+        self._closed = True
+        self._unpacker = msgpack.Unpacker()
+
+        self._hook['connected']()
+        self._stream.read_until_close(self._on_closed, self._on_chunk)
+
+    def closed(self):
+        return self._closed
+
+    def _on_closed(self, data):
+        assert 0 == len(data)
+        log.debug('stream is closed')
+        self._hook['disconnected']()
+
+    def _on_chunk(self, data):
+        log.debug('received raw data: %s', data)
+        self._unpacker.feed(data)
+        for chunk in self._unpacker:
+            log.debug('received message: %s', chunk)
+            id_, session, data = chunk
+            if self._closed:
+                if ('invoke', id_, tuple(data)) in self._hook:
+                    sequence = self._hook['invoke', id_, tuple(data)]
+                    self._send_response(session, sequence)
+            else:
+                if ('push', id_, tuple(data)) in self._hook:
+                    sequence = self._hook['push', id_, tuple(data)]
+                    self._send_response(session, sequence)
+
+    def _send_response(self, session, responses):
+        assert hasattr(responses, '__iter__'), 'responses object must be iterable'
+        log.debug('iterating over responses: %s', responses)
+        for response in responses:
+            log.debug('sending: %s', response)
+            self._stream.write(response.pack(session))
+            if response.id == RPC.CHOKE:
+                self._closed = True
+                self._stream.close()
 
 
 class AppServerMock(TCPServer):
@@ -98,42 +187,12 @@ class AppServerMock(TCPServer):
         super(AppServerMock, self).__init__()
         self._name = name
         self._hook = hook
-        self._unpacker = msgpack.Unpacker()
+        self._connections = []
         self.listen(port)
 
     def handle_stream(self, stream, address):
         log.debug('connection accepted for "%s" from %s', self._name, address)
-        stream.read_until_close(self._on_closed, functools.partial(self._on_chunk, stream))
-        self._hook['connected']()
-
-    def _on_closed(self, data):
-        assert 0 == len(data)
-        log.debug('stream for "%s" is closed', self._name)
-        self._hook['disconnected']()
-
-    def _on_chunk(self, stream, data):
-        log.debug('received raw data: %s', data)
-        self._unpacker.feed(data)
-        for chunk in self._unpacker:
-            log.debug('received message: %s', chunk)
-            id_, session, data = chunk
-            if ('message', msgpack.dumps(chunk)) in self._hook.callbacks:
-                response, action = self._hook[('message', msgpack.dumps(chunk))]
-                action()
-                self._send_response(stream, session, response)
-
-    def _send_response(self, stream, session, responses):
-        assert hasattr(responses, '__iter__'), 'responses object must be iterable'
-        log.debug('iterating over response: %s', responses)
-        for response in responses:
-            log.debug('sending: %s', response)
-            if isinstance(response, RuntimeMockError):
-                msg = Message(RPC.ERROR, session, response.errno, response.reason)
-            else:
-                msg = Message(RPC.CHUNK, session, msgpack.dumps(response))
-            stream.write(msg.pack())
-        stream.write(Message(RPC.CHOKE, session).pack())
-        stream.close()
+        self._connections.append(Connection(stream, self._hook))
 
 
 class RuntimeMock(object):
@@ -142,15 +201,17 @@ class RuntimeMock(object):
         self._hooks = collections.defaultdict(Hook)
         self._servers = []
 
-        self.register('locator', 0, port, 1, {})
+        self.register('locator', port, 1, {})
 
-    def register(self, name, session, port, version, api):
+    def register(self, name, port, version, api):
         assert name not in self._services, 'service already registered'
         log.debug('registering "%s" at (%s, %d)', name, 'localhost', port)
 
         self._services[name] = port
-        self.when('locator').message([0, session, [name]],
-                                     [[['localhost', port], version, api]])
+        self.when('locator').invoke(0, name).answer([
+            Chunk([['localhost', port], version, api]),
+            Choke()
+        ])
 
     def when(self, name):
         return self._hooks[name]
