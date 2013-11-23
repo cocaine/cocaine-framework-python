@@ -45,14 +45,37 @@ class Pipe(object):
 
         self._connect_deferred = None
 
-    def connect(self, address):
+    def connect(self, address, sync=False):
         self._connect_deferred = Deferred()
+        if sync:
+            self._connect_sync(address)
+        else:
+            self._connect(address)
+
+        return self._connect_deferred
+
+    def _connect_sync(self, address):
+        try:
+            self.sock.settimeout(5.0)  # timeout)
+            self.sock.connect(address)
+            # self._state = self.CONNECTED
+        except socket.error as err:
+            # if err.errno == errno.ECONNREFUSED:
+            #     raise ConnectionRefusedError(address)
+            # elif err.errno == errno.ETIMEDOUT:
+            #     raise ConnectionTimeoutError(address, timeout)
+            # else:
+            #     raise ConnectionError(address, err)
+            pass
+        finally:
+            self.sock.setblocking(False)
+
+    def _connect(self, address):
         try:
             self.sock.connect(address)
         except socket.error as err:
             if err.errno not in (errno.EINPROGRESS, errno.EWOULDBLOCK):
                 log.warn('connect error on fd %d: %s', self.sock.fileno(), err)
-        return self._connect_deferred
 
 
 class SocketServerMock(object):
@@ -84,6 +107,7 @@ class SocketServerMock(object):
         server.listen(port)
         self.io_loop.add_callback(self.started.set)
         self.io_loop.start()
+        server.stop()
 
     def _handle_stream(self, stream, address):
         with self.lock:
@@ -113,7 +137,17 @@ class PipeTestCase(AsyncTestCase):
         self.assertTrue(fcntl.fcntl(sock.fileno(), fcntl.F_GETFL) & os.O_NONBLOCK)
 
     def test_can_connect_to_remote_address_sync(self):
-        self.fail()
+        flag = [False]
+
+        def set_flag():
+            flag[0] = True
+
+        with serve(60000) as server:
+            pipe = Pipe(socket.socket(), self.io_loop)
+            pipe.connect(('127.0.0.1', 60000), sync=True)
+            server.on_connect(set_flag)
+
+        self.assertTrue(flag[0])
 
     def test_can_make_socket_no_delay(self):
         self.fail()
@@ -129,6 +163,24 @@ class PipeTestCase(AsyncTestCase):
             self.wait()
 
     def test_returns_deferred_when_connected_async(self):
+        self.fail()
+
+    def test_has_disconnected_state_by_default(self):
+        self.fail()
+
+    def test_has_connected_state_after_connected(self):
+        self.fail()
+
+    def test_has_connecting_state_while_connecting(self):
+        self.fail()
+
+    def test_has_disconnected_state_after_closed(self):
+        self.fail()
+
+    def test_has_disconnected_state_after_error(self):
+        self.fail()
+
+    def test_has_disconnected_state_after_connecting_error(self):
         self.fail()
 
     def test_can_connect_to_socket_async_multiple_times(self):
