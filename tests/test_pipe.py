@@ -18,14 +18,23 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import socket
 import unittest
+
+from tornado.ioloop import IOLoop
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
+class Pipe(object):
+    def __init__(self, sock, io_loop=None):
+        pass
+
+
 class PipeTestCase(unittest.TestCase):
     def test_class(self):
-        self.fail()
+        Pipe(socket.socket())
+        Pipe(socket.socket(), IOLoop.current())
 
     def test_can_connect_to_socket(self):
         self.fail()
