@@ -20,9 +20,7 @@
 
 import logging
 import sys
-import unittest
 
-from tornado.ioloop import IOLoop
 from tornado.testing import AsyncTestCase
 
 from cocaine import concurrent
@@ -49,7 +47,7 @@ class RuntimeTestCase(AsyncTestCase):
         self.runtime.stop()
 
     def get_runtime(self):
-        return RuntimeMock(io_loop=IOLoop())
+        return RuntimeMock()
 
 
 class ServiceTestCase(RuntimeTestCase):
