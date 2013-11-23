@@ -25,7 +25,7 @@ from tornado.ioloop import IOLoop
 
 from ..protocol import ChokeEvent
 from . import service
-from .base import LOCATOR_DEFAULT_HOST, LOCATOR_DEFAULT_PORT
+from .base import LOCATOR_DEFAULT_HOST, LOCATOR_DEFAULT_PORT, log
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -34,7 +34,10 @@ def synchrony(func):
     def wrapper(*args, **kwargs):
         def run():
             fiber = greenlet(func)
-            fiber.switch(*args, **kwargs)
+            try:
+                fiber.switch(*args, **kwargs)
+            except Exception as err:
+                log.warn('exception occurred: %s', err, exc_info=True)
         io_loop = IOLoop.current()
         io_loop.add_callback(run)
         io_loop.start()
