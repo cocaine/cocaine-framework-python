@@ -23,6 +23,7 @@ import sys
 import unittest
 
 from tornado.ioloop import IOLoop
+from tornado.testing import AsyncTestCase
 
 from cocaine import concurrent
 from cocaine.services import Service
@@ -38,23 +39,52 @@ log.setLevel(logging.DEBUG)
 log.propagate = False
 
 
-class ServiceTestCase(unittest.TestCase):
+class RuntimeTestCase(AsyncTestCase):
+    def setUp(self):
+        super(RuntimeTestCase, self).setUp()
+        self.runtime = self.get_runtime()
+
+    def tearDown(self):
+        super(RuntimeTestCase, self).tearDown()
+        self.runtime.stop()
+
+    def get_runtime(self):
+        return RuntimeMock(io_loop=IOLoop())
+
+
+class ServiceTestCase(RuntimeTestCase):
     def test_single_chunk(self):
-        runtime = RuntimeMock()
-        runtime.register('node', 10054, 1, {0: 'list'})
-        runtime.when('node').invoke(0).answer([
+        self.runtime.register('node', 10054, 1, {0: 'list'})
+        self.runtime.when('node').invoke(0).answer([
             Chunk(['echo']),
             Choke()
         ])
-        runtime.start()
+        self.runtime.start()
 
         @concurrent.engine
         def test():
             actual = yield node.list()
             self.assertEqual(['echo'], actual)
-            IOLoop.current().stop()
+            self.stop()
 
         node = Service('node')
         test()
-        IOLoop.current().start()
-        runtime.stop()
+        self.wait()
+
+    def test_single_chunk2(self):
+        self.runtime.register('node', 10054, 1, {0: 'list'})
+        self.runtime.when('node').invoke(0).answer([
+            Chunk(['echo']),
+            Choke()
+        ])
+        self.runtime.start()
+
+        @concurrent.engine
+        def test():
+            actual = yield node.list()
+            self.assertEqual(['echo'], actual)
+            self.stop()
+
+        node = Service('node')
+        test()
+        self.wait()
