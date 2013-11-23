@@ -25,7 +25,6 @@ import logging
 import os
 import socket
 import threading
-import unittest
 
 from tornado.ioloop import IOLoop
 from tornado.tcpserver import TCPServer
