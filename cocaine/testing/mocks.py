@@ -1,6 +1,5 @@
 import collections
 import datetime
-import functools
 import logging
 import sys
 import msgpack
@@ -9,7 +8,7 @@ from tornado.tcpserver import TCPServer
 
 from cocaine.concurrent import Deferred
 from cocaine.protocol import ChokeEvent
-from cocaine.protocol.message import Message, RPC
+from cocaine.protocol.message import RPC
 
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
