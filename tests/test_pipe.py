@@ -18,6 +18,8 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import fcntl
+import os
 import socket
 import unittest
 
@@ -28,13 +30,20 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 class Pipe(object):
     def __init__(self, sock, io_loop=None):
-        pass
+        self.sock = sock
+        self.sock.setblocking(False)
+        self.io_loop = io_loop
 
 
 class PipeTestCase(unittest.TestCase):
     def test_class(self):
         Pipe(socket.socket())
         Pipe(socket.socket(), IOLoop.current())
+
+    def test_transforms_socket_into_non_blocking(self):
+        sock = socket.socket()
+        Pipe(sock)
+        self.assertTrue(fcntl.fcntl(sock.fileno(), fcntl.F_GETFL) & os.O_NONBLOCK)
 
     def test_can_connect_to_socket(self):
         self.fail()
