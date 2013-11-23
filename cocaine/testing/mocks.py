@@ -1,6 +1,5 @@
 import collections
 import datetime
-import functools
 import logging
 import sys
 import threading
@@ -198,14 +197,14 @@ class AppServerMock(TCPServer):
 
 
 class RuntimeMock(object):
-    def __init__(self, port=10053, io_loop=None):
+    def __init__(self, port=10053):
         self._services = {}
         self._hooks = collections.defaultdict(Hook)
-        self._io_loop = io_loop
+
+        self._io_loop = None
+        self._started = threading.Event()
 
         self.register('locator', port, 1, {})
-        self._started = threading.Event()
-        self._stopped = threading.Event()
 
     def register(self, name, port, version, api):
         assert name not in self._services, 'service already registered'
@@ -221,23 +220,25 @@ class RuntimeMock(object):
         return self._hooks[name]
 
     def start(self):
-        thread = threading.Thread(target=functools.partial(self._start_in_thread))
-        thread.start()
+        self.thread = threading.Thread(target=self._start_in_thread)
+        self.thread.start()
         self._started.wait()
         log.debug('runtime mock server has been started')
 
     def _start_in_thread(self):
-        servers = []
+        self.servers = []
+        self._io_loop = IOLoop()
         for name, port in self._services.iteritems():
-            servers.append(AppServerMock(name, port, self._hooks[name], self._io_loop))
-        self._started.set()
+            server = AppServerMock(name, port, self._hooks[name], self._io_loop)
+            self.servers.append(server)
+        self._io_loop.add_callback(self._started.set)
         self._io_loop.start()
-        for server in servers:
-            server.stop()
-        self._stopped.set()
+        self._io_loop.clear_current()
+        self._io_loop.close(all_fds=True)
 
     def stop(self):
-        if self._io_loop is not None:
-            self._io_loop.stop()
-            self._stopped.wait()
+        for server in self.servers:
+            server.stop()
+        self._io_loop.stop()
+        self.thread.join()
         log.debug('runtime mock server has been stopped')
