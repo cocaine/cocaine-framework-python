@@ -63,3 +63,4 @@ class SynchronyTestCase(AsyncTestCase):
 
         node = Service('node')
         self.assertEqual(['echo'], node.list())
+        runtime.stop()

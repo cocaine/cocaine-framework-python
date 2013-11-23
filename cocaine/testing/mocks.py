@@ -1,8 +1,11 @@
 import collections
 import datetime
+import functools
 import logging
 import sys
+import threading
 import msgpack
+from tornado.ioloop import IOLoop
 
 from tornado.tcpserver import TCPServer
 
@@ -182,8 +185,8 @@ class Connection(object):
 
 
 class AppServerMock(TCPServer):
-    def __init__(self, name, port, hook):
-        super(AppServerMock, self).__init__()
+    def __init__(self, name, port, hook, io_loop=None):
+        super(AppServerMock, self).__init__(io_loop=io_loop)
         self._name = name
         self._hook = hook
         self._connections = []
@@ -198,7 +201,7 @@ class RuntimeMock(object):
     def __init__(self, port=10053):
         self._services = {}
         self._hooks = collections.defaultdict(Hook)
-        self._servers = []
+        self._io_loop = None
 
         self.register('locator', port, 1, {})
 
@@ -216,10 +219,23 @@ class RuntimeMock(object):
         return self._hooks[name]
 
     def start(self):
+        event = threading.Event()
+        thread = threading.Thread(target=functools.partial(self._start_in_thread, event))
+        thread.start()
+        event.wait()
+
+    def _start_in_thread(self, event):
+        self._io_loop = IOLoop.current()
+        servers = []
         for name, port in self._services.iteritems():
-            server = AppServerMock(name, port, self._hooks[name])
-            self._servers.append(server)
+            servers.append(AppServerMock(name, port, self._hooks[name], self._io_loop))
+        event.set()
+        self._io_loop.start()
+        for server in servers:
+            server.stop()
 
     def stop(self):
-        for server in self._servers:
-            server.stop()
+        self._io_loop.stop()
+
+    def __del__(self):
+        self._io_loop.stop()
