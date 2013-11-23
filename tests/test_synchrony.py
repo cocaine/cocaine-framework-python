@@ -47,12 +47,12 @@ def autoclosable(func):
     return wrapper
 
 
-class EngineTestCase(AsyncTestCase):
+class SynchronyTestCase(AsyncTestCase):
     os.environ.setdefault('ASYNC_TEST_TIMEOUT', '0.5')
 
     @synchrony
     @autoclosable
-    def test_something(self):
+    def test_single_chunk(self):
         runtime = RuntimeMock()
         runtime.register('node', 10054, 1, {0: 'list'})
         runtime.when('node').invoke(0).answer([
