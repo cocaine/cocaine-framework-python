@@ -37,6 +37,10 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 log = logging.getLogger(__name__)
 
 
+class PipeError(Exception):
+    pass
+
+
 class Pipe(object):
     def __init__(self, sock, io_loop=None):
         self.sock = sock
@@ -45,32 +49,27 @@ class Pipe(object):
 
         self._connect_deferred = None
 
-    def connect(self, address, sync=False):
+    def connect(self, address, timeout=None, sync=False):
         self._connect_deferred = Deferred()
         if sync:
-            self._connect_sync(address)
+            self._connect_sync(address, timeout)
         else:
-            self._connect(address)
+            self._connect(address, timeout)
 
         return self._connect_deferred
 
-    def _connect_sync(self, address):
+    def _connect_sync(self, address, timeout):
         try:
-            self.sock.settimeout(5.0)  # timeout)
+            self.sock.settimeout(timeout)
             self.sock.connect(address)
             # self._state = self.CONNECTED
         except socket.error as err:
-            # if err.errno == errno.ECONNREFUSED:
-            #     raise ConnectionRefusedError(address)
-            # elif err.errno == errno.ETIMEDOUT:
-            #     raise ConnectionTimeoutError(address, timeout)
-            # else:
-            #     raise ConnectionError(address, err)
-            pass
+            log.warn('connect error on fd %d: %s', self.sock.fileno(), err)
+            raise PipeError(err)
         finally:
             self.sock.setblocking(False)
 
-    def _connect(self, address):
+    def _connect(self, address, timeout):
         try:
             self.sock.connect(address)
         except socket.error as err:
@@ -91,7 +90,9 @@ class SocketServerMock(object):
         self.thread = None
         self.lock = threading.Lock()
         self.started = threading.Event()
-        self.actions = {}
+        self.actions = {
+            'connected': lambda: None
+        }
 
     def start(self, port):
         self.thread = threading.Thread(target=self._start, args=(port,))
@@ -158,13 +159,19 @@ class SynchronousPipeTestCase(AsyncTestCase):
 
         with serve(60000) as server:
             pipe = Pipe(socket.socket(), self.io_loop)
-            pipe.connect(('127.0.0.1', 60000), sync=True)
             server.on_connect(set_flag)
+            pipe.connect(('127.0.0.1', 60000), sync=True)
 
         self.assertTrue(flag[0])
 
     def test_throws_exception_on_fail_to_connect_to_remote_address(self):
-        self.fail()
+        pipe = Pipe(socket.socket(), self.io_loop)
+        self.assertRaises(PipeError, pipe.connect, ('127.0.0.1', 60000), sync=True)
+
+    def test_throws_exception_on_timeout_while_connect_to_remote_address(self):
+        with serve(60000):
+            pipe = Pipe(socket.socket(), self.io_loop)
+            self.assertRaises(PipeError, pipe.connect, ('127.0.0.1', 60000), timeout=0.000001, sync=True)
 
 
 class AsynchronousPipeTestCase(AsyncTestCase):
