@@ -124,9 +124,7 @@ def serve(port):
         server.stop()
 
 
-class PipeTestCase(AsyncTestCase):
-    os.environ.setdefault('ASYNC_TEST_TIMEOUT', '0.5')
-
+class CommonPipeTestCase(AsyncTestCase):
     def test_class(self):
         Pipe(socket.socket())
         Pipe(socket.socket(), IOLoop.current())
@@ -136,7 +134,12 @@ class PipeTestCase(AsyncTestCase):
         Pipe(sock)
         self.assertTrue(fcntl.fcntl(sock.fileno(), fcntl.F_GETFL) & os.O_NONBLOCK)
 
-    def test_can_connect_to_remote_address_sync(self):
+    def test_can_make_socket_no_delay(self):
+        self.fail()
+
+
+class SynchronousPipeTestCase(AsyncTestCase):
+    def test_can_connect_to_remote_address(self):
         flag = [False]
 
         def set_flag():
@@ -149,20 +152,21 @@ class PipeTestCase(AsyncTestCase):
 
         self.assertTrue(flag[0])
 
-    def test_can_make_socket_no_delay(self):
+    def test_throws_exception_on_fail_to_connect_to_remote_address(self):
         self.fail()
 
-    def test_throws_exception_on_fail_to_connect_to_socket_sync(self):
-        self.fail()
 
-    def test_can_connect_to_remote_address_async(self):
+class AsynchronousPipeTestCase(AsyncTestCase):
+    os.environ.setdefault('ASYNC_TEST_TIMEOUT', '0.5')
+
+    def test_can_connect_to_remote_address(self):
         with serve(60000) as server:
             pipe = Pipe(socket.socket(), self.io_loop)
             pipe.connect(('127.0.0.1', 60000))
             server.on_connect(self.stop)
             self.wait()
 
-    def test_returns_deferred_when_connected_async(self):
+    def test_returns_deferred_when_connected(self):
         self.fail()
 
     def test_has_disconnected_state_by_default(self):
