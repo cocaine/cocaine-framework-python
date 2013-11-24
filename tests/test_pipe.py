@@ -77,6 +77,14 @@ class Pipe(object):
             if err.errno not in (errno.EINPROGRESS, errno.EWOULDBLOCK):
                 log.warn('connect error on fd %d: %s', self.sock.fileno(), err)
 
+    def set_nodelay(self, value):
+        if self.sock is not None and self.sock.family in (socket.AF_INET, socket.AF_INET6):
+            try:
+                self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1 if value else 0)
+            except socket.error as err:
+                if err.errno != errno.EINVAL:
+                    raise
+
 
 class SocketServerMock(object):
     def __init__(self):
@@ -135,7 +143,10 @@ class CommonPipeTestCase(AsyncTestCase):
         self.assertTrue(fcntl.fcntl(sock.fileno(), fcntl.F_GETFL) & os.O_NONBLOCK)
 
     def test_can_make_socket_no_delay(self):
-        self.fail()
+        sock = socket.socket()
+        pipe = Pipe(sock)
+        pipe.set_nodelay(True)
+        self.assertTrue(sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
 
 
 class SynchronousPipeTestCase(AsyncTestCase):
