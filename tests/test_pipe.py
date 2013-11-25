@@ -26,6 +26,7 @@ import os
 import socket
 import threading
 
+from tornado import stack_context
 from tornado.ioloop import IOLoop
 from tornado.tcpserver import TCPServer
 from tornado.testing import AsyncTestCase
@@ -42,17 +43,21 @@ class PipeError(Exception):
 
 
 class Pipe(object):
-    DISCONNECTED, CONNECTING, CONNECTED = range(3)
+    CLOSED, CONNECTING, CONNECTED = range(3)
 
-    def __init__(self, sock, io_loop=None):
+    def __init__(self, sock, io_loop):
         self.sock = sock
         self.sock.setblocking(False)
-        self.io_loop = io_loop
+        self.io_loop = io_loop or IOLoop.current()
 
         self._connect_deferred = None
-        self._state = self.DISCONNECTED
+        self._state = self.CLOSED
+        self._events = None
 
     def connect(self, address, timeout=None, sync=False):
+        if self.connecting:
+            return self._connect_deferred
+
         self._connect_deferred = Deferred()
         self._state = self.CONNECTING
         if sync:
@@ -65,6 +70,18 @@ class Pipe(object):
     @property
     def state(self):
         return self._state
+
+    @property
+    def closed(self):
+        return self._state == self.CLOSED
+
+    @property
+    def connecting(self):
+        return self._state == self.CONNECTING
+
+    @property
+    def connected(self):
+        return self._state == self.CONNECTED
 
     def _connect_sync(self, address, timeout):
         try:
@@ -83,6 +100,9 @@ class Pipe(object):
         except socket.error as err:
             if err.errno not in (errno.EINPROGRESS, errno.EWOULDBLOCK):
                 log.warn('connect error on fd %d: %s', self.sock.fileno(), err)
+                self.close()
+                return
+        self._add_io_state(self.io_loop.WRITE)
 
     def set_nodelay(self, value):
         if self.sock is not None and self.sock.family in (socket.AF_INET, socket.AF_INET6):
@@ -91,6 +111,84 @@ class Pipe(object):
             except socket.error as err:
                 if err.errno != errno.EINVAL:
                     raise
+
+    def _add_io_state(self, event):
+        if self.closed:
+            return
+
+        if self._events is None:
+            self._events = event | IOLoop.ERROR
+            with stack_context.NullContext():
+                self.io_loop.add_handler(self.fileno(), self._handle_events, self._events)
+        elif not event & self._events:
+            self._events |= event
+            self.io_loop.update_handler(self.fileno(), self._events)
+
+    def _handle_events(self, fd, events):
+        if self.closed:
+            log.warn('got events for closed stream %d', fd)
+            return
+
+        try:
+            if events & self.io_loop.READ:
+                self._handle_read()
+            if self.closed:
+                return
+
+            if events & self.io_loop.WRITE:
+                if self.connecting:
+                    self._handle_connect()
+                self._handle_write()
+            if self.closed:
+                return
+
+            if events & self.io_loop.ERROR:
+                self.error = self.get_fd_error()
+                self.io_loop.add_callback(self.close)
+                return
+
+            event = self.io_loop.ERROR
+            # if self.reading():
+            #     event |= self.io_loop.READ
+            # if self.writing():
+            #     event |= self.io_loop.WRITE
+            if event == self.io_loop.ERROR:
+                event |= self.io_loop.READ
+            if event != self._state:
+                self._events = event
+                self.io_loop.update_handler(self.fileno(), self._events)
+        except Exception:
+            log.error('uncaught exception, closing connection', exc_info=True)
+            # self.close(exc_info=True)
+            # raise
+
+    def _handle_connect(self):
+        err = self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+        # if err != 0:
+        #     self.error = socket.error(err, os.strerror(err))
+        #     log.warn('connect error on fd %d: %s', self.sock.fileno(), errno.errorcode[err])
+        #     self.close()
+        #     return
+
+        self._state = self.CONNECTED
+        assert self._connect_deferred
+        self._connect_deferred.trigger()
+
+    def close(self):
+        pass
+
+    def fileno(self):
+        return self.sock.fileno()
+
+    def _handle_read(self):
+        pass
+
+    def _handle_write(self):
+        pass
+
+    def get_fd_error(self):
+        errno = self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+        return socket.error(errno, os.strerror(errno))
 
 
 class SocketServerMock(object):
@@ -143,17 +241,17 @@ def serve(port):
 
 class CommonPipeTestCase(AsyncTestCase):
     def test_class(self):
-        Pipe(socket.socket())
+        Pipe(socket.socket(), self.io_loop)
         Pipe(socket.socket(), IOLoop.current())
 
     def test_transforms_socket_into_non_blocking(self):
         sock = socket.socket()
-        Pipe(sock)
+        Pipe(sock, self.io_loop)
         self.assertTrue(fcntl.fcntl(sock.fileno(), fcntl.F_GETFL) & os.O_NONBLOCK)
 
     def test_can_make_socket_no_delay(self):
         sock = socket.socket()
-        pipe = Pipe(sock)
+        pipe = Pipe(sock, self.io_loop)
         pipe.set_nodelay(True)
         self.assertTrue(sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
 
@@ -199,15 +297,14 @@ class AsynchronousPipeTestCase(AsyncTestCase):
 
     def test_has_disconnected_state_by_default(self):
         pipe = Pipe(socket.socket(), self.io_loop)
-        self.assertEqual(Pipe.DISCONNECTED, pipe.state)
-
-    def test_has_connected_state_after_connected(self):
-        self.fail()
+        self.assertEqual(Pipe.CLOSED, pipe.state)
+        self.assertTrue(pipe.closed)
 
     def test_has_connecting_state_while_connecting(self):
         pipe = Pipe(socket.socket(), self.io_loop)
         pipe.connect(('127.0.0.1', 60000))
         self.assertEqual(Pipe.CONNECTING, pipe.state)
+        self.assertTrue(pipe.connecting)
 
     def test_has_disconnected_state_after_closed(self):
         self.fail()
@@ -219,10 +316,27 @@ class AsynchronousPipeTestCase(AsyncTestCase):
         self.fail()
 
     def test_can_connect_to_socket_async_multiple_times(self):
-        self.fail()
+        pipe = Pipe(socket.socket(), self.io_loop)
+        deferred = pipe.connect(('127.0.0.1', 60000))
+        self.assertEqual(deferred, pipe.connect(()))
 
     def test_triggers_connect_deferred_when_connected(self):
-        self.fail()
+        flag = [False]
+
+        def set_flag(future):
+            flag[0] = True
+            self.assertIsNone(future.get())
+
+        with serve(60000) as server:
+            pipe = Pipe(socket.socket(), self.io_loop)
+            deferred = pipe.connect(('127.0.0.1', 60000))
+            deferred.add_callback(set_flag)
+            server.on_connect(self.stop)
+            self.wait()
+
+        self.assertTrue(flag[0])
+        self.assertEqual(Pipe.CONNECTED, pipe.state)
+        self.assertTrue(pipe.connected)
 
     def test_triggers_connect_deferred_when_timeout(self):
         self.fail()
