@@ -42,15 +42,19 @@ class PipeError(Exception):
 
 
 class Pipe(object):
+    DISCONNECTED, CONNECTING, CONNECTED = range(3)
+
     def __init__(self, sock, io_loop=None):
         self.sock = sock
         self.sock.setblocking(False)
         self.io_loop = io_loop
 
         self._connect_deferred = None
+        self._state = self.DISCONNECTED
 
     def connect(self, address, timeout=None, sync=False):
         self._connect_deferred = Deferred()
+        self._state = self.CONNECTING
         if sync:
             self._connect_sync(address, timeout)
         else:
@@ -58,11 +62,15 @@ class Pipe(object):
 
         return self._connect_deferred
 
+    @property
+    def state(self):
+        return self._state
+
     def _connect_sync(self, address, timeout):
         try:
             self.sock.settimeout(timeout)
             self.sock.connect(address)
-            # self._state = self.CONNECTED
+            self._state = self.CONNECTED
         except socket.error as err:
             log.warn('connect error on fd %d: %s', self.sock.fileno(), err)
             raise PipeError(err)
@@ -184,17 +192,22 @@ class AsynchronousPipeTestCase(AsyncTestCase):
             server.on_connect(self.stop)
             self.wait()
 
-    def test_returns_deferred_when_connected(self):
-        self.fail()
+    def test_returns_deferred_when_connecting(self):
+        pipe = Pipe(socket.socket(), self.io_loop)
+        deferred = pipe.connect(('127.0.0.1', 60000))
+        self.assertTrue(isinstance(deferred, Deferred))
 
     def test_has_disconnected_state_by_default(self):
-        self.fail()
+        pipe = Pipe(socket.socket(), self.io_loop)
+        self.assertEqual(Pipe.DISCONNECTED, pipe.state)
 
     def test_has_connected_state_after_connected(self):
         self.fail()
 
     def test_has_connecting_state_while_connecting(self):
-        self.fail()
+        pipe = Pipe(socket.socket(), self.io_loop)
+        pipe.connect(('127.0.0.1', 60000))
+        self.assertEqual(Pipe.CONNECTING, pipe.state)
 
     def test_has_disconnected_state_after_closed(self):
         self.fail()
