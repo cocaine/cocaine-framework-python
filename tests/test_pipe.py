@@ -24,8 +24,8 @@ import fcntl
 import logging
 import os
 import socket
-import threading
 import sys
+import time
 
 from tornado import stack_context
 from tornado.ioloop import IOLoop
@@ -51,6 +51,18 @@ class TimeoutError(PipeError):
     pass
 
 
+def add_timeout_watcher(func, timeout, callback, io_loop):
+    if timeout is None:
+        return func
+
+    timeout_id = io_loop.add_timeout(time.time() + timeout, callback)
+
+    def wrapper(*args, **kwargs):
+        io_loop.remove_timeout(timeout_id)
+        func(*args, **kwargs)
+    return wrapper
+
+
 class Pipe(object):
     CLOSED, CONNECTING, CONNECTED = range(3)
 
@@ -59,7 +71,12 @@ class Pipe(object):
         self.sock.setblocking(False)
         self.io_loop = io_loop or IOLoop.current()
 
+        self._connected_callback = None
+
         self._connect_deferred = None
+        self._connect_timeout = None
+        self._connect_timeout_id = None
+
         self._state = self.CLOSED
         self._events = None
 
@@ -79,42 +96,33 @@ class Pipe(object):
     def connected(self):
         return self._state == self.CONNECTED
 
-    def connect(self, address, timeout=None, sync=False):
+    def connect(self, address, timeout=None):
         if self.connecting:
             return self._connect_deferred
 
         self._connect_deferred = Deferred()
         self._state = self.CONNECTING
-        if sync:
-            self._connect_sync(address, timeout)
-        else:
-            self._connect(address, timeout)
-
+        self._connect(address, timeout)
         return self._connect_deferred
-
-    def _connect_sync(self, address, timeout):
-        try:
-            self.sock.settimeout(timeout)
-            self.sock.connect(address)
-            self._state = self.CONNECTED
-        except socket.error as err:
-            log.warn('connect error on fd %d: %s', self.sock.fileno(), err)
-            raise PipeError(err)
-        finally:
-            self.sock.setblocking(False)
 
     def _connect(self, address, timeout):
         try:
             log.debug('connecting to the %s', address)
             self.sock.connect(address)
         except socket.error as err:
-            if err.errno not in (errno.EINPROGRESS, errno.EWOULDBLOCK):
+            if err.errno in (errno.EINPROGRESS, errno.EWOULDBLOCK):
+                if timeout:
+                    self._connected_callback = add_timeout_watcher(
+                        self._handle_connect, timeout, self._handle_connect_timeout, self.io_loop)
+                else:
+                    self._connected_callback = self._handle_connect
+                self._add_io_state(self.io_loop.WRITE)
+            else:
                 log.warn('connect error on fd %d: %s', self.sock.fileno(), err)
                 self._connect_deferred.error(PipeError(''))
                 self._connect_deferred = None
                 self.close()
                 return
-        self._add_io_state(self.io_loop.WRITE)
 
     def set_nodelay(self, value):
         if self.sock is not None and self.sock.family in (socket.AF_INET, socket.AF_INET6):
@@ -149,7 +157,7 @@ class Pipe(object):
 
             if self.connecting:
                 if (events & IOLoop.WRITE) | (events & IOLoop.ERROR):
-                    self._handle_connect()
+                    self._connected_callback()
 
             if events & IOLoop.WRITE:
                 self._handle_write()
@@ -161,13 +169,13 @@ class Pipe(object):
                 self.io_loop.add_callback(self.close)
                 return
 
-            event = self.io_loop.ERROR
+            event = IOLoop.ERROR
             # if self.reading():
-            #     event |= self.io_loop.READ
+            #     event |= IOLoop.READ
             # if self.writing():
-            #     event |= self.io_loop.WRITE
-            if event == self.io_loop.ERROR:
-                event |= self.io_loop.READ
+            #     event |= IOLoop.WRITE
+            if event == IOLoop.ERROR:
+                event |= IOLoop.READ
             if event != self._state:
                 self._events = event
                 self.io_loop.update_handler(self.fileno(), self._events)
@@ -179,14 +187,20 @@ class Pipe(object):
     def _handle_connect(self):
         log.debug('handling connect for %d', self.sock.fileno())
         err = self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
-        if err != 0:
+        if err == 0:
+            self._state = self.CONNECTED
+            self._connect_deferred.trigger()
+        else:
             log.warn('connect error on fd %d: %s', self.sock.fileno(), errno.errorcode[err])
             self._connect_deferred.error(PipeError(''))
             self._connect_deferred = None
             self.close()
-        else:
-            self._state = self.CONNECTED
-            self._connect_deferred.trigger()
+
+    def _handle_connect_timeout(self):
+        log.warn('connect error on fd %d: %s', self.sock.fileno(), 'timeout')
+        self._connect_deferred.error(TimeoutError(''))
+        self._connect_deferred = None
+        self.close()
 
     def close(self):
         self._state = self.CLOSED
@@ -207,40 +221,23 @@ class Pipe(object):
 
 class SocketServerMock(object):
     def __init__(self):
-        self.thread = None
-        self.lock = threading.Lock()
-        self.started = threading.Event()
         self.actions = {
             'connected': lambda: None
         }
 
     def start(self, port):
-        self.thread = threading.Thread(target=self._start, args=(port,))
-        self.thread.start()
-        self.started.wait()
+        self.server = TCPServer()
+        self.server.handle_stream = self._handle_stream
+        self.server.listen(port)
 
     def stop(self):
-        if self.thread:
-            self.io_loop.stop()
-            self.thread.join()
+        self.server.stop()
 
     def on_connect(self, action):
-        with self.lock:
-            self.actions['connected'] = action
-
-    def _start(self, port):
-        self.io_loop = IOLoop()
-        self.io_loop.make_current()
-        server = TCPServer(self.io_loop)
-        server.handle_stream = self._handle_stream
-        server.listen(port)
-        self.io_loop.add_callback(self.started.set)
-        self.io_loop.start()
-        server.stop()
+        self.actions['connected'] = action
 
     def _handle_stream(self, stream, address):
-        with self.lock:
-            self.actions['connected']()
+        self.actions['connected']()
 
 
 @contextlib.contextmanager
@@ -268,30 +265,6 @@ class CommonPipeTestCase(AsyncTestCase):
         pipe = Pipe(sock, self.io_loop)
         pipe.set_nodelay(True)
         self.assertTrue(sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
-
-
-class SynchronousPipeTestCase(AsyncTestCase):
-    def test_can_connect_to_remote_address(self):
-        flag = [False]
-
-        def set_flag():
-            flag[0] = True
-
-        with serve(60000) as server:
-            pipe = Pipe(socket.socket(), self.io_loop)
-            server.on_connect(set_flag)
-            pipe.connect(('127.0.0.1', 60000), sync=True)
-
-        self.assertTrue(flag[0])
-
-    def test_throws_exception_on_fail_to_connect_to_remote_address(self):
-        pipe = Pipe(socket.socket(), self.io_loop)
-        self.assertRaises(PipeError, pipe.connect, ('127.0.0.1', 60000), sync=True)
-
-    def test_throws_exception_on_timeout_while_connect_to_remote_address(self):
-        with serve(60000):
-            pipe = Pipe(socket.socket(), self.io_loop)
-            self.assertRaises(PipeError, pipe.connect, ('127.0.0.1', 60000), timeout=0.000001, sync=True)
 
 
 class AsynchronousPipeTestCase(AsyncTestCase):
@@ -340,10 +313,13 @@ class AsynchronousPipeTestCase(AsyncTestCase):
         def on_client_connect(future):
             flag[0] += 1
             self.assertIsNone(future.get())
-            self.stop()
+            if flag[0] == 2:
+                self.stop()
 
         def on_server_connect():
             flag[0] += 1
+            if flag[0] == 2:
+                self.stop()
 
         with serve(60000) as server:
             pipe = Pipe(socket.socket(), self.io_loop)
@@ -357,7 +333,19 @@ class AsynchronousPipeTestCase(AsyncTestCase):
         self.assertTrue(pipe.connected)
 
     def test_triggers_connect_deferred_when_timeout(self):
-        self.fail()
+        flag = [False]
+
+        def on_client_connect(future):
+            flag[0] = True
+            self.assertRaises(TimeoutError, future.get)
+            self.stop()
+
+        with serve(60000):
+            pipe = Pipe(socket.socket(), self.io_loop)
+            deferred = pipe.connect(('127.0.0.1', 60000), timeout=0.000001)
+            deferred.add_callback(stack_context.wrap(on_client_connect))
+            self.wait()
+        self.assertTrue(flag[0])
 
     def test_triggers_connect_deferred_when_error(self):
         flag = [False]
