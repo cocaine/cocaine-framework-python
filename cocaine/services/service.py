@@ -21,12 +21,10 @@
 import logging
 from cocaine import concurrent
 
-from ..concurrent import return_, Deferred
 from ..exceptions import IllegalStateError
 
 from .base import AbstractService, LOCATOR_DEFAULT_HOST, LOCATOR_DEFAULT_PORT
 from .exceptions import ServiceError
-from .internal import strategy
 from .locator import Locator
 from .state import StateBuilder
 
