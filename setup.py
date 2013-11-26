@@ -52,7 +52,7 @@ setup(
         "cocaine.logging",
         "cocaine.testing",
     ],
-    install_requires=["msgpack_python", "tornado"],
+    install_requires=["msgpack_python", "tornado >= 3.0"],
     tests_require=["mockito"],
     test_suite="unittest.TestCase",
     classifiers=[
