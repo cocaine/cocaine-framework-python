@@ -90,14 +90,21 @@ class TimeoutError(IOError):
 class TimeoutDeferred(Deferred):
     def __init__(self, timeout, io_loop):
         super(TimeoutDeferred, self).__init__()
-        if timeout is None:
-            return
+        self.io_loop = io_loop
 
-        self.timeout_id = io_loop.add_timeout(time.time() + timeout, self._on_timeout)
+        if timeout is None:
+            self.timeout_id = None
+        else:
+            self.timeout_id = io_loop.add_timeout(time.time() + timeout, self._on_timeout)
 
     def _on_timeout(self):
         log.warn('operation has timed out')
         self.error(TimeoutError())
+
+    def close(self):
+        if self.timeout_id is not None:
+            self.io_loop.remove_timeoit(self.timeout_id)
+        super(TimeoutDeferred, self).close()
 
 
 class ServiceConnector(object):
@@ -292,5 +299,6 @@ class AbstractService(object):
         if deferred is None:
             deferred = CocaineDeferred()
             self._sessions[session] = deferred
-        self._stream.write(msgpack.dumps(data))
+        if self._stream:
+            self._stream.write(msgpack.dumps(data))
         return deferred

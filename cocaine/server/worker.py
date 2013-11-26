@@ -22,10 +22,10 @@
 import socket
 import sys
 import types
+from tornado.iostream import IOStream
 
 from ..asio import ev
-from ..asio.pipe import Pipe
-from ..asio.stream import ReadableStream, WritableStream, Decoder
+from cocaine.services.base import Decoder
 from ..concurrent import Deferred
 from ..logging.defaults import core as log
 from ..protocol.message import Message, RPC
@@ -36,41 +36,35 @@ from .sandbox import Sandbox
 
 
 class WorkerConnection(object):
-    def __init__(self, endpoint, on_message, io_loop):
-        self._io_loop = io_loop
-
+    def __init__(self, endpoint):
         if isinstance(endpoint, types.TupleType) or isinstance(endpoint, types.ListType):
             if len(endpoint) == 2:
-                socket_type = socket.AF_INET
+                family = socket.AF_INET
             elif len(endpoint) == 4:
-                socket_type = socket.AF_INET6
+                family = socket.AF_INET6
             else:
                 raise ValueError('invalid endpoint')
         elif isinstance(endpoint, types.StringType):
-            socket_type = socket.AF_UNIX
+            family = socket.AF_UNIX
         else:
             raise ValueError('invalid endpoint')
 
-        self.pipe = Pipe(socket.socket(socket_type))
-        self.pipe.connect(endpoint, blocking=True)
-        self._io_loop.bind_on_fd(self.pipe.fileno())
-
-        self.decoder = Decoder()
-        self.decoder.bind(on_message)
-
-        self.w_stream = WritableStream(self._io_loop, self.pipe)
-        self.r_stream = ReadableStream(self._io_loop, self.pipe)
-        self.r_stream.bind(self.decoder.decode)
-
-        self._io_loop.register_read_event(self.r_stream._on_event, self.pipe.fileno())
+        self.endpoint = endpoint
+        self._stream = IOStream(socket.socket(family))
+        self._connect_deferred = Deferred()
 
     def connect(self):
-        d = Deferred()
-        d.trigger()
-        return d
+        self._stream.connect(self.endpoint, callback=self._on_connect())
+        return self._connect_deferred
+
+    def _on_connect(self):
+        self._connect_deferred.trigger()
 
     def send_data(self, data):
-        self.w_stream.write(data)
+        self._stream.write(data)
+
+    def read_until_close(self, callback):
+        self._stream.read_until_close(lambda data: None, streaming_callback=callback)
 
 
 class Timer(object):
@@ -133,7 +127,7 @@ class Worker(object):
 
         # Connection control
         self._sessions = {}
-        self._connection = WorkerConnection(self.endpoint, on_message=self._dispatch, io_loop=self._io_loop)
+        self._connection = WorkerConnection(self.endpoint)
         deferred = self._connection.connect()
         deferred.add_callback(self._on_connect)
 
@@ -159,6 +153,9 @@ class Worker(object):
         except Exception as err:
             log.error('failed to connect worker with cocaine-runtime: %s', err)
         else:
+            self.decoder = Decoder()
+            self.decoder.set_callback(self._dispatch)
+            self._connection.read_until_close(self.decoder.feed)
             self._send_handshake()
             self._send_heartbeat()
             self._health.start()
