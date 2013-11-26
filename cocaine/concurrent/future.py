@@ -54,3 +54,6 @@ class Future(object):
 
     def __str__(self):
         return 'Future(result={0})'.format(self._result)
+
+    def __repr__(self):
+        return '<{0} object at {1}>'.format(self, id(self))
