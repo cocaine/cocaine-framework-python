@@ -105,7 +105,7 @@ def _engine_closure(final_deferred):
             log.debug('StopIteration - %r', err)
             final_deferred.trigger()
         except Exception as err:
-            log.debug('error occurred - %s', err)
+            log.debug('received error - %s', err)
             final_deferred.error(err)
     return _engine
 
