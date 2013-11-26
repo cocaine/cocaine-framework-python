@@ -63,7 +63,7 @@ class Deferred(object):
         self._callbacks = []
 
     def __str__(self):
-        return 'Deferred(callbacks={0}, pending={1})'.format(self._callbacks, self._pending)
+        return '{0}(callbacks={1}, pending={2})'.format(self.__class__.__name__, self._callbacks, self._pending)
 
 
 def _engine_closure(final_deferred):
