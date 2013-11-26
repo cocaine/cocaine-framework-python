@@ -51,7 +51,7 @@ class Locator(AbstractService):
     def __init__(self):
         super(Locator, self).__init__('locator')
 
-    def connect(self, host, port, timeout, blocking):
+    def connect(self, host, port, timeout):
         """Connects to the locator at specified host and port.
 
         The locator itself always runs on a well-known host and port.
@@ -59,13 +59,10 @@ class Locator(AbstractService):
         :param host: locator hostname.
         :param port: locator port.
         :param timeout: connection timeout.
-        :param blocking: strategy of the connection. If flag `blocking` is set to `True`, direct blocking socket
-                         connection will be used. Otherwise this method returns `cocaine.futures.chain.Chain` object,
-                         which is normally requires event loop running.
         """
-        return self._connect_to_endpoint(host, port, timeout, blocking=blocking)
+        return self._connect_to_endpoint(host, port, timeout)
 
-    def resolve(self, name, timeout, blocking):
+    def resolve(self, name, timeout):
         """Resolve service by its `name`.
 
         Returned tuple is describing resolved service information - `(endpoint, version, api)`:
@@ -75,16 +72,9 @@ class Locator(AbstractService):
 
         :param name: service name.
         :param timeout: resolving timeout.
-        :param blocking: strategy of the resolving. If flag `blocking` is set to `True`, direct blocking socket
-                         usage will be selected. Otherwise this method returns `cocaine.futures.chain.Chain` object,
-                         which is normally requires event loop running.
         """
         log.debug('resolving %s', name)
-        if blocking:
-            (endpoint, version, api), = [chunk for chunk in self._invoke_sync_by_id(RPC.RESOLVE, name, timeout=timeout)]
-            return endpoint, version, api
-        else:
-            return self._invoke(RPC.RESOLVE, self.ROOT_STATE, name)
+        return self._invoke(RPC.RESOLVE, self.ROOT_STATE, name)
 
     def refresh(self, name, timeout=None):
         return self._invoke(RPC.REFRESH, self.ROOT_STATE, name)

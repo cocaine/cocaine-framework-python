@@ -28,5 +28,5 @@ class Error(Exception):
         super(Error, self).__init__(reason % args)
 
 
-class IllegalStateError(Exception):
+class IllegalStateError(Error):
     pass

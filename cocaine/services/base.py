@@ -18,6 +18,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import functools
 import itertools
 import logging
 import msgpack
@@ -25,22 +26,26 @@ import socket
 import sys
 import time
 
-from ..asio.exceptions import ConnectionResolveError, ConnectionError, ConnectionTimeoutError
-from ..asio.pipe import Pipe
-from ..asio.stream import WritableStream, ReadableStream
+from tornado import stack_context
+from tornado.ioloop import IOLoop
+from tornado.iostream import IOStream
+
 from ..concurrent import Deferred
 from ..exceptions import IllegalStateError
 from ..protocol import ChokeEvent
 from ..protocol.message import Message, RPC
 
 from .exceptions import ServiceError
-from .internal import strategy, scope
 from .session import Session
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
 log = logging.getLogger(__name__)
+
+
+class ResolveError(IOError):
+    pass
 
 
 class CocaineDeferred(Deferred):
@@ -61,7 +66,7 @@ class CocaineDeferred(Deferred):
         super(CocaineDeferred, self).close()
 
 
-# Make defaults namespace
+# todo: Make defaults namespace
 LOCATOR_DEFAULT_HOST = '127.0.0.1'
 LOCATOR_DEFAULT_PORT = 10053
 
@@ -72,6 +77,109 @@ if '--locator' in sys.argv:
         LOCATOR_DEFAULT_HOST = host
     if port.isdigit():
         LOCATOR_DEFAULT_PORT = int(port)
+
+
+class ConnectError(IOError):
+    pass
+
+
+class TimeoutError(IOError):
+    pass
+
+
+class TimeoutDeferred(Deferred):
+    def __init__(self, timeout, io_loop):
+        super(TimeoutDeferred, self).__init__()
+        if timeout is None:
+            return
+
+        self.timeout_id = io_loop.add_timeout(time.time() + timeout, self._on_timeout)
+
+    def _on_timeout(self):
+        log.warn('operation has timed out')
+        self.error(TimeoutError())
+
+
+class ServiceConnector(object):
+    def __init__(self, host, port, timeout=None, io_loop=None):
+        self.host = host
+        self.port = port
+        self.timeout = timeout
+        self.io_loop = io_loop or IOLoop.current()
+        self.each_timeout = timeout
+
+        self.deferred = None
+
+    def connect(self):
+        if self.deferred is not None:
+            return self.deferred
+
+        log.debug('connecting to %s:%d', self.host, self.port)
+        candidates = socket.getaddrinfo(self.host, self.port, 0, socket.SOCK_STREAM)
+        if not candidates:
+            log.warn('could not resolve %s:%d', self.host, self.port)
+            raise ResolveError()
+
+        log.debug('candidates: %s', candidates)
+
+        self.deferred = TimeoutDeferred(self.timeout, io_loop=self.io_loop)
+        df = self._try_connect(candidates[0])
+        df.add_callback(stack_context.wrap(functools.partial(self._handle_connection, candidates=candidates[1:])))
+        return self.deferred
+
+    def _try_connect(self, candidate):
+        family, socktype, proto, canonname, address = candidate
+        log.debug(' - trying [%d] %s', proto, address)
+        deferred = Deferred()
+        try:
+            sock = socket.socket(family=family, type=socktype, proto=proto)
+            self._stream = IOStream(sock, io_loop=self.io_loop)
+            self._stream.connect(address, callback=deferred.trigger)
+            self._stream.set_close_callback(functools.partial(self._handle_connection_error, deferred))
+        except Exception as err:
+            log.warn(' - failed: %s', err)
+            deferred.error(err)
+        return deferred
+
+    def _handle_connection(self, future, candidates):
+        try:
+            future.get()
+        except Exception as err:
+            log.warn(' - failed: %s', err)
+            if candidates:
+                df = self._try_connect(candidates[0])
+                callback = stack_context.wrap(functools.partial(self._handle_connection, candidates=candidates[1:]))
+                df.add_callback(callback)
+            else:
+                df = self.deferred
+                self.deferred = None
+                df.error(ConnectError())
+        else:
+            log.debug(' - success')
+            self._stream.set_close_callback(None)
+            df = self.deferred
+            self.deferred = None
+            df.trigger(self._stream)
+
+    def _handle_connection_error(self, deferred):
+        deferred.error(ConnectError(self._stream.error))
+
+
+class Decoder(object):
+    def __init__(self):
+        self._unpacker = msgpack.Unpacker()
+        self._callback = None
+
+    def set_callback(self, callback):
+        self._callback = callback
+
+    def feed(self, data):
+        self._unpacker.feed(data)
+        if self._callback is None:
+            return
+
+        for chunk in self._unpacker:
+            self._callback(chunk)
 
 
 class AbstractService(object):
@@ -88,10 +196,8 @@ class AbstractService(object):
     def __init__(self, name):
         self.name = name
 
-        self._pipe = None
-        self._ioLoop = None
-        self._writableStream = None
-        self._readableStream = None
+        self._stream = None
+        self._decoder = None
 
         self._counter = itertools.count(1)
         self._sessions = {}
@@ -108,74 +214,53 @@ class AbstractService(object):
         family `(address, port)` 2-tuple for AF_INET, or `(address, port, flow info, scope id)` 4-tuple for AF_INET6),
         and is meant to be passed to the socket.connect() method.
 
-        It the service is not connected this method returns tuple `('NOT_CONNECTED', 0)`.
+        It the service is not connected this method returns tuple `('0.0.0.0', 0)`.
         """
-        return self._pipe.address if self.connected() else ('NOT_CONNECTED', 0)
+        if self._stream is not None:
+            return self._stream.socket.getsockname()
+        else:
+            return '0.0.0.0', 0
 
     def connecting(self):
         """Return true if the service is in connecting state."""
-        return self._pipe is not None and self._pipe.isConnecting()
+        return self._stream is not None and not self._stream.closed() and self._stream._connecting
 
     def connected(self):
         """Return true if the service is in connected state."""
-        return self._pipe is not None and self._pipe.isConnected()
+        return self._stream is not None and not self._stream.closed() and not self.connecting()
 
     def disconnect(self):
         """Disconnect service from its endpoint and destroys all communications between them.
 
         .. note:: This method does nothing if the service is not connected.
         """
-        if not self._pipe:
+        if not self._stream:
             return
-        self._pipe.close()
-        self._pipe = None
+        self._stream.close()
+        self._stream = None
 
-    @strategy.coroutine
-    def _connect_to_endpoint(self, host, port, timeout, blocking=False):
+    def _connect_to_endpoint(self, host, port, timeout):
+        log.debug('connecting to the service "%s"', self.name)
         if self.connected():
-            raise IllegalStateError('service "{0}" is already connected'.format(self.name))
+            raise IllegalStateError('service "%s" is already connected', self.name)
 
-        addressInfoList = socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM)
-        if not addressInfoList:
-            raise ConnectionResolveError((host, port))
+        deferred = ServiceConnector(host, port, timeout).connect()
+        deferred.add_callback(self._on_connect)
+        return deferred
 
-        pipe_timeout = float(timeout) / len(addressInfoList) if timeout is not None else None
+    def _on_connect(self, future):
+        try:
+            self._stream = future.get()
+        except Exception as err:
+            log.warn('err: %s', err)
+        else:
+            log.debug('successfully connected to the %s', self._stream.socket.getsockname())
+            self._decoder = Decoder()
+            self._decoder.set_callback(self._on_message)
+            self._stream.read_until_close(self._on_last_message, streaming_callback=self._decoder.feed)
 
-        log.debug('Connecting to the service "{0}", candidates: {1}'.format(self.name, addressInfoList))
-        start = time.time()
-        errors = []
-        for family, socktype, proto, canonname, address in addressInfoList:
-            log.debug(' - connecting to "{0} {1}"'.format(proto, address))
-            sock = socket.socket(family=family, type=socktype, proto=proto)
-            try:
-                self._pipe = Pipe(sock)
-                yield self._pipe.connect(address, timeout=pipe_timeout, blocking=blocking)
-                log.debug(' - success')
-            except ConnectionError as err:
-                errors.append(err)
-                log.debug(' - failed - {0}'.format(err))
-            except Exception as err:
-                log.warn('Unexpected error caught while connecting to the "{0}" - {1}'.format(address, err))
-            else:
-                self._ioLoop = self._pipe._ioLoop
-                self._writableStream = WritableStream(self._ioLoop, self._pipe)
-                self._readableStream = ReadableStream(self._ioLoop, self._pipe)
-                self._ioLoop.bind_on_fd(self._pipe.fileno())
-
-                def decode_and_dispatch(on_event):
-                    def dispatch(unpacker):
-                        for chunk in unpacker:
-                            on_event(chunk)
-                    return dispatch
-                self._readableStream.bind(decode_and_dispatch(self._on_message))
-                return
-
-        if timeout is not None and time.time() - start > timeout:
-            raise ConnectionTimeoutError((host, port), timeout)
-
-        prefix = 'service resolving failed. Reason:'
-        reason = '{0} [{1}]'.format(prefix, ', '.join(str(err) for err in errors))
-        raise ConnectionError((host, port), reason)
+    def _on_last_message(self, data):
+        pass
 
     def _on_message(self, args):
         message = Message.initialize(args)
@@ -210,50 +295,5 @@ class AbstractService(object):
         if deferred is None:
             deferred = CocaineDeferred()
             self._sessions[session] = deferred
-        self._writableStream.write(msgpack.dumps(data))
+        self._stream.write(msgpack.dumps(data))
         return deferred
-
-    def _invoke_sync(self, method, *args, **kwargs):
-        """Performs synchronous method invocation via direct socket usage without the participation of the event loop.
-
-        Returns generator of chunks.
-
-        :param method: method name.
-        :param args: method arguments.
-        :param kwargs: method keyword arguments. You can specify `timeout` keyword to set socket timeout.
-
-        .. note:: Left for backward compatibility, tests and other stuff. Indiscriminate using of this method can lead
-                  to the summoning of Satan.
-        .. warning:: Do not mix synchronous and asynchronous usage of service!
-        """
-        if method not in self.api:
-            raise ValueError('service "{0}" has no method named "{1}"'.format(self.name, method))
-
-        return self._invoke_sync_by_id(self.api[method], *args, **kwargs)
-
-    def _invoke_sync_by_id(self, method_id, *args, **kwargs):
-        if not self.connected():
-            raise IllegalStateError('service "{0}" is not connected'.format(self.name))
-
-        timeout = kwargs.get('timeout', None)
-        if timeout is not None and timeout <= 0:
-            raise ValueError('timeout must be positive number')
-
-        with scope.socket.timeout(self._pipe.sock, timeout) as sock:
-            session = self._counter.next()
-            sock.send(msgpack.dumps([method_id, session, args]))
-            unpacker = msgpack.Unpacker()
-            error = None
-            while True:
-                data = sock.recv(4096)
-                unpacker.feed(data)
-                for chunk in unpacker:
-                    msg = Message.initialize(chunk)
-                    if msg is None:
-                        continue
-                    if msg.id == RPC.CHUNK:
-                        yield msgpack.loads(msg.data)
-                    elif msg.id == RPC.CHOKE:
-                        raise error or StopIteration
-                    elif msg.id == RPC.ERROR:
-                        error = ServiceError(msg.errno, msg.reason)

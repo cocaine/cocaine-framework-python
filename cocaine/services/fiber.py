@@ -89,7 +89,7 @@ DEFAULT_LOCATOR_ENDPOINT = (LOCATOR_DEFAULT_HOST, LOCATOR_DEFAULT_PORT)
 
 class Service(object):
     def __init__(self, name, locator_endpoint=DEFAULT_LOCATOR_ENDPOINT):
-        self.service = service.Service(name, blockingConnect=False)
+        self.service = service.Service(name)
         self._connect(*locator_endpoint)
 
     def _connect(self, host, port):

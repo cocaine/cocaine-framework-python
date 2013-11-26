@@ -19,9 +19,10 @@
 #
 
 import logging
+from cocaine import concurrent
 
-from ..asio.exceptions import *
-from ..concurrent import return_
+from ..concurrent import return_, Deferred
+from ..exceptions import IllegalStateError
 
 from .base import AbstractService, LOCATOR_DEFAULT_HOST, LOCATOR_DEFAULT_PORT
 from .exceptions import ServiceError
@@ -34,6 +35,9 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
 log = logging.getLogger(__name__)
+
+
+# todo: Make this stuff framework-independent
 
 
 class Service(AbstractService):
@@ -82,19 +86,11 @@ class Service(AbstractService):
     :ivar version: service or application version. Provided only after its resolving.
     :ivar api: service or application API. Provided only after its resolving.
     """
-    _locator_cache = {}
-
-    def __init__(self, name, blockingConnect=True, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT):
+    def __init__(self, name):
         super(Service, self).__init__(name)
 
-        if not blockingConnect and any([host != LOCATOR_DEFAULT_HOST, port != LOCATOR_DEFAULT_PORT]):
-            raise ValueError('you should not specify locator address in __init__ while performing non-blocking connect')
-
-        if blockingConnect:
-            self.connect(host, port, blocking=True)
-
-    @strategy.coroutine
-    def connect(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, timeout=None, blocking=False):
+    @concurrent.engine
+    def connect(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, timeout=None):
         """Connect to the service through locator and initialize its API.
 
         Before service is connected to its endpoint there is no any API (cause it's provided by locator). Any usage of
@@ -104,57 +100,24 @@ class Service(AbstractService):
                   If you don't want to create connection to the locator each time you create service, you can use
                   `connectThroughLocator` method, which is specially designed for that cases.
         """
-        if (host, port) not in self._locator_cache:
-            locator = Locator()
-            self._locator_cache[(host, port)] = locator
-        else:
-            locator = self._locator_cache[(host, port)]
+        locator = Locator()
+        yield locator.connect(host, port, timeout)
+        yield self.connect_through_locator(locator, timeout)
 
-        if not locator.connected():
-            yield locator.connect(host, port, timeout, blocking=blocking)
-        yield self.connectThroughLocator(locator, timeout, blocking=blocking)
-
-    @strategy.coroutine
-    def connectThroughLocator(self, locator, timeout=None, blocking=False):
+    @concurrent.engine
+    def connect_through_locator(self, locator, timeout=None):
         try:
-            endpoint, self.version, api = yield locator.resolve(self.name, timeout, blocking=blocking)
+            endpoint, self.version, api = yield locator.resolve(self.name, timeout)
         except ServiceError as err:
-            raise LocatorResolveError(self.name, locator.address, err)
+            raise IOError(err)  # LocatorResolveError(self.name, locator.address, err)
 
         self.states = StateBuilder.build(api).substates
         for state in self.states.values():
             self.api[state.name] = state.id
             invoke = self._make_invokable(state)
-            # invoke = self._make_reconnectable(invoke, locator)
             setattr(self, state.name, invoke)
 
-        yield self._connect_to_endpoint(*endpoint, timeout=timeout, blocking=blocking)
-
-    def _make_reconnectable(self, func, locator):
-        @strategy.coroutine
-        def wrapper(*args, **kwargs):
-            if not self.connected():
-                yield self.connectThroughLocator(locator)
-
-            try:
-                d = yield func(*args, **kwargs)
-            except KeyError as fd:
-                log.warn('broken pipe detected, fd: %s', str(fd))
-                log.info('reconnecting... ')
-                yield self.disconnect()
-                yield self.connectThroughLocator(locator)
-                d = yield func(*args, **kwargs)
-                log.info('service has been successfully reconnected')
-            return_(d)
-
-        return wrapper
-
-    @strategy.coroutine
-    def reconnect(self, timeout=None, blocking=False):
-        if self.connecting():
-            raise IllegalStateError('already connecting')
-        self.disconnect()
-        yield self.connect(timeout=timeout, blocking=blocking)
+        yield self._connect_to_endpoint(*endpoint, timeout=timeout)
 
     def __getattr__(self, item):
         def caller(*args, **kwargs):
