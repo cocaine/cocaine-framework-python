@@ -254,7 +254,7 @@ class AbstractService(object):
         except Exception as err:
             log.warn('err: %s', err)
         else:
-            log.debug('successfully connected to the %s', self._stream.socket.getsockname())
+            log.debug('successfully connected')
             self._decoder = Decoder()
             self._decoder.set_callback(self._on_message)
             self._stream.read_until_close(self._on_last_message, streaming_callback=self._decoder.feed)
