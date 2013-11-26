@@ -257,10 +257,7 @@ class AbstractService(object):
             log.debug('successfully connected')
             self._decoder = Decoder()
             self._decoder.set_callback(self._on_message)
-            self._stream.read_until_close(self._on_last_message, streaming_callback=self._decoder.feed)
-
-    def _on_last_message(self, data):
-        pass
+            self._stream.read_until_close(lambda data: None, streaming_callback=self._decoder.feed)
 
     def _on_message(self, args):
         message = Message.initialize(args)
