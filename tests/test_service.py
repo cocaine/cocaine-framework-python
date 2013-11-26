@@ -61,6 +61,8 @@ class ServiceTestCase(RuntimeTestCase):
 
         @concurrent.engine
         def test():
+            yield node.connect()
+            self.assertTrue(node.connected())
             actual = yield node.list()
             self.assertEqual(['echo'], actual)
             self.stop()
@@ -79,6 +81,7 @@ class ServiceTestCase(RuntimeTestCase):
 
         @concurrent.engine
         def test():
+            yield node.connect()
             actual = yield node.list()
             self.assertEqual(['echo'], actual)
             self.stop()
