@@ -62,6 +62,9 @@ class Deferred(object):
                 callback(result)
         self._callbacks = []
 
+    def __str__(self):
+        return 'Deferred(callbacks={0}, pending={1})'.format(self._callbacks, self._pending)
+
 
 def _engine_closure(final_deferred):
     current_deferred = [None]
@@ -89,7 +92,7 @@ def _engine_closure(final_deferred):
                     _engine(r, g, d, tracked_deferreds)
 
                 if d not in tracked_deferreds:
-                    log.debug('%s added in cache', d)
+                    log.debug('added in cache: %s', d)
                     tracked_deferreds.add(d)
                     d.add_callback(functools.partial(_engine, g=g, deferred=d, tracked_deferreds=tracked_deferreds))
             else:
