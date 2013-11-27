@@ -100,10 +100,11 @@ class TimeoutDeferred(Deferred):
     def _on_timeout(self):
         log.warn('operation has timed out')
         self.error(TimeoutError())
+        self.close()
 
     def close(self):
         if self.timeout_id is not None:
-            self.io_loop.remove_timeoit(self.timeout_id)
+            self.io_loop.remove_timeout(self.timeout_id)
         super(TimeoutDeferred, self).close()
 
 
