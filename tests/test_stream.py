@@ -21,12 +21,10 @@
 import logging
 import socket
 import msgpack
-from cocaine.protocol.message import Message, RPC
-from cocaine.services.base import TimeoutError
 
 from tornado.testing import AsyncTestCase
+
 from cocaine.asio.stream import CocaineStream
-from cocaine.concurrent import Deferred
 from cocaine.testing.mocks import serve
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -39,65 +37,21 @@ class StreamTestCase(AsyncTestCase):
     def test_can_connect(self):
         with serve(60000):
             stream = CocaineStream(socket.socket(), self.io_loop)
-            deferred = stream.connect(('127.0.0.1', 60000))
-            self.assertFalse(stream.closed)
-            self.assertTrue(stream.connecting)
-            self.assertFalse(stream.connected)
-            self.assertIsInstance(deferred, Deferred)
-
-    def test_triggers_deferred_when_connected(self):
-        def on_connect(future):
-            self.assertIsNone(future.get())
-            self.stop()
-
-        with serve(60000):
-            stream = CocaineStream(socket.socket(), self.io_loop)
-            deferred = stream.connect(('127.0.0.1', 60000))
-            deferred.add_callback(on_connect)
-            self.wait()
-            self.assertFalse(stream.closed)
-            self.assertFalse(stream.connecting)
-            self.assertTrue(stream.connected)
-
-    def test_errors_deferred_when_connect_error(self):
-        def on_connect(future):
-            self.assertRaises(socket.error, future.get)
-            self.stop()
-
-        stream = CocaineStream(socket.socket(), self.io_loop)
-        deferred = stream.connect(('127.0.0.1', 60000))
-        deferred.add_callback(on_connect)
-        self.wait()
-        self.assertTrue(stream.closed)
-        self.assertFalse(stream.connecting)
-        self.assertFalse(stream.connected)
-
-    def test_timeouts_deferred_when_connected(self):
-        def on_connect(future):
-            self.assertRaises(TimeoutError, future.get)
-            self.stop()
-
-        with serve(60000):
-            stream = CocaineStream(socket.socket(), self.io_loop)
-            deferred = stream.connect(('127.0.0.1', 60000), timeout=0.000001)
-            deferred.add_callback(on_connect)
-            self.wait()
-            self.assertFalse(stream.closed)
-            self.assertFalse(stream.connecting)
-            self.assertTrue(stream.connected)
+            stream.connect(('127.0.0.1', 60000))
+            self.assertFalse(stream.closed())
+            self.assertTrue(stream.connecting())
+            self.assertFalse(stream.connected())
 
     def test_triggers_close_callback_when_closed(self):
-        def on_connect(future):
-            server.stop()
+        def on_closed():
             self.stop()
 
-        def on_closed(future):
-            self.assertIsNone(future.get())
+        def on_connect():
+            server.stop()
 
         with serve(60000) as server:
             stream = CocaineStream(socket.socket(), self.io_loop)
-            deferred = stream.connect(('127.0.0.1', 60000))
-            deferred.add_callback(on_connect)
+            stream.connect(('127.0.0.1', 60000), on_connect)
             stream.set_close_callback(on_closed)
             self.wait()
 
@@ -106,12 +60,11 @@ class StreamTestCase(AsyncTestCase):
             self.assertEqual([4, 1, ['name']], message)
             self.stop()
 
-        def on_connect(future):
-            server.connections[stream.address].write(msgpack.dumps([4, 1, ['name']]))
+        def on_connect():
+            server.connections[stream.address()].write(msgpack.dumps([4, 1, ['name']]))
 
         with serve(60000) as server:
             stream = CocaineStream(socket.socket(), self.io_loop)
-            deferred = stream.connect(('127.0.0.1', 60000))
-            deferred.add_callback(on_connect)
+            stream.connect(('127.0.0.1', 60000), callback=on_connect)
             stream.set_read_callback(on_message)
             self.wait()

@@ -17,12 +17,12 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+
+import functools
+
 import msgpack
 
-from cocaine.concurrent import Deferred
-
 from tornado.iostream import IOStream
-from cocaine.services.base import TimeoutDeferred
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
@@ -44,72 +44,29 @@ class Decoder(object):
             self._callback(chunk)
 
 
-class CocaineStream(object):
-    def __init__(self, sock, io_loop):
-        self._stream = IOStream(sock, io_loop)
-        self._connect_deferred = None
-        self._close_callback = None
+class CocaineStream(IOStream):
+    def __init__(self, socket, *args, **kwargs):
+        super(CocaineStream, self).__init__(socket, *args, **kwargs)
         self._decoder = Decoder()
 
-    @property
     def connecting(self):
-        return self._connect_deferred is not None
+        return self._connecting
 
-    @property
     def connected(self):
-        return not self.closed and not self.connecting
+        return not self.closed() and not self.connecting
 
-    @property
-    def closed(self):
-        return self._stream.closed()
-
-    @property
     def address(self):
-        return self._stream.socket.getsockname()
+        return self.socket.getsockname()
 
-    def connect(self, address, timeout=None):
-        self._connect_deferred = TimeoutDeferred(timeout, self._stream.io_loop)
-        self._connect_deferred.add_callback(self._handle_connect_timeout)
-        self._stream.connect(address, callback=self._handle_connect)
-        self._stream.set_close_callback(self._handle_connect_error)
-        return self._connect_deferred
+    def connect(self, address, callback=None, server_hostname=None):
+        super(CocaineStream, self).connect(address, functools.partial(self._on_connect, callback), server_hostname)
 
-    def write(self, data):
-        self._stream.write(data)
-
-    def close(self):
-        self._stream.close()
-
-    def set_close_callback(self, callback):
-        if self.connecting:
-            self._close_callback = callback
-        elif self.connected:
-            self._stream.set_close_callback(callback)
+    def _on_connect(self, callback):
+        callback()
+        self.read_until_close(lambda data: None, self._decoder.feed)
 
     def set_read_callback(self, callback):
         self._decoder.set_callback(callback)
-
-    def _handle_connect(self):
-        self._stream.read_until_close(lambda data: None, self._decoder.feed)
-        self._stream.set_close_callback(self._close_callback)
-        deferred = self._connect_deferred
-        self._connect_deferred = None
-        deferred.trigger()
-        deferred.close()
-
-    def _handle_connect_error(self):
-        self._stream.set_close_callback(None)
-        self._close_callback = None
-        deferred = self._connect_deferred
-        self._connect_deferred = None
-        deferred.error(self._stream.error)
-        deferred.close()
-
-    def _handle_connect_timeout(self, future):
-        self._stream.set_close_callback(None)
-        self._connect_deferred = None
-        self._close_callback = None
-
 
 
 

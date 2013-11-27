@@ -28,8 +28,8 @@ import time
 
 from tornado import stack_context
 from tornado.ioloop import IOLoop
-from tornado.iostream import IOStream
 
+from ..asio.stream import CocaineStream
 from ..concurrent import Deferred
 from ..exceptions import IllegalStateError
 from ..protocol import ChokeEvent
@@ -141,7 +141,7 @@ class ServiceConnector(object):
         deferred = Deferred()
         try:
             sock = socket.socket(family=family, type=socktype, proto=proto)
-            self._stream = IOStream(sock, io_loop=self.io_loop)
+            self._stream = CocaineStream(sock, io_loop=self.io_loop)
             self._stream.connect(address, callback=deferred.trigger)
             self._stream.set_close_callback(functools.partial(self._handle_connection_error, deferred))
         except Exception as err:
@@ -263,9 +263,7 @@ class AbstractService(object):
             log.warn('err: %s', err)
         else:
             log.debug('successfully connected')
-            self._decoder = Decoder()
-            self._decoder.set_callback(self._on_message)
-            self._stream.read_until_close(lambda data: None, streaming_callback=self._decoder.feed)
+            self._stream.set_read_callback(self._on_message)
 
     def _on_message(self, args):
         message = Message.initialize(args)

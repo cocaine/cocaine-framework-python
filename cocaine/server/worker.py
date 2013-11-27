@@ -22,10 +22,10 @@
 import socket
 import sys
 import types
-from tornado.iostream import IOStream
 
-from ..asio import ev
-from cocaine.services.base import Decoder
+from tornado.ioloop import PeriodicCallback, IOLoop
+
+from ..asio.stream import CocaineStream
 from ..concurrent import Deferred
 from ..logging.defaults import core as log
 from ..protocol.message import Message, RPC
@@ -36,7 +36,13 @@ from .sandbox import Sandbox
 
 
 class WorkerConnection(object):
-    def __init__(self, endpoint):
+    def __init__(self, endpoint, io_loop):
+        self.endpoint = endpoint
+        self._stream = CocaineStream(self.create_socket(endpoint), io_loop=io_loop)
+        self._connect_deferred = Deferred()
+
+    @staticmethod
+    def create_socket(endpoint):
         if isinstance(endpoint, types.TupleType) or isinstance(endpoint, types.ListType):
             if len(endpoint) == 2:
                 family = socket.AF_INET
@@ -48,13 +54,10 @@ class WorkerConnection(object):
             family = socket.AF_UNIX
         else:
             raise ValueError('invalid endpoint')
-
-        self.endpoint = endpoint
-        self._stream = IOStream(socket.socket(family))
-        self._connect_deferred = Deferred()
+        return socket.socket(family)
 
     def connect(self):
-        self._stream.connect(self.endpoint, callback=self._on_connect())
+        self._stream.connect(self.endpoint, callback=self._on_connect)
         return self._connect_deferred
 
     def _on_connect(self):
@@ -63,8 +66,8 @@ class WorkerConnection(object):
     def send_data(self, data):
         self._stream.write(data)
 
-    def read_until_close(self, callback):
-        self._stream.read_until_close(lambda data: None, streaming_callback=callback)
+    def set_read_callback(self, callback):
+        self._stream.set_read_callback(callback)
 
 
 class Timer(object):
@@ -78,8 +81,8 @@ class HealthManager(object):
         self._heartbeat_callback = heartbeat_callback
         self._io_loop = io_loop
 
-        self._disown_timer = ev.Timer(self._on_disown, disown_timeout, self._io_loop)
-        self._heartbeat_timer = ev.Timer(self._on_heartbeat, heartbeat_timeout, self._io_loop)
+        self._disown_timer = PeriodicCallback(self._on_disown, 1000 * disown_timeout, self._io_loop)
+        self._heartbeat_timer = PeriodicCallback(self._on_heartbeat, 1000 * heartbeat_timeout, self._io_loop)
 
     def start(self):
         self._heartbeat_timer.start()
@@ -109,7 +112,7 @@ class Worker(object):
         except KeyError:
             raise ValueError('wrong command line arguments: {0}'.format(sys.argv))
 
-        self._io_loop = ev.Loop()
+        self._io_loop = IOLoop.current()
 
         # Dispatching
         self._sandbox = Sandbox()
@@ -127,7 +130,7 @@ class Worker(object):
 
         # Connection control
         self._sessions = {}
-        self._connection = WorkerConnection(self.endpoint)
+        self._connection = WorkerConnection(self.endpoint, io_loop=self._io_loop)
         deferred = self._connection.connect()
         deferred.add_callback(self._on_connect)
 
@@ -140,7 +143,7 @@ class Worker(object):
         for event, name in binds.items():
             self.on(event, name)
 
-        self._io_loop.run()
+        self._io_loop.start()
 
     def terminate(self, session, errno, reason):
         self._send_terminate(session, errno, reason)
@@ -153,9 +156,7 @@ class Worker(object):
         except Exception as err:
             log.error('failed to connect worker with cocaine-runtime: %s', err)
         else:
-            self.decoder = Decoder()
-            self.decoder.set_callback(self._dispatch)
-            self._connection.read_until_close(self.decoder.feed)
+            self._connection.set_read_callback(self._dispatch)
             self._send_handshake()
             self._send_heartbeat()
             self._health.start()
