@@ -81,11 +81,15 @@ if '--locator' in sys.argv:
 
 
 class ServiceConnector(object):
+    class Timeout(object):
+        def __init__(self, value):
+            self.value = value
+            self.id = 0
+
     def __init__(self, host, port, timeout=None, io_loop=None):
         self.host = host
         self.port = port
-        self.timeout = timeout
-        self.timeout_id = None
+        self.timeout = self.Timeout(timeout) if timeout is not None else None
         self.io_loop = io_loop or IOLoop.current()
 
         self.deferred = None
@@ -104,7 +108,8 @@ class ServiceConnector(object):
 
         self.deferred = Deferred()
         if self.timeout is not None:
-            self.timeout_id = self.io_loop.add_timeout(time.time() + self.timeout, self._handle_connection_timeout)
+            deadline = time.time() + self.timeout.value
+            self.timeout.id = self.io_loop.add_timeout(deadline, self._handle_connection_timeout)
 
         df = self._try_connect(candidates[0])
         df.add_callback(stack_context.wrap(functools.partial(self._handle_connection, candidates=candidates[1:])))
@@ -139,9 +144,9 @@ class ServiceConnector(object):
                 df.error(ConnectError())
         else:
             log.debug(' - success')
-            if self.timeout_id is not None:
-                self.io_loop.remove_timeout(self.timeout_id)
-                self.timeout_id = None
+            if self.timeout is not None:
+                self.io_loop.remove_timeout(self.timeout.id)
+                self.timeout = None
             self._stream.set_close_callback(None)
             df = self.deferred
             self.deferred = None
@@ -151,8 +156,8 @@ class ServiceConnector(object):
         deferred.error(ConnectError(self._stream.error))
 
     def _handle_connection_timeout(self):
-        self.io_loop.remove_timeout(self.timeout_id)
-        self.timeout_id = None
+        self.io_loop.remove_timeout(self.timeout.id)
+        self.timeout = None
         self.deferred.error(TimeoutError())
 
 
