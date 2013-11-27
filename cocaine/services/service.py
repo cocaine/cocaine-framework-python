@@ -19,12 +19,12 @@
 #
 
 import logging
-from cocaine import concurrent
 
+from .. import concurrent
 from ..exceptions import IllegalStateError
 
 from .base import AbstractService, LOCATOR_DEFAULT_HOST, LOCATOR_DEFAULT_PORT
-from .exceptions import ServiceError
+from .exceptions import ServiceError, LocatorResolveError
 from .locator import Locator
 from .state import StateBuilder
 
@@ -107,7 +107,7 @@ class Service(AbstractService):
         try:
             endpoint, self.version, api = yield locator.resolve(self.name, timeout)
         except ServiceError as err:
-            raise IOError(err)  # LocatorResolveError(self.name, locator.address, err)
+            raise LocatorResolveError(self.name, locator.address, err)
 
         self.states = StateBuilder.build(api).substates
         for state in self.states.values():
@@ -116,11 +116,6 @@ class Service(AbstractService):
             setattr(self, state.name, invoke)
 
         yield self._connect_to_endpoint(*endpoint, timeout=timeout)
-
-    def __getattr__(self, item):
-        def caller(*args, **kwargs):
-            return self.enqueue(item, *args, **kwargs)
-        return caller
 
     def _make_invokable(self, state):
         def wrapper(*args, **kwargs):

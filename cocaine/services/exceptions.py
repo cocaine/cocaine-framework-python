@@ -30,3 +30,8 @@ class ServiceError(Error):
         self.errno = errno
         self.reason = reason
         super(ServiceError, self).__init__(reason)
+
+
+class LocatorResolveError(Error):
+    def __init__(self, name, address, err):
+        super(LocatorResolveError, self).__init__(err)

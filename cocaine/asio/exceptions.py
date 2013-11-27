@@ -29,6 +29,9 @@ class ConnectError(Error):
     pass
 
 
-class TimeoutError(Error):
+class ResolveError(ConnectError):
     pass
 
+
+class TimeoutError(Error):
+    pass
