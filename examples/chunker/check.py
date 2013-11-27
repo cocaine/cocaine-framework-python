@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 import os
+from tornado.ioloop import IOLoop
+from cocaine import concurrent
 import msgpack
 import sys
+from cocaine.protocol import ChokeEvent
 
-from cocaine.exceptions import ChokeEvent
-from cocaine.futures.chain import Chain
 from cocaine.services import Service
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
@@ -15,23 +16,30 @@ if __name__ == '__main__':
         print('Usage: chunker.py NUMBER_OF_CHUNKS')
         exit(os.EX_USAGE)
 
+    @concurrent.engine
     def fetchAll():
-        chunk = yield service.enqueue('chunkMe', str(sys.argv[1]))
-        chunk = msgpack.loads(chunk)
-        size = len(chunk)
+        yield service.connect()
+        df = service.enqueue('spam', str(sys.argv[1]))
+        size = 0
         counter = 0
-        while True:
-            ch = yield
-            chunk = msgpack.loads(ch)
-            size += len(chunk)
-            counter += 1
-            print(counter, len(chunk), size)
-            if chunk == 'Done':
-                break
+        try:
+            while True:
+                ch = yield df
+                chunk = msgpack.loads(ch)
+                size += len(chunk)
+                counter += 1
+                # print(counter, len(chunk), size)
+                if chunk == 'Done':
+                    break
+        except ChokeEvent:
+            pass
+        except Exception as err:
+            print(err)
+        finally:
+            IOLoop.current().stop()
 
-    service = Service('Chunker')
-    c = Chain([fetchAll])
-    try:
-        c.get()
-    except ChokeEvent:
-        print('Done')
+
+    service = Service('chunker')
+    fetchAll()
+    IOLoop.current().start()
+    print('Done')

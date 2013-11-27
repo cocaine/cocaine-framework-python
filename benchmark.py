@@ -1,5 +1,6 @@
 # coding=utf-8
 from time import time
+from cocaine.protocol import ChokeEvent
 import numpy
 import objgraph
 import sys
@@ -10,6 +11,22 @@ from cocaine import concurrent
 from cocaine.services import Service
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
+
+
+def on_response(future):
+    try:
+        response = future.get()
+        assert response == 'Whatever.'
+    except ChokeEvent:
+        pass
+    except Exception as err:
+        print(repr(err))
+    finally:
+        c.inc()
+
+
+def tickV0Native():
+    service.enqueue('pingV0', 'Whatever.').add_callback(on_response)
 
 
 @concurrent.engine
@@ -64,7 +81,10 @@ class Counter(object):
             else:
                 left = 0
             sys.stdout.write('\rDone: {0} ({1:.1f}%). Elapsed: ~{2:.3f}s. RPS: ~{3:.3f}'.format(
-                self.requests, self.requests * 100.0 / self.maxRequests, left, self.requests / (self.t[-1] - self.t[0])
+                self.requests,
+                self.requests * 100.0 / self.maxRequests,
+                left,
+                self.requests / (self.t[-1] - self.t[0] + 0.001)
             ))
             sys.stdout.flush()
         if self.requests == self.maxRequests:
@@ -100,7 +120,7 @@ if __name__ == '__main__':
     print('Total requests: {0}'.format(c.maxRequests))
     loop = IOLoop.instance()
     loop.run_sync(service.connect)
-    p = PeriodicCallback(tickV0, config['benchmark']['interval'], io_loop=loop)
+    p = PeriodicCallback(tickV0Native, config['benchmark']['interval'], io_loop=loop)
     p.start()
     loop.start()
     print('')
