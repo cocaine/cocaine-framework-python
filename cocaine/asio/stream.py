@@ -62,7 +62,8 @@ class CocaineStream(IOStream):
         super(CocaineStream, self).connect(address, functools.partial(self._on_connect, callback), server_hostname)
 
     def _on_connect(self, callback):
-        callback()
+        if callback is not None:
+            callback()
         self.read_until_close(lambda data: None, self._decoder.feed)
 
     def set_read_callback(self, callback):

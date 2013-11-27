@@ -267,8 +267,8 @@ class SocketServerMock(object):
 
     def _handle_stream(self, stream, address):
         log.debug('accepted connection from %s', address)
-        self.actions['connected']()
         self.connections[address] = stream
+        self.actions['connected']()
 
 
 @contextlib.contextmanager
