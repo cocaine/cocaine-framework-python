@@ -18,8 +18,13 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import collections
+import time
 import sys
 
+from tornado.ioloop import IOLoop
+
+from .. import concurrent
 from ..logging.message import RPC
 from ..utils import ThreadLocalMixin
 
@@ -35,7 +40,28 @@ class Logger(Service, ThreadLocalMixin):
     def __init__(self, app=None):
         super(Logger, self).__init__('logging')
         self.target = self.init_target(app)
-        self.connect()
+        self._verbosity = 0
+        self._queue = collections.deque(maxlen=256)
+        self.connect().add_callback(self._init)
+
+    def _init(self, future):
+        try:
+            future.get()
+        except Exception as err:
+            print('cannot connect to logger service: {0}'.format(err))
+            print('will try again in 1 sec')
+            IOLoop.instance().add_timeout(time.time() + 1.0, lambda: self.connect().add_callback(self._init))
+        else:
+            self.configure()
+
+    @concurrent.engine
+    def configure(self):
+        try:
+            self._verbosity = yield self._invoke(RPC.VERBOSITY, self.ROOT_STATE)
+        except Exception as err:
+            print('cannot resolve "verbosity" property: {0}'.format(err))
+            print('will try again after 1 sec')
+            IOLoop.instance().add_timeout(time.time() + 1.0, self.configure)
 
     @staticmethod
     def init_target(app):
@@ -46,9 +72,13 @@ class Logger(Service, ThreadLocalMixin):
                 app = 'standalone'
         return 'app/{0}'.format(app)
 
-    def emit(self, level, message, *args):
-        return self._invoke(RPC.EMIT, self.ROOT_STATE, level, self.target, message % args)
-
-    def verbosity(self):
-        return self._invoke(RPC.VERBOSITY, self.ROOT_STATE)
-
+    def emit(self, level, message):
+        if level <= self._verbosity:
+            while self._queue:
+                level, message = self._queue.popleft()
+                self._invoke(RPC.EMIT, self.ROOT_STATE, level, self.target, message)
+            self._invoke(RPC.EMIT, self.ROOT_STATE, level, self.target, message)
+        else:
+            if len(self._queue) == self._queue.maxlen:
+                print('log message dropped because of queue limit: {0}'.format(message))
+            self._queue.append((level, message))
