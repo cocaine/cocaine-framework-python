@@ -65,6 +65,7 @@ class StreamTestCase(AsyncTestCase):
 
         with serve(60000) as server:
             stream = CocaineStream(socket.socket(), self.io_loop)
-            stream.connect(('127.0.0.1', 60000), callback=on_connect)
+            stream.connect(('127.0.0.1', 60000))
+            server.on_connect(on_connect)
             stream.set_read_callback(on_message)
             self.wait()
