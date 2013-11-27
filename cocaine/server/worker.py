@@ -209,7 +209,7 @@ class Worker(object):
             response.error(2, 'unrecoverable error: %s ', err)
             self._send_terminate(message.session, 1, 'programming error')
         except Exception as err:
-            log.error('on invoke error: %s', err, print_exc=True)
+            log.error('on invoke error: %s', err, exc_info=True)
             response.error(1, 'invocation error')
 
     def _dispatch_chunk(self, message):
