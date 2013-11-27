@@ -30,6 +30,7 @@ from tornado import stack_context
 from tornado.ioloop import IOLoop
 
 from ..asio.stream import CocaineStream
+from ..asio.exceptions import ConnectError, TimeoutError
 from ..concurrent import Deferred
 from ..exceptions import IllegalStateError
 from ..protocol import ChokeEvent
@@ -79,42 +80,13 @@ if '--locator' in sys.argv:
         LOCATOR_DEFAULT_PORT = int(port)
 
 
-class ConnectError(IOError):
-    pass
-
-
-class TimeoutError(IOError):
-    pass
-
-
-class TimeoutDeferred(Deferred):
-    def __init__(self, timeout, io_loop):
-        super(TimeoutDeferred, self).__init__()
-        self.io_loop = io_loop
-
-        if timeout is None:
-            self.timeout_id = None
-        else:
-            self.timeout_id = io_loop.add_timeout(time.time() + timeout, self._on_timeout)
-
-    def _on_timeout(self):
-        log.warn('operation has timed out')
-        self.error(TimeoutError())
-        self.close()
-
-    def close(self):
-        if self.timeout_id is not None:
-            self.io_loop.remove_timeout(self.timeout_id)
-        super(TimeoutDeferred, self).close()
-
-
 class ServiceConnector(object):
     def __init__(self, host, port, timeout=None, io_loop=None):
         self.host = host
         self.port = port
         self.timeout = timeout
+        self.timeout_id = None
         self.io_loop = io_loop or IOLoop.current()
-        self.each_timeout = timeout
 
         self.deferred = None
 
@@ -130,7 +102,10 @@ class ServiceConnector(object):
 
         log.debug('candidates: %s', candidates)
 
-        self.deferred = TimeoutDeferred(self.timeout, io_loop=self.io_loop)
+        self.deferred = Deferred()
+        if self.timeout is not None:
+            self.timeout_id = self.io_loop.add_timeout(time.time() + self.timeout, self._handle_connection_timeout)
+
         df = self._try_connect(candidates[0])
         df.add_callback(stack_context.wrap(functools.partial(self._handle_connection, candidates=candidates[1:])))
         return self.deferred
@@ -164,6 +139,9 @@ class ServiceConnector(object):
                 df.error(ConnectError())
         else:
             log.debug(' - success')
+            if self.timeout_id is not None:
+                self.io_loop.remove_timeout(self.timeout_id)
+                self.timeout_id = None
             self._stream.set_close_callback(None)
             df = self.deferred
             self.deferred = None
@@ -171,6 +149,11 @@ class ServiceConnector(object):
 
     def _handle_connection_error(self, deferred):
         deferred.error(ConnectError(self._stream.error))
+
+    def _handle_connection_timeout(self):
+        self.io_loop.remove_timeout(self.timeout_id)
+        self.timeout_id = None
+        self.deferred.error(TimeoutError())
 
 
 class Decoder(object):
