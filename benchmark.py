@@ -54,18 +54,17 @@ class Counter(object):
         self.r = []
 
     def inc(self):
-        # if (self.requests * 100.0 / self.maxRequests) % 1 == 0:
         if (self.requests * 100.0 / self.maxRequests) >= self.tickLimit * self.ticks:
             self.ticks += 1
             self.r.append(self.requests)
             self.t.append(time())
             if len(self.r) > 1 and len(self.t) > 1:
                 poly = numpy.polyfit(self.t, self.r, 1)
-                elapsed = (self.maxRequests - poly[1]) / poly[0] - time()
+                left = (self.maxRequests - poly[1]) / poly[0] - time()
             else:
-                elapsed = 0
-            sys.stdout.write('\rDone: {0} ({1:.1f}%). Elapsed: ~{2:.3f}s'.format(
-                self.requests, self.requests * 100.0 / self.maxRequests, elapsed
+                left = 0
+            sys.stdout.write('\rDone: {0} ({1:.1f}%). Elapsed: ~{2:.3f}s. RPS: ~{3:.3f}'.format(
+                self.requests, self.requests * 100.0 / self.maxRequests, left, self.requests / (self.t[-1] - self.t[0])
             ))
             sys.stdout.flush()
         if self.requests == self.maxRequests:
@@ -79,7 +78,7 @@ if __name__ == '__main__':
             'name': 'echo'
         },
         'benchmark': {
-            'interval': 1,
+            'interval': 0.1,
             'maxRequests': 100000,
             'tickLimit': 0.1
         },
@@ -100,6 +99,7 @@ if __name__ == '__main__':
 
     print('Total requests: {0}'.format(c.maxRequests))
     loop = IOLoop.instance()
+    loop.run_sync(service.connect)
     p = PeriodicCallback(tickV0, config['benchmark']['interval'], io_loop=loop)
     p.start()
     loop.start()
