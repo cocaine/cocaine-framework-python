@@ -259,12 +259,14 @@ class SocketServerMock(object):
         self.server.listen(port)
 
     def stop(self):
+        self.connections = []
         self.server.stop()
 
     def on_connect(self, action):
         self.actions['connected'] = action
 
     def _handle_stream(self, stream, address):
+        log.debug('accepted connection from %s', address)
         self.actions['connected']()
         self.connections[address] = stream
 
