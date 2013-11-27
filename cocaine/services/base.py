@@ -23,7 +23,7 @@ import logging
 import msgpack
 import sys
 
-from ..asio.connector import ServiceConnector
+from ..asio.connector import Connector
 from ..concurrent import Deferred
 from ..exceptions import IllegalStateError
 from ..protocol import ChokeEvent
@@ -148,7 +148,7 @@ class AbstractService(object):
         if self.connected():
             raise IllegalStateError('service "%s" is already connected', self.name)
 
-        deferred = ServiceConnector(host, port, timeout).connect()
+        deferred = Connector(host, port, timeout).connect()
         deferred.add_callback(self._on_connect)
         return deferred
 

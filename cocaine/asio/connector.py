@@ -43,7 +43,7 @@ class _Timeout(object):
         self.id = 0
 
 
-class ServiceConnector(object):
+class Connector(object):
     def __init__(self, host, port, timeout=None, io_loop=None):
         self.host = host
         self.port = port
