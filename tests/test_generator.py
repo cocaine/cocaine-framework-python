@@ -14,11 +14,7 @@ from cocaine.testing import trigger_check, DeferredMock
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-log = logging.getLogger(__name__)
-h = logging.StreamHandler(stream=sys.stdout)
-log.addHandler(h)
-log.setLevel(logging.DEBUG)
-log.propagate = False
+log = logging.getLogger('cocaine')
 
 
 class DeferredTestCase(unittest.TestCase):

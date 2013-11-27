@@ -32,10 +32,6 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
 log = logging.getLogger('cocaine.testing')
-h = logging.StreamHandler(stream=sys.stdout)
-log.addHandler(h)
-log.setLevel(logging.DEBUG)
-log.propagate = False
 
 
 def autoclosable(func):

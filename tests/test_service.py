@@ -31,10 +31,6 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
 log = logging.getLogger('cocaine')
-h = logging.StreamHandler(stream=sys.stdout)
-log.addHandler(h)
-log.setLevel(logging.DEBUG)
-log.propagate = False
 
 
 class RuntimeTestCase(AsyncTestCase):
