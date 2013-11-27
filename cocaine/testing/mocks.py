@@ -1,4 +1,5 @@
 import collections
+import contextlib
 import datetime
 import logging
 import sys
@@ -242,3 +243,37 @@ class RuntimeMock(object):
         self._io_loop.stop()
         self.thread.join()
         log.debug('runtime mock server has been stopped')
+
+
+class SocketServerMock(object):
+    def __init__(self):
+        self.actions = {
+            'connected': lambda: None
+        }
+
+        self.connections = {}
+
+    def start(self, port):
+        self.server = TCPServer()
+        self.server.handle_stream = self._handle_stream
+        self.server.listen(port)
+
+    def stop(self):
+        self.server.stop()
+
+    def on_connect(self, action):
+        self.actions['connected'] = action
+
+    def _handle_stream(self, stream, address):
+        self.actions['connected']()
+        self.connections[address] = stream
+
+
+@contextlib.contextmanager
+def serve(port):
+    server = SocketServerMock()
+    try:
+        server.start(port)
+        yield server
+    finally:
+        server.stop()

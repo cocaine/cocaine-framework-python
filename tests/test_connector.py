@@ -18,7 +18,6 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import contextlib
 import logging
 import socket
 import sys
@@ -29,44 +28,10 @@ from tornado import stack_context
 from tornado.iostream import IOStream
 from cocaine.services.base import ServiceConnector, TimeoutError, ConnectError
 
-from tornado.tcpserver import TCPServer
 from tornado.testing import AsyncTestCase
+from cocaine.testing.mocks import serve
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
-
-
-class SocketServerMock(object):
-    def __init__(self):
-        self.actions = {
-            'connected': lambda: None
-        }
-
-        self.connections = {}
-
-    def start(self, port):
-        self.server = TCPServer()
-        self.server.handle_stream = self._handle_stream
-        self.server.listen(port)
-
-    def stop(self):
-        self.server.stop()
-
-    def on_connect(self, action):
-        self.actions['connected'] = action
-
-    def _handle_stream(self, stream, address):
-        self.actions['connected']()
-        self.connections[address] = stream
-
-
-@contextlib.contextmanager
-def serve(port):
-    server = SocketServerMock()
-    try:
-        server.start(port)
-        yield server
-    finally:
-        server.stop()
 
 
 log = logging.getLogger('cocaine')
