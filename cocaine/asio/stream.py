@@ -56,7 +56,10 @@ class CocaineStream(IOStream):
         return not self.closed() and not self.connecting()
 
     def address(self):
-        return self.socket.getsockname()
+        if self.socket is not None:
+            return self.socket.getsockname()
+        else:
+            return '0.0.0.0', 0
 
     def connect(self, address, callback=None, server_hostname=None):
         super(CocaineStream, self).connect(address, functools.partial(self._on_connect, callback), server_hostname)

@@ -103,7 +103,7 @@ class AbstractService(object):
         It the service is not connected this method returns tuple `('0.0.0.0', 0)`.
         """
         if self.connected():
-            return self._stream.socket.getsockname()
+            return self._stream.address()
         else:
             return '0.0.0.0', 0
 
