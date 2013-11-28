@@ -69,23 +69,6 @@ if '--locator' in sys.argv:
         LOCATOR_DEFAULT_PORT = int(port)
 
 
-class Decoder(object):
-    def __init__(self):
-        self._unpacker = msgpack.Unpacker()
-        self._callback = None
-
-    def set_callback(self, callback):
-        self._callback = callback
-
-    def feed(self, data):
-        self._unpacker.feed(data)
-        if self._callback is None:
-            return
-
-        for chunk in self._unpacker:
-            self._callback(chunk)
-
-
 class AbstractService(object):
     """Represents abstract cocaine service.
 
