@@ -53,7 +53,7 @@ class CocaineStream(IOStream):
         return self._connecting
 
     def connected(self):
-        return not self.closed() and not self.connecting
+        return not self.closed() and not self.connecting()
 
     def address(self):
         return self.socket.getsockname()
