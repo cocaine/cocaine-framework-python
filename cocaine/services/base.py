@@ -168,10 +168,10 @@ class AbstractService(object):
 
     def _chunk(self, method_id, session, *args):
         log.debug('sending chunk [%d, %d, %s]', method_id, session, args)
-        deferred = self.send_data(session, [method_id, session, args])
+        deferred = self._send_data(session, [method_id, session, args])
         return deferred
 
-    def send_data(self, session, data):
+    def _send_data(self, session, data):
         deferred = self._sessions.get(session)
         if deferred is None:
             deferred = CocaineDeferred()
