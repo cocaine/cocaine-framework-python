@@ -167,13 +167,13 @@ class AbstractService(object):
     def _invoke(self, method_id, state, *args):
         log.debug('invoking [%d, %s]', method_id, args)
         session = self._counter.next()
-        deferred = self._chunk(method_id, session, *args)
+        deferred = self._push(method_id, session, *args)
         if len(state.substates) == 0:  # Non-Switching, pure invocation with deferreds and whores.
             return deferred
         else:  # Switching
             return Session(state, session, self, deferred)
 
-    def _chunk(self, method_id, session, *args):
+    def _push(self, method_id, session, *args):
         log.debug('sending chunk [%d, %d, %s]', method_id, session, args)
         deferred = self._send_data(session, [method_id, session, args])
         return deferred

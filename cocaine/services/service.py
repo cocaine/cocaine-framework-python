@@ -124,9 +124,9 @@ class Service(AbstractService):
             return self._invoke(state.id, state, *args, **kwargs)
         return wrapper
 
-    def _make_chunk(self, method_id, session):
+    def _make_pushable(self, method_id, session):
         def wrapper(*args, **kwargs):
             if not self.connected():
                 raise IllegalStateError('service "%s" is not connected', self.name)
-            return self._chunk(method_id, session, *args, **kwargs)
+            return self._push(method_id, session, *args, **kwargs)
         return wrapper
