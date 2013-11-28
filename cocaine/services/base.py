@@ -84,7 +84,6 @@ class AbstractService(object):
         self.name = name
 
         self._stream = None
-        self._decoder = None
 
         self._counter = itertools.count(1)
         self._sessions = {}
@@ -103,18 +102,18 @@ class AbstractService(object):
 
         It the service is not connected this method returns tuple `('0.0.0.0', 0)`.
         """
-        if self._stream is not None:
+        if self.connected():
             return self._stream.socket.getsockname()
         else:
             return '0.0.0.0', 0
 
     def connecting(self):
         """Return true if the service is in connecting state."""
-        return self._stream is not None and not self._stream.closed() and self._stream._connecting
+        return self._stream is not None and self._stream.connecting()
 
     def connected(self):
         """Return true if the service is in connected state."""
-        return self._stream is not None and not self._stream.closed() and not self.connecting()
+        return self._stream is not None and self._stream.connected()
 
     def disconnect(self):
         """Disconnect service from its endpoint and destroys all communications between them.
