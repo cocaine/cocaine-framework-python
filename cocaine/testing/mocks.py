@@ -155,7 +155,7 @@ class Connection(object):
 
     def _on_closed(self, data):
         assert 0 == len(data)
-        log.debug('stream is closed')
+        log.debug('stream is closed, calling callback')
         self._hook['disconnected']()
 
     def _on_chunk(self, data):

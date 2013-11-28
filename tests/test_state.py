@@ -5,7 +5,7 @@ from cocaine.services.state import StateBuilder, RootState, State
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-class MyTestCase(unittest.TestCase):
+class StateTestCase(unittest.TestCase):
     def test_state_builder(self):
         api = {
             0: (
