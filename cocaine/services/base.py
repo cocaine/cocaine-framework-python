@@ -138,10 +138,17 @@ class AbstractService(object):
         try:
             self._stream = future.get()
         except Exception as err:
-            log.warn('err: %s', err)
+            log.warn('failed to connect: %s', err)
         else:
             log.debug('successfully connected')
             self._stream.set_read_callback(self._on_message)
+            self._stream.set_close_callback(self._on_disconnect)
+
+    def _on_disconnect(self):
+        if self._stream is not None and self._stream.socket is not None:
+            log.warn('service "%s" has been disconnected: %s', self.name, self._stream.error)
+        else:
+            log.debug('service "%s" has been disconnected', self.name)
 
     def _on_message(self, args):
         message = Message.initialize(args)
