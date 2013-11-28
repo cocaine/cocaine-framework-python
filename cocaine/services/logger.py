@@ -41,7 +41,8 @@ class Logger(Service, ThreadLocalMixin):
         super(Logger, self).__init__('logging')
         self.target = self.init_target(app)
         self._verbosity = 0
-        self._queue = collections.deque(maxlen=256)
+        self._max_buffer_len = 256
+        self._queue = collections.deque(maxlen=self._max_buffer_len)
         self.connect().add_callback(self._init)
 
     def _init(self, future):
@@ -79,6 +80,6 @@ class Logger(Service, ThreadLocalMixin):
                 self._invoke(RPC.EMIT, self.ROOT_STATE, level, self.target, message)
             self._invoke(RPC.EMIT, self.ROOT_STATE, level, self.target, message)
         else:
-            if len(self._queue) == self._queue.maxlen:
+            if len(self._queue) == self._max_buffer_len:
                 print('log message dropped because of queue limit: {0}'.format(message))
             self._queue.append((level, message))
