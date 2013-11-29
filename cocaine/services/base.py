@@ -145,6 +145,7 @@ class AbstractService(object):
             self._stream.set_close_callback(self._on_disconnect)
 
     def _on_disconnect(self):
+        #todo: anyway we need to drop all sessions.
         if self._stream is not None and self._stream.socket is not None:
             log.warn('service "%s" has been disconnected: %s', self.name, self._stream.error)
         else:
