@@ -1,5 +1,3 @@
-import subprocess
-import sys
 from cocaine.futures import chain
 import msgpack
 from tornado.ioloop import IOLoop
@@ -31,6 +29,7 @@ def then_api():
     c = s.enqueue('chunkMe', num)
     c.then(collect_all)
     return c
+
 
 @chain.source
 def yield_api():

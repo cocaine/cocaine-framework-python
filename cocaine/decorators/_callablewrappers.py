@@ -72,7 +72,7 @@ class _Coroutine(_Proxy):
             if not self._response.closed:
                 self._response.error(1, "Error in event '%s' handler %s" %
                                      (self._response.event,
-                                     str(err)))
+                                      str(err)))
         finally:
             if not self._response.closed:
                 self._logger.info("Handler for %s didn't close response stream" % self._response.event)
@@ -117,7 +117,7 @@ class _Function(_Proxy):
 
 def type_traits(func_or_generator):
     """ Return class object depends on type of callable object """
-    if compiler.consts.CO_GENERATOR & func_or_generator.func_code.co_flags: # Coroutine
+    if compiler.consts.CO_GENERATOR & func_or_generator.func_code.co_flags:  # Coroutine
         return _Coroutine
     else:
         return _Function

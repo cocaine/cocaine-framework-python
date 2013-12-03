@@ -16,7 +16,7 @@
 #    GNU Lesser General Public License for more details.
 #
 #    You should have received a copy of the GNU Lesser General Public License
-#    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+#    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
 
@@ -51,34 +51,35 @@ PROTOCOL_LIST = (
 
 PROTOCOL = {
     RPC_HANDSHAKE: {
-        "id" : RPC_HANDSHAKE, #PROTOCOL_LIST.index("rpc::handshake"),
+        "id": RPC_HANDSHAKE,
         "tuple_type": ("uuid",)
     },
     RPC_HEARTBEAT: {
-        "id" : RPC_HEARTBEAT, #PROTOCOL_LIST.index("rpc::heartbeat"),
+        "id": RPC_HEARTBEAT,
         "tuple_type": ()
     },
-    RPC_TERMINATE : {
-        "id" : RPC_TERMINATE, #PROTOCOL_LIST.index("rpc::terminate"),
+    RPC_TERMINATE: {
+        "id": RPC_TERMINATE,
         "tuple_type": ("reason", "message")
     },
-    RPC_INVOKE   : {
-        "id" : RPC_INVOKE, #PROTOCOL_LIST.index("rpc::invoke"),
+    RPC_INVOKE: {
+        "id": RPC_INVOKE,
         "tuple_type": ("event",)
     },
-    RPC_CHUNK    : {
-        "id" : RPC_CHUNK, #PROTOCOL_LIST.index("rpc::chunk"),
+    RPC_CHUNK: {
+        "id": RPC_CHUNK,
         "tuple_type": ("data",)
     },
-    RPC_ERROR   : {
-        "id" : RPC_ERROR, #PROTOCOL_LIST.index("rpc::error"),
+    RPC_ERROR: {
+        "id": RPC_ERROR,
         "tuple_type": ("code", "message")
     },
-    RPC_CHOKE   : {
-        "id" : RPC_CHOKE, #PROTOCOL_LIST.index("rpc::choke"),
+    RPC_CHOKE: {
+        "id": RPC_CHOKE,
         "tuple_type": ()
     }
 }
+
 
 def closure(m_id, m_session, args):
     def _wrapper():
@@ -107,8 +108,8 @@ class Message(object):
         try:
             _id = unpacked_data[0]
             session = unpacked_data[1]
-            args = unpacked_data[2]  #if unpacked_data[1] is not None else list()
+            args = unpacked_data[2]  # if unpacked_data[1] is not None else list()
             return Message(PROTOCOL_LIST[_id], session, *args)
-        except Exception as err:
+        except Exception:
             #print str(err)
             return None
