@@ -120,6 +120,7 @@ def make_package(dirname, app_path):
     fh.close()
     return path
 
+
 @contextlib.contextmanager
 def prepare_app():
     APP_ROOT_PATH = os.path.join(ROOT_PATH, 'app')

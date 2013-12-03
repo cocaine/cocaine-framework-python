@@ -459,4 +459,3 @@ class Service(AbstractService):
         def caller(*args, **kwargs):
             return self.enqueue(item, *args, **kwargs)
         return caller
-

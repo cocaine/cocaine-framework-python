@@ -63,7 +63,7 @@ def _construct_logger_methods(cls, verbosity_level):
             def func(data):
                 with cls._lock:
                     cls._counter += 1
-                    cls._logger._writableStream.write(Message("Message", cls._counter, _lvl,  cls.target, str(data)).pack())
+                    cls._logger._writableStream.write(Message("Message", cls._counter, _lvl, cls.target, str(data)).pack())
             return func
         else:
             def func(data):
