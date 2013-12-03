@@ -16,7 +16,7 @@
 #    GNU Lesser General Public License for more details.
 #
 #    You should have received a copy of the GNU Lesser General Public License
-#    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+#    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
 
@@ -128,4 +128,3 @@ class Loop(object):
 class Timer(ev.PeriodicCallback):
     def __init__(self, callback, callback_time, io_loop):
         super(Timer, self).__init__(callback, callback_time * 1000, io_loop.ioloop)
-

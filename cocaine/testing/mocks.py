@@ -73,9 +73,9 @@ def checker(conditions, self):
         try:
             condition = conditions.pop(0)
             condition(result)
-        except AssertionError as err:
+        except AssertionError:
             sys.exit(1)
-        except Exception as err:
+        except Exception:
             sys.exit(2)
         finally:
             if not conditions:

@@ -15,7 +15,7 @@
 #    GNU Lesser General Public License for more details.
 #
 #    You should have received a copy of the GNU Lesser General Public License
-#    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+#    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
 import msgpack
@@ -28,7 +28,7 @@ from cocaine.utils import weakmethod
 
 major = sys.version_info[0]
 minor = sys.version_info[1]
-if  major == 2 and minor < 7:
+if major == 2 and minor < 7:
     import array
 
     class Buffer(array.array):

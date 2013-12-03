@@ -21,4 +21,3 @@
 from cocaine.asio.service import Service
 
 __all__ = ["Service"]
-
