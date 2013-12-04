@@ -31,7 +31,7 @@ class Pipe(object):
         self._ioLoop = ioLoop or Loop.instance()
 
         self._state = self.NOT_CONNECTED
-        self._onConnectedDeferred = Deferred()
+        self._onConnectedDeferred = None
         self._connectionTimeoutTuple = None
 
     def fileno(self):
@@ -50,6 +50,7 @@ class Pipe(object):
         if self.isConnected():
             raise IllegalStateError('already connected')
 
+        self._onConnectedDeferred = Deferred()
         self._state = self.CONNECTING
         if blocking:
             return self._blockingConnect(address, timeout)
@@ -105,7 +106,9 @@ class Pipe(object):
             self._ioLoop.remove_timeout(timeoutId)
             self._connectionTimeoutTuple = None
             self.close()
-            self._onConnectedDeferred.error(ConnectionTimeoutError(address, timeout))
+            df = self._onConnectedDeferred
+            self._onConnectedDeferred = None
+            df.error(ConnectionTimeoutError(address, timeout))
 
     def _onConnectedCallback(self, address, fd, event):
         assert fd == self.sock.fileno(), 'Incoming fd must be socket fd'
@@ -117,17 +120,19 @@ class Pipe(object):
                 self._ioLoop.remove_timeout(fd)
                 self._connectionTimeoutTuple = None
 
+        df = self._onConnectedDeferred
+        self._onConnectedDeferred = None
         err = self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
         if err == 0:
             self._state = self.CONNECTED
             self.address = address
             removeConnectionTimeout()
             self._ioLoop.stop_listening(self.sock.fileno())
-            self._onConnectedDeferred.trigger(None)
+            df.trigger(None)
         elif err not in (errno.EINPROGRESS, errno.EAGAIN, errno.EALREADY):
             self.close()
             removeConnectionTimeout()
-            self._onConnectedDeferred.error(ConnectionError(address, os.strerror(err)))
+            df.error(ConnectionError(address, os.strerror(err)))
 
     def read(self, buff, size):
         return self._handle(self.sock.recv_into, buff, size)
