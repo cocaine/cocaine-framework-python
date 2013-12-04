@@ -40,7 +40,7 @@ class HotTestCase(AsyncTestCase):
 
         @chain.source
         def compare(s):
-            c = yield s.execute()
+            yield s.execute()
             try:
                 completed[0] += 1
                 yield
@@ -480,7 +480,7 @@ class AsynchronousApiTestCase(AsyncTestCase):
         check = checker(expected, self)
 
         def firstStep():
-            r1 = yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=0.002).execute()
+            yield ServiceMock(chunks=[], T=self.T, ioLoop=self.io_loop, interval=0.002).execute()
             yield 'Ok'
 
         f = Chain([firstStep], ioLoop=self.io_loop)

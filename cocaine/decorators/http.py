@@ -16,7 +16,7 @@
 #    GNU Lesser General Public License for more details.
 #
 #    You should have received a copy of the GNU Lesser General Public License
-#    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+#    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
 import msgpack
@@ -122,6 +122,7 @@ def _tornado_request_wrapper(data):
     method, uri, version, headers, body = msgpack.unpackb(data)
     return HTTPRequest(method, uri, version, dict(headers), body)
 
+
 def tornado_request_decorator(obj):
     def dec(func):
         def wrapper(chunk):
@@ -133,6 +134,7 @@ def tornado_request_decorator(obj):
 
 def http(func):
     return proxy_factory(func, response_handler=_HTTPResponse, request_handler=http_request_decorator)
+
 
 def tornado(func):
     return proxy_factory(func, response_handler=_HTTPResponse, request_handler=tornado_request_decorator)

@@ -18,6 +18,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+from __future__ import print_function
 import sys
 import threading
 
@@ -42,19 +43,19 @@ VERBOSITY_LEVELS = {
 class _STDERR_Logger(object):
 
     def debug(self, data):
-        print >> sys.stderr, data
+        print(data, file=sys.stderr)
 
     def info(self, data):
-        print >> sys.stderr, data
+        print(data, file=sys.stderr)
 
     def warn(self, data):
-        print >> sys.stderr, data
+        print(data, file=sys.stderr)
 
     def error(self, data):
-        print >> sys.stderr, data
+        print(data, file=sys.stderr)
 
     def ignore(self, data):
-        print >> sys.stderr, data
+        print(data, file=sys.stderr)
 
 
 def _construct_logger_methods(cls, verbosity_level):
@@ -63,7 +64,7 @@ def _construct_logger_methods(cls, verbosity_level):
             def func(data):
                 with cls._lock:
                     cls._counter += 1
-                    cls._logger._writableStream.write(Message("Message", cls._counter, _lvl,  cls.target, str(data)).pack())
+                    cls._logger._writableStream.write(Message("Message", cls._counter, _lvl, cls.target, "%s" % data).pack())
             return func
         else:
             def func(data):

@@ -16,7 +16,7 @@
 #    GNU Lesser General Public License for more details.
 #
 #    You should have received a copy of the GNU Lesser General Public License
-#    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+#    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
 from itertools import izip
@@ -41,7 +41,7 @@ def closure(m_id, session, args):
 
 class MessageInit(type):
 
-    def __call__(cls, rpc_tag, session,  *tuple_types):
+    def __call__(cls, rpc_tag, session, *tuple_types):
         obj_dict = PROTOCOL[rpc_tag]
         msg = object.__new__(cls)
         msg.__init__()
@@ -60,8 +60,7 @@ class Message(object):
         try:
             _id = unpacked_data[0]
             session = unpacked_data[1]
-            args = unpacked_data[2] #if unpacked_data[1] is not None else list()
-            return Message(PROTOCOL_LIST[_id], *args)
-        except Exception as err:
-            #print str(err)
+            args = unpacked_data[2]  # if unpacked_data[1] is not None else list()
+            return Message(PROTOCOL_LIST[_id], session, *args)
+        except Exception:
             return None
