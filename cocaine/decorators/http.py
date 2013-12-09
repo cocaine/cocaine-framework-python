@@ -23,7 +23,7 @@ import msgpack
 import urlparse
 from tornado import escape
 
-from tornado.httputil import parse_body_arguments
+from tornado.httputil import parse_body_arguments, HTTPHeaders
 
 from _callablewrappers import proxy_factory
 
@@ -120,7 +120,7 @@ from tornado.httpserver import HTTPRequest, Cookie
 
 def _tornado_request_wrapper(data):
     method, uri, version, headers, body = msgpack.unpackb(data)
-    return HTTPRequest(method, uri, version, dict(headers), body)
+    return HTTPRequest(method, uri, version, HTTPHeaders(headers), body)
 
 def tornado_request_decorator(obj):
     def dec(func):
