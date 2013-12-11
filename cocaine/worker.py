@@ -55,7 +55,6 @@ class Worker(object):
         self.heartbeat_timer = ev.Timer(self.on_heartbeat,
                                         heartbeat_timeout,
                                         self.loop)
-        self.disown_timer.start()
         self.heartbeat_timer.start()
 
         if isinstance(self.endpoint, types.TupleType) or isinstance(self.endpoint, types.ListType):
