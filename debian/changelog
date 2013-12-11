@@ -1,6 +1,12 @@
+cocaine-framework-python (0.10.6.21) lucid; urgency=low
+
+  * Send handshake, heartbeat and start heartbeat_timer when worker runs 
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 11 Dec 2013 16:31:25 +0400
+
 cocaine-framework-python (0.10.6.20) lucid; urgency=low
 
-  * fix wrong diswon logic. Start disown timer after first heartbeat.
+  * fix wrong disorn logic. Start disown timer after first heartbeat.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 11 Dec 2013 09:53:59 +0400
 

@@ -55,7 +55,6 @@ class Worker(object):
         self.heartbeat_timer = ev.Timer(self.on_heartbeat,
                                         heartbeat_timeout,
                                         self.loop)
-        self.heartbeat_timer.start()
 
         if isinstance(self.endpoint, types.TupleType) or isinstance(self.endpoint, types.ListType):
             if len(self.endpoint) == 2:
@@ -83,10 +82,6 @@ class Worker(object):
         self.loop.register_read_event(self.r_stream._on_event,
                                       self.pipe.fileno())
         self._logger.debug("Worker with %s send handshake" % self.id)
-        # Send both messages - to run timers properly. This messages will be sent
-        # only after all initialization, so they have same purpose.
-        self._send_handshake()
-        self._send_heartbeat()
 
     def _init_endpoint(self, init_args):
         try:
@@ -98,6 +93,11 @@ class Worker(object):
             raise RuntimeError("Wrong cmdline arguments")
 
     def run(self, binds=None):
+        # Send both messages - to run timers properly. This messages will be sent
+        # only after all initialization, so they have same purpose.
+        self._send_handshake()
+        self._send_heartbeat()
+        self.heartbeat_timer.start()
         if not binds:
             binds = {}
         for event, name in binds.iteritems():
