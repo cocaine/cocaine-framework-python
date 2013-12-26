@@ -459,3 +459,9 @@ class Service(AbstractService):
         def caller(*args, **kwargs):
             return self.enqueue(item, *args, **kwargs)
         return caller
+
+    def _getAttributeNames(self):
+        return self.api.keys()
+
+    def trait_names(self):
+        return self.api.keys()
