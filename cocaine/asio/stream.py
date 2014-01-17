@@ -38,9 +38,7 @@ if major == 2 and minor < 7:
         def __len__(self):
             return self.buffer_info()[1]
 else:
-    class Buffer(bytearray):
-        def __init__(self, size):
-            super(Buffer, self).__init__('\0' * size)
+    Buffer = bytearray
 
 
 class Decoder(object):
