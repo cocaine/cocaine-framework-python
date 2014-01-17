@@ -84,7 +84,6 @@ class Worker(object):
         # Send both messages - to run timers properly. This messages will be sent
         # only after all initialization, so they have same purpose.
         self._send_handshake()
-        self._send_heartbeat()
 
     def _init_endpoint(self, init_args):
         try:
@@ -100,6 +99,7 @@ class Worker(object):
             binds = {}
         for event, name in binds.iteritems():
             self.on(event, name)
+        self._send_heartbeat()
         self.loop.run()
 
     def terminate(self, reason, msg):
