@@ -1,3 +1,9 @@
+cocaine-framework-python (0.11.1.1) unstable; urgency=low
+
+  * Fix handshake and heartbeat timer.
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Mon, 27 Jan 2014 15:47:14 +0400
+
 cocaine-framework-python (0.11.1.0) unstable; urgency=low
 
   * Docker uploading/managing support.
