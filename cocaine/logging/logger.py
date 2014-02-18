@@ -32,11 +32,12 @@ LOCK = threading.Lock()
 
 
 VERBOSITY_LEVELS = {
-    0: "ignore",
-    1: "error",
-    2: "warn",
-    3: "info",
-    4: "debug"
+    "ignore": 0,
+    "error": 1,
+    "warn": 2,
+    "warning": 2,
+    "info": 3,
+    "debug": 4
 }
 
 
@@ -49,6 +50,9 @@ class _STDERR_Logger(object):
         print(data, file=sys.stderr)
 
     def warn(self, data):
+        print(data, file=sys.stderr)
+
+    def warning(self, data):
         print(data, file=sys.stderr)
 
     def error(self, data):
@@ -72,7 +76,7 @@ def _construct_logger_methods(cls, verbosity_level):
             return func
 
     setattr(cls, "_counter", 0)
-    for level, name in VERBOSITY_LEVELS.iteritems():
+    for name, level in VERBOSITY_LEVELS.iteritems():
         setattr(cls, name, closure(level))
 
 
