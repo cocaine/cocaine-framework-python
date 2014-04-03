@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import msgpack
+import time
 
 from cocaine.worker import Worker
 from cocaine.logging import Logger
@@ -12,7 +13,7 @@ log = Logger()
 def echo(request, response):
     message = yield request.read()
     log.debug('Message received: \'{0}\'. Sending it back ...'.format(message))
-    response.write(msgpack.dumps(message))
+    response.write(message)
     response.close()
 
 

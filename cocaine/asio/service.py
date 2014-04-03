@@ -383,6 +383,8 @@ class Service(AbstractService):
 
     def __init__(self, name, blockingConnect=True, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT):
         super(Service, self).__init__(name)
+        self.host = None
+        self.port = None
 
         if not blockingConnect and any([host != LOCATOR_DEFAULT_HOST, port != LOCATOR_DEFAULT_PORT]):
             raise ValueError('you should not specify locator address in __init__ while performing non-blocking connect')
@@ -401,6 +403,12 @@ class Service(AbstractService):
                   If you don't want to create connection to the locator each time you create service, you can use
                   `connectThroughLocator` method, which is specially designed for that cases.
         """
+        # Store endpoint here as Locator doesn't hold this info.
+        self.host = host
+        self.port = port
+        # Is it good?
+        self.locator_timeout = timeout
+
         if (host, port) not in self._locator_cache:
             locator = Locator()
             self._locator_cache[(host, port)] = locator
@@ -417,10 +425,24 @@ class Service(AbstractService):
 
     @strategy.coroutine
     def connectThroughLocator(self, locator, timeout=None, blocking=False):
-        try:
-            endpoint, self.version, api = yield locator.resolve(self.name, timeout, blocking=blocking)
-        except ServiceError as err:
-            raise LocatorResolveError(self.name, locator.address, err)
+        # hack: recreate locator if it's broken.
+        attemps = 1
+        while True:
+            try:
+                endpoint, self.version, api = yield locator.resolve(self.name, timeout, blocking=blocking)
+                break
+            except ServiceError as err:
+                raise LocatorResolveError(self.name, locator.address, err)
+            except (KeyError, AttributeError) as err:  # It means locator is disconnected.
+                log.warn("locator.resolve() throw an error: %s. %d attemp(s) left", err, attemps)
+                locator.disconnect()
+                log.debug("Disconnect locator")
+                yield locator.connect(self.host, self.port, timeout, blocking)
+                log.warn("locator has been connected again")
+            finally:
+                attemps -= 1
+                if attemps < 0:
+                    break
 
         yield self._connectToEndpoint(*endpoint, timeout=timeout, blocking=blocking)
 
@@ -434,18 +456,21 @@ class Service(AbstractService):
         @strategy.coroutine
         def wrapper(*args, **kwargs):
             if not self.isConnected():
+                log.warn('service is disconnected')
                 yield self.connectThroughLocator(locator)
+                log.warn('service has been successfully reconnected')
 
             try:
                 yield func(*args, **kwargs)
             except KeyError as fd:
                 log.warn('broken pipe detected, fd: %s', str(fd))
-                log.info('reconnecting... ')
-                yield self.disconnect()
+                log.warn('reconnecting... ')
+                self.disconnect()
                 yield self.connectThroughLocator(locator)
-                yield func(*args, **kwargs)
-                log.info('service has been successfully reconnected')
+                log.warn('connectedThroughLocator was called successfully')
+                log.warn('service has been successfully reconnected')
 
+            yield func(*args, **kwargs)
         return wrapper
 
     @strategy.coroutine
