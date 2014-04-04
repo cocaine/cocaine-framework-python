@@ -77,13 +77,14 @@ class ReadableStream(object):
         self._tmp_buff = Buffer(self.START_CHUNK_SIZE)
         self._lock = threading.Lock()
 
-    def bind(self, callback):
+    def bind(self, callback, on_pipe_closed=None):
         assert callable(callback), 'callback argument must be callable'
         with self._lock:
             if self._pipe is None:
                 raise IllegalStateError('pipe is not connected')
 
             self._callback = callback
+            self._on_pipe_closed = on_pipe_closed
             self._attached = self._loop.register_read_event(self._on_event, self._pipe.fileno())
 
     def unbind(self):
@@ -112,14 +113,24 @@ class ReadableStream(object):
             if length <= 0:
                 if length == 0:
                     # Remote side has closed connection
+                    # Stop fd polling
                     self._loop.stop_listening(self._pipe.fileno())
+
+                    # Notify consumer if it wished
+                    if self._on_pipe_closed is not None:
+                        self._on_pipe_closed()
+
+                    # Should I close pipe here?
+                    # Does consumer take responsibility for that?
+
+                    # drop socket ref
                     self._pipe = None
                 return
 
             self._buffer.feed(self._tmp_buff[:length])
             self._callback(self._buffer)
 
-            # Enlarge buffer if it is not large enough
+            # Enlarge buffer
             if len(self._tmp_buff) == length:
                 self._tmp_buff *= 2
 

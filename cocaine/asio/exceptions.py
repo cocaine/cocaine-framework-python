@@ -48,5 +48,10 @@ class TimeoutError(CommunicationError):
         super(TimeoutError, self).__init__('timeout ({0:.3f}s)'.format(timeout))
 
 
+class DisconnectionError(CommunicationError):
+    def __init__(self, name):
+        super(DisconnectionError, self).__init__('Service {0} has been disconnected'.format(name))
+
+
 class IllegalStateError(CommunicationError):
     pass

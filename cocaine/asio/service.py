@@ -184,7 +184,8 @@ class AbstractService(object):
                         for chunk in unpacker:
                             on_event(chunk)
                     return dispatch
-                self._readableStream.bind(decode_and_dispatch(self._on_message))
+                self._readableStream.bind(decode_and_dispatch(self._on_message),
+                                          self._on_connection_closed)
                 return
 
         if timeout is not None and time() - start > timeout:
@@ -193,6 +194,21 @@ class AbstractService(object):
         prefix = 'service resolving failed. Reason:'
         reason = '{0} [{1}]'.format(prefix, ', '.join(str(err) for err in errors))
         raise ConnectionError((host, port), reason)
+
+    def _on_connection_closed(self):
+        """Invokes, when remote side closes connection"""
+        log.warn("%s Remote side closed the connection" % self.name)
+        # Send error into every opened session.
+        while self._subscribers:
+            session, future = self._subscribers.popitem()
+            log.debug("Send error to a session #%d", session)
+            try:
+                future.error(DisconnectionError(self.name))
+            except Exception as err:
+                log.error("Unable to send error to the session #%d: %s", session, err)
+            finally:
+                # close future.
+                future.close()
 
     def _on_message(self, args):
         msg = Message.initialize(args)

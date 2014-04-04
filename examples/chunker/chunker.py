@@ -17,8 +17,8 @@ def chunker(request, response):
         chunks = int(chunks)
 
     for num in xrange(chunks):
-        response.write(msgpack.dumps('{0:-<1024}'.format(num)))
-    response.write(msgpack.dumps('Done'))
+        response.write('{0:-<1024}'.format(num))
+    response.write('Done')
     response.close()
 
 W = Worker()
