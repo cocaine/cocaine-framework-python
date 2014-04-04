@@ -29,7 +29,7 @@ except ImportError:
 #   Answer to C++ templates
 #
 
-#PROTOCOL_LIST = (
+# PROTOCOL_LIST = (
 #    "rpc::handshake",   #0
 #    "rpc::heartbeat",   #1
 #    "rpc::terminate",   #2
@@ -111,5 +111,4 @@ class Message(object):
             args = unpacked_data[2]  # if unpacked_data[1] is not None else list()
             return Message(PROTOCOL_LIST[_id], session, *args)
         except Exception:
-            #print str(err)
             return None

@@ -58,7 +58,6 @@ class AsyncConnectionError(ConnectionError):
         super(AsyncConnectionError, self).__init__(message)
 
 
-############ PROTOCOL ############
 class ChokeEvent(Exception):
     def __str__(self):
         return 'ChokeEvent'

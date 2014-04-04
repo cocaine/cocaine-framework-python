@@ -80,7 +80,7 @@ class _Coroutine(_Proxy):
     def close(self):
         self._state = None
 
-#===========================================
+# ===========================================
 
 
 class _Function(_Proxy):
@@ -112,7 +112,7 @@ class _Function(_Proxy):
     def close(self):
         self._state = None
 
-#=========================================
+# =========================================
 
 
 def type_traits(func_or_generator):

@@ -44,7 +44,7 @@ class Sandbox(object):
             event_handler.invoke(request, stream)
         else:
             self._logger.warn("there is no handler for event %s" % event_name)
-            #todo: define magic constants
+            # todo: define magic constants
             stream.error(-100, "there is no handler for event %s" % event_name)
 
     def on(self, event_name, event_handler):
@@ -142,7 +142,7 @@ class Request(Deferred):
                 Can't throw error: %s" % str(self._errmsg))
 
     def bind(self, callback, errorback=None, on_done=None):
-        #self._logger.debug("Bind request")
+        # self._logger.debug("Bind request")
         if len(self.cache) > 0:
             callback(self.cache.pop(0))
         elif self._errmsg is not None:
