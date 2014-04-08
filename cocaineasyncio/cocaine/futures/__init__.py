@@ -39,8 +39,12 @@ class Deffered(object):
         self._done = False
 
     @asyncio.coroutine
-    def get(self):
-        res = yield self._queue.get()
+    def get(self, timeout=0):
+        if timeout > 0:
+            res = yield asyncio.wait_for(self._queue.get(), timeout)
+        else:
+            res = yield self._queue.get()
+
         if isinstance(res, Exception):
             raise res
         else:

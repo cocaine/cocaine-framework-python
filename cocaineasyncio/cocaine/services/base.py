@@ -52,10 +52,10 @@ class BaseService(object):
     def connect(self):
         # double state check
         if not self.connected():
-            log.info("Disconnected")
+            log.debug("Disconnected")
             with (yield self._state_lock):
                 if not self.connected():
-                    log.info("Still disconnected")
+                    log.debug("Still disconnected")
                     # is it safe?
                     loop = asyncio.get_event_loop()
 
@@ -77,11 +77,11 @@ class BaseService(object):
 
         # replace with constants and message.initializer
         if msg_type == 4:  # RPC CHUNK
-            asyncio.Task(deffered.push(msgpack.unpackb(data[0])))
+            asyncio.async(deffered.push(msgpack.unpackb(data[0])))
         elif msg_type == 6:  # RPC CHOKE
-            asyncio.Task(deffered.done())
+            asyncio.async(deffered.done())
         elif msg_type == 5:  # RPC ERROR
-            asyncio.Task(deffered.error(*data))
+            asyncio.async(deffered.error(*data))
 
     def on_failure(self, exc):
         log.warn("Disconnected %s", exc)
