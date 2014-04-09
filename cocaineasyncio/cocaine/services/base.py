@@ -18,6 +18,7 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+from __future__ import with_statement
 
 import asyncio
 import logging
@@ -35,7 +36,8 @@ log.setLevel(logging.INFO)
 class BaseService(object):
     _state_lock = asyncio.Lock()
 
-    def __init__(self, host='localhost', port=10053):
+    def __init__(self, host='localhost', port=10053, loop=None):
+        self.loop = loop or asyncio.get_event_loop()
         self.host = host
         self.port = port
         # protocol
@@ -51,20 +53,22 @@ class BaseService(object):
     @asyncio.coroutine
     def connect(self):
         # double state check
-        if not self.connected():
-            log.debug("Disconnected")
-            with (yield self._state_lock):
-                if not self.connected():
-                    log.debug("Still disconnected")
-                    # is it safe?
-                    loop = asyncio.get_event_loop()
+        if self.connected():
+            log.debug("Connected")
+            return
 
-                    proto_factory = CocaineProtocol.factory(self.on_message,
-                                                            self.on_failure)
+        log.debug("Disconnected")
+        with (yield self._state_lock):
+            if self.connected():
+                return
 
-                    _, self.pr = yield loop.create_connection(proto_factory,
-                                                              self.host,
-                                                              self.port)
+            log.debug("Still disconnected")
+            proto_factory = CocaineProtocol.factory(self.on_message,
+                                                    self.on_failure)
+
+            _, self.pr = yield self.loop.create_connection(proto_factory,
+                                                           self.host,
+                                                           self.port)
 
     def on_message(self, result):
         msg_type, session, data = result
@@ -87,7 +91,7 @@ class BaseService(object):
         log.warn("Disconnected %s", exc)
 
         for deffered in self.sessions.itervalues():
-            log.debug("Send DisconnectionError into deffered here!!!")
+            log.error("Send DisconnectionError into deffered here!!!")
             # deffered.send_error()
 
     @asyncio.coroutine
