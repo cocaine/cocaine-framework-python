@@ -81,6 +81,15 @@ def waits():
 
 
 @asyncio.coroutine
+def sync():
+    nested_loop = asyncio.new_event_loop()
+    log.info("Loops: %s, %s", loop, nested_loop)
+    nested_loop.set_debug(True)
+    nested_loop.run_until_complete(asyncio.sleep(2.0, loop=nested_loop))
+    log.info("DONE")
+
+
+@asyncio.coroutine
 def main():
     log.info("Start simple example")
     yield simple()
@@ -88,6 +97,8 @@ def main():
     yield chain()
     log.info("Start a_wait example")
     yield waits()
+    log.info("Start sync example")
+    yield sync()
     loop.stop()
 
 
