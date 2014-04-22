@@ -486,7 +486,7 @@ class Service(AbstractService):
                 log.warn('connectedThroughLocator was called successfully')
                 log.warn('service has been successfully reconnected')
 
-            yield func(*args, **kwargs)
+                yield func(*args, **kwargs)
         return wrapper
 
     @strategy.coroutine
