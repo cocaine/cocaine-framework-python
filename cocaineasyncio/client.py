@@ -3,12 +3,11 @@
 import logging
 import asyncio
 
-
 from cocaine.services.base import Locator
 
 logging.basicConfig()
 log = logging.getLogger("asyncio")
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 
 @asyncio.coroutine
