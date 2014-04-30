@@ -134,7 +134,7 @@ class Locator(BaseService):
 class Service(BaseService):
     def __init__(self, name, host="localhost", port=10053, loop=None):
         super(Service, self).__init__(loop=None)
-        self.locator = Locator(host="localhost", port=10053, loop=None)
+        self.locator = Locator(host=host, port=port, loop=loop)
         self.name = name
         self.api = {}
         self.host = None
