@@ -48,7 +48,6 @@ class _Coroutine(_Proxy):
         self._obj = func
 
     def invoke(self, request, response, loop):
-        # make it threadsafe throug
         loop.call_soon_threadsafe(asyncio.async, self._obj(request, response))
 
 

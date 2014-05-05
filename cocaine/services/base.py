@@ -25,7 +25,7 @@ import logging
 
 import msgpack
 
-from cocaine.futures import Stream
+from cocaine.concurrent import Stream
 from cocaine.asio.protocol import CocaineProtocol
 from cocaine.asio.message import RPC, Message
 

@@ -18,7 +18,7 @@
 #    GNU Lesser General Public License for more details.
 #
 #    You should have received a copy of the GNU Lesser General Public License
-#    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+#    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
 import os
@@ -46,14 +46,14 @@ setup(
         "cocaine",
         "cocaine.asio",
         "cocaine.concurrent",
-        "cocaine.decorators",
-        "cocaine.logging",
-        "cocaine.protocol",
-        "cocaine.server",
+        # "cocaine.decorators",
+        # "cocaine.logging",
+        # "cocaine.protocol",
+        "cocaine.worker",
         "cocaine.services",
         "cocaine.testing",
     ],
-    install_requires=["msgpack_python", "tornado"],
+    install_requires=["msgpack_python"],
     tests_require=["mockito"],
     test_suite="unittest.TestCase",
     classifiers=[
