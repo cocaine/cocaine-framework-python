@@ -75,9 +75,14 @@ if __name__ == '__main__':
     unix_socket_path = "enp"
     l = asyncio.get_event_loop()
     r = RuntimeMock(unix_socket_path, loop=l)
+    i = 0
 
     def on_heartbeat(w):
+        global i
+        i += 1
         w.write(msgpack.packb([1, 0, []]))
-        w.write(msgpack.packb([3, 1, ["echo"]]))
+        w.write(msgpack.packb([3, i, ["echo"]]))
+        w.write(msgpack.packb([4, i, ["echo"]]))
+        w.write(msgpack.packb([6, i, []]))
     r.on([1, 0, []], on_heartbeat)
     r.serve()

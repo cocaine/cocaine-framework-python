@@ -29,10 +29,10 @@ from cocaine.asio.message import RPC
 from cocaine.asio.message import Message
 from cocaine.asio.utils import Timer
 from cocaine.asio import CocaineProtocol
-from cocaine.futures import Stream
 
-from .sandbox import Sandbox
+from ._wrappers import default
 from .response import ResponseStream
+from .request import RequestStream
 
 DEFAULT_HEARTBEAT_TIMEOUT = 20
 DEFAULT_DISOWN_TIMEOUT = 5
@@ -56,14 +56,13 @@ class Worker(object):
         self.heartbeat_timer = Timer(self.on_heartbeat_timer,
                                      heartbeat_timeout, self.loop)
 
-        self._sandbox = Sandbox()
         self._dispatcher = {
             RPC.HEARTBEAT: self._dispatch_heartbeat,
             RPC.TERMINATE: self._dispatch_terminate,
             RPC.INVOKE: self._dispatch_invoke,
-            # RPC.CHUNK: self._dispatch_chunk,
+            RPC.CHUNK: self._dispatch_chunk,
             # RPC.ERROR: self._dispatch_error,
-            # RPC.CHOKE: self._dispatch_choke
+            RPC.CHOKE: self._dispatch_choke
         }
 
         #TBD move into opts
@@ -74,7 +73,10 @@ class Worker(object):
         except (ValueError, IndexError) as err:
             raise Exception("wrong commandline args %s" % err)
 
+        # storehouse for sessions
         self.sessions = {}
+        # handlers for events
+        self._events = {}
         # protocol
         self.pr = None
 
@@ -120,8 +122,21 @@ class Worker(object):
         if not self.loop.is_running():
             self.loop.run_forever()
 
-    def on(self, event, callback):
-        self._sandbox.on(event, callback)
+    def on(self, event_name, event_handler):
+        log.error(event_name)
+        try:
+            # Try to construct handler.
+            closure = event_handler()
+        except Exception:
+            # If this callable object is not our wrapper - may raise Exception
+            closure = default(event_handler)()
+            if hasattr(closure, "_wrapped"):
+                event_handler = default(event_handler)
+        else:
+            if not hasattr(closure, "_wrapped"):
+                event_handler = default(event_handler)
+        log.debug("Attach handler for %s", event_name)
+        self._events[event_name] = event_handler
 
     # Events
     # healthmonitoring events
@@ -157,10 +172,17 @@ class Worker(object):
 
     def _dispatch_invoke(self, msg):
         log.debug("invoke has been received %s", msg)
-        request = Stream()
+        request = RequestStream()
         response = ResponseStream(msg.session, self, msg.event)
         try:
-            self._sandbox.invoke(msg.event, request, response)
+            event_closure = self._events.get(msg.event, None)
+            if event_closure is not None:
+                event_handler = event_closure()
+                event_handler.invoke(request, response, self.loop)
+            else:
+                self._logger.warn("there is no handler for event %s" % msg.event)
+                response.error(-100, "there is no handler for event %s" % msg.event)
+
             self.sessions[msg.session] = request
         except (ImportError, SyntaxError) as err:
             response.error(2, "unrecoverable error: %s " % str(err))
@@ -169,6 +191,23 @@ class Worker(object):
             log.error("On invoke error: %s" % err)
             traceback.print_stack()
             response.error(1, "Invocation error: %s" % err)
+
+    def _dispatch_chunk(self, msg):
+        log.debug("Receive chunk: %d" % msg.session)
+        try:
+            _session = self.sessions[msg.session]
+            _session.push(msg.data)
+        except Exception as err:
+            log.error("On push error: %s" % str(err))
+            # self.terminate(1, "Push error: %s" % str(err))
+            return
+
+    def _dispatch_choke(self, msg):
+        log.debug("Receive choke: %d" % msg.session)
+        _session = self.sessions.get(msg.session, None)
+        if _session is not None:
+            _session.done()
+            self.sessions.pop(msg.session)
 
     # On disconnection callback
     def on_failure(self, *args):

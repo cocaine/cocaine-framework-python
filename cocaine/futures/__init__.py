@@ -51,10 +51,10 @@ class Stream(object):
             raise asyncio.Return(res)
 
     def push(self, item):
-        return self._queue.put(item)
+        self._queue.put_nowait(item)
 
     def done(self):
-        return self._queue.put(ChokeEvent())
+        return self._queue.put_nowait(ChokeEvent())
 
     def error(self, errnumber, reason):
-        return self._queue.put(ServiceError(errnumber, reason))
+        return self._queue.put_nowait(ServiceError(errnumber, reason))

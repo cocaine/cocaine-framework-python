@@ -22,9 +22,9 @@
 
 __all__ = ["proxy_factory"]
 
-from abc import ABCMeta, abstractmethod
+import asyncio
+
 import inspect
-import traceback
 
 
 class ChokeEvent(Exception):
@@ -34,12 +34,7 @@ class ChokeEvent(Exception):
 
 class _Proxy(object):
 
-    __metaclass__ = ABCMeta
     _wrapped = True
-
-    @abstractmethod
-    def invoke(self, request, stream):
-        pass
 
     @property
     def closed(self):
@@ -50,65 +45,11 @@ class _Coroutine(_Proxy):
     """Wrapper for coroutine function """
 
     def __init__(self, func):
-        self._response = None
         self._obj = func
-        self._state = None
-        self._current_future_object = None
 
-    def invoke(self, request, response):
-        self._state = 1
-        self._response = response
-        Chain([lambda: self._obj(request, self._response), self.on_error])
-
-    def on_error(self, res):
-        try:
-            res.get()
-        except ChokeEvent:
-            pass
-        except StopIteration:
-            pass
-        except Exception as err:
-            self._logger.error(repr(err), exc_info=True)
-            traceback.print_stack()
-            if not self._response.closed:
-                self._response.error(1, "Error in event '%s' handler %s" %
-                                     (self._response.event,
-                                      str(err)))
-        finally:
-            if not self._response.closed:
-                print("Handler for %s didn't close response stream" % self._response.event)
-
-    def close(self):
-        self._state = None
-
-# class _Function(_Proxy):
-#     """Wrapper for function object"""
-
-#     def __init__(self, func):
-#         self._state = None
-#         self._func = func
-
-#     def invoke(self, request, stream):
-#         self._state = 1
-#         self._response = stream
-#         self._request = request
-#         try:
-#             self._func(self._request, self._response)
-#         except Exception as err:
-#             self._logger.error("Caught exception in invoke(): %s" % str(err))
-#             traceback.print_stack()
-#             raise
-
-#     def push(self, chunk):
-#         try:
-#             self._func(chunk, self._response)
-#         except Exception as err:
-#             self._logger.error("Caught exception in push(): %s" % str(err))
-#             traceback.print_stack()
-#             raise
-
-#     def close(self):
-#         self._state = None
+    def invoke(self, request, response, loop):
+        # make it threadsafe throug
+        loop.call_soon_threadsafe(asyncio.async, self._obj(request, response))
 
 
 def type_traits(func_or_generator):

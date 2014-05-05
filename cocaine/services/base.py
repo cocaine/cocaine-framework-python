@@ -84,11 +84,11 @@ class BaseService(object):
 
         # replace with constants and message.initializer
         if msg.id == RPC.CHUNK:
-            asyncio.async(stream.push(msgpack.unpackb(msg.data)))
+            stream.push(msgpack.unpackb(msg.data))
         elif msg.id == RPC.CHOKE:
-            asyncio.async(stream.done())
+            stream.done()
         elif msg.id == RPC.ERROR:
-            asyncio.async(stream.error(msg.errno, msg.reason))
+            stream.error(msg.errno, msg.reason)
 
     def on_failure(self, exc):
         log.warn("Disconnected %s", exc)
