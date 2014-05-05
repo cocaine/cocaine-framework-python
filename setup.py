@@ -53,7 +53,7 @@ setup(
         "cocaine.services",
         "cocaine.testing",
     ],
-    install_requires=["msgpack_python"],
+    install_requires=["msgpack_python", "trollius"],
     tests_require=["mockito"],
     test_suite="unittest.TestCase",
     classifiers=[
