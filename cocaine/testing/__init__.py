@@ -1,33 +1,20 @@
-import contextlib
-import functools
-
-from ..concurrent import Deferred
-
-__author__ = 'Evgeny Safronov <division494@gmail.com>'
-
-
-@contextlib.contextmanager
-def trigger_check(self):
-    class Trigger(object):
-        def __init__(self):
-            self.flag = False
-
-        def toggle(self):
-            self.flag = True
-
-        def __nonzero__(self):
-            return self.flag
-
-    trigger = Trigger()
-    try:
-        yield trigger
-    finally:
-        self.assertTrue(trigger, 'trigger is not triggered')
-
-
-class DeferredMock(Deferred):
-    def __init__(self, pending, io_loop):
-        super(DeferredMock, self).__init__()
-        for value in pending:
-            func = self.error if isinstance(value, Exception) else self.trigger
-            io_loop.add_callback(functools.partial(func, value))
+#
+#    Copyright (c) 2014+ Anton Tyurin <noxiouz@yandex.ru>
+#    Copyright (c) 2014+ Evgeny Safronov <division494@gmail.com>
+#    Copyright (c) 2011-2014 Other contributors as noted in the AUTHORS file.
+#
+#    This file is part of Cocaine.
+#
+#    Cocaine is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU Lesser General Public License as published
+#    by the Free Software Foundation; either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Cocaine is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#    GNU Lesser General Public License for more details.
+#
+#    You should have received a copy of the GNU Lesser General Public License
+#    along with this program. If not, see <http://www.gnu.org/licenses/>.
+#

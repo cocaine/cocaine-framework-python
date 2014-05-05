@@ -20,6 +20,37 @@
 #
 
 
-from .protocol import CocaineProtocol
+import asyncio
 
-__all__ = ["CocaineProtocol"]
+import msgpack
+
+
+class CocaineProtocol(asyncio.Protocol):
+    def __init__(self, on_chunk, on_failure):
+        self.buffer = msgpack.Unpacker()
+        self.transport = None
+        self.on_chunk = on_chunk
+        self.on_failure = on_failure
+
+    def connected(self):
+        return self.transport is not None
+
+    def connection_made(self, transport):
+        self.transport = transport
+
+    def data_received(self, data):
+        # Replace with MixIn
+        self.buffer.feed(data)
+        for chunk in self.buffer:
+            self.on_chunk(chunk)
+
+    def connection_lost(self, exc):
+        self.transport = None
+        self.on_failure(exc)
+
+    def write(self, data):
+        self.transport.write(data)
+
+    @staticmethod
+    def factory(on_chunk, on_failure):
+        return lambda: CocaineProtocol(on_chunk, on_failure)

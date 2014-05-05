@@ -21,6 +21,7 @@
 
 import logging
 import sys
+import traceback
 
 import asyncio
 
@@ -28,8 +29,10 @@ from cocaine.asio.message import RPC
 from cocaine.asio.message import Message
 from cocaine.asio.utils import Timer
 from cocaine.asio import CocaineProtocol
+from cocaine.futures import Stream
 
 from .sandbox import Sandbox
+from .response import ResponseStream
 
 DEFAULT_HEARTBEAT_TIMEOUT = 20
 DEFAULT_DISOWN_TIMEOUT = 5
@@ -43,19 +46,21 @@ class Worker(object):
     def __init__(self, disown_timeout=DEFAULT_DISOWN_TIMEOUT,
                  heartbeat_timeout=DEFAULT_HEARTBEAT_TIMEOUT,
                  loop=None, **kwargs):
+        if heartbeat_timeout < disown_timeout:
+            raise ValueError("heartbeat timeout must be greater then disown")
         self.loop = loop or asyncio.get_event_loop()
 
         self.disown_timer = Timer(self.on_disown,
                                   disown_timeout, self.loop)
 
-        self.heartbeat_timer = Timer(self.on_heartbeat,
+        self.heartbeat_timer = Timer(self.on_heartbeat_timer,
                                      heartbeat_timeout, self.loop)
 
         self._sandbox = Sandbox()
         self._dispatcher = {
-            # RPC.HEARTBEAT: self._dispatch_heartbeat,
-            # RPC.TERMINATE: self._dispatch_terminate,
-            # RPC.INVOKE: self._dispatch_invoke,
+            RPC.HEARTBEAT: self._dispatch_heartbeat,
+            RPC.TERMINATE: self._dispatch_terminate,
+            RPC.INVOKE: self._dispatch_invoke,
             # RPC.CHUNK: self._dispatch_chunk,
             # RPC.ERROR: self._dispatch_error,
             # RPC.CHOKE: self._dispatch_choke
@@ -67,27 +72,35 @@ class Worker(object):
             self.uuid = kwargs.get("uuid") or sys.argv[sys.argv.index("--uuid") + 1]
             self.endpoint = kwargs.get("endpoint") or sys.argv[sys.argv.index("--endpoint") + 1]
         except (ValueError, IndexError) as err:
-            raise Exception("Wrong commandline args %s" % err)
+            raise Exception("wrong commandline args %s" % err)
 
-        self._sessiong = {}
+        self.sessions = {}
         # protocol
         self.pr = None
 
+        # avoid unnecessary dublicate packing of message
+        self._heartbeat_msg = Message(RPC.HEARTBEAT, 0).pack()
+
+    def async_connect(self):
         proto_factory = CocaineProtocol.factory(self.on_message,
                                                 self.on_failure)
 
         @asyncio.coroutine
         def on_connect():
-            log.debug("Connected to %s", self.endpoint)
+            log.debug("connecting to %s", self.endpoint)
             try:
-                self.pr = yield self.loop.create_unix_connection(proto_factory,
-                                                                 self.endpoint)
-                log.debug("Connected to %s", self.endpoint)
-                return
+                _, self.pr = yield self.loop.create_unix_connection(proto_factory,
+                                                                    self.endpoint)
+                log.debug("connected to %s", self.endpoint)
             except asyncio.FileNotFoundError as err:
-                log.error("Unable to connect to UNIX socket '%s'. No such file.", self.endpoint)
+                log.error("unable to connect to UNIX socket '%s'. No such file.",
+                          self.endpoint)
             except Exception as err:
-                log.error("Unable to connect to '%s' %s", self.endpoint, err)
+                log.error("unable to connect to '%s' %s", self.endpoint, err)
+            else:
+                self._send_handshake()
+                self._send_heartbeat()
+                return
             self.on_failure()
 
         asyncio.async(on_connect(), self.loop)
@@ -99,6 +112,11 @@ class Worker(object):
         for event, handler in binds.iteritems():
             self.on(event, handler)
 
+        # schedule connection establishment
+        self.async_connect()
+        # start heartbeat timer
+        self.heartbeat_timer.start()
+
         if not self.loop.is_running():
             self.loop.run_forever()
 
@@ -106,15 +124,15 @@ class Worker(object):
         self._sandbox.on(event, callback)
 
     # Events
-    # healtmonitoring events
-    def on_heartbeat(self):
+    # healthmonitoring events
+    def on_heartbeat_timer(self):
         self._send_heartbeat()
 
     def on_disown(self):
         try:
-            log.error("Disowned")
+            log.error("disowned")
         finally:
-            self.loop.stop()
+            self._stop()
 
     # General dispathc method
     def on_message(self, args):
@@ -122,11 +140,58 @@ class Worker(object):
         message = Message.initialize(args)
         callback = self._dispatcher.get(message.id)
         if callback is None:
-            raise Exception("Unknown message type %s" % str(message))
+            raise Exception("unknown message type %s" % str(message))
 
         callback(message)
 
+    def _dispatch_heartbeat(self, _):
+        log.debug("heartbeat has been received. Stop disown timer")
+        self.disown_timer.stop()
+
+    def _dispatch_terminate(self, msg):
+        log.debug("terminate has been received %s, %s" % (msg.reason,
+                                                          msg.message))
+        self.pr.write(Message(RPC.TERMINATE, 0,
+                              msg.reason, msg.message).pack())
+        self._stop()
+
+    def _dispatch_invoke(self, msg):
+        log.debug("invoke has been received %s", msg)
+        request = Stream()
+        response = ResponseStream(msg.session, self, msg.event)
+        try:
+            self._sandbox.invoke(msg.event, request, response)
+            self.sessions[msg.session] = request
+        except (ImportError, SyntaxError) as err:
+            response.error(2, "unrecoverable error: %s " % str(err))
+            self.terminate(1, "Bad source code")
+        except Exception as err:
+            log.error("On invoke error: %s" % err)
+            traceback.print_stack()
+            response.error(1, "Invocation error: %s" % err)
+
     # On disconnection callback
     def on_failure(self, *args):
-        log.error("on_failure")
+        log.error("connection has been lost")
         self.on_disown()
+
+    # Private:
+    def _send_handshake(self):
+        self.pr.write(Message(RPC.HANDSHAKE, 0, self.uuid).pack())
+
+    def _send_heartbeat(self):
+        self.disown_timer.start()
+        log.debug("heartbeat has been sent. Start disown timer")
+        self.pr.write(self._heartbeat_msg)
+
+    def send_choke(self, session):
+        self.pr.write(Message(RPC.CHOKE, session).pack())
+
+    def send_chunk(self, session, data):
+        self.pr.write(Message(RPC.CHUNK, session, data).pack())
+
+    def send_error(self, session, code, msg):
+        self.pr.write(Message(RPC.ERROR, session, code, msg).pack())
+
+    def _stop(self):
+        self.loop.stop()

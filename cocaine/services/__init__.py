@@ -1,12 +1,13 @@
 #
-#    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
-#    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
+#    Copyright (c) 2014+ Anton Tyurin <noxiouz@yandex.ru>
+#    Copyright (c) 2014+ Evgeny Safronov <division494@gmail.com>
+#    Copyright (c) 2011-2014 Other contributors as noted in the AUTHORS file.
 #
 #    This file is part of Cocaine.
 #
 #    Cocaine is free software; you can redistribute it and/or modify
-#    it under the terms of the GNU Lesser General Public License as published by
-#    the Free Software Foundation; either version 3 of the License, or
+#    it under the terms of the GNU Lesser General Public License as published
+#    by the Free Software Foundation; either version 3 of the License, or
 #    (at your option) any later version.
 #
 #    Cocaine is distributed in the hope that it will be useful,
@@ -18,8 +19,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .service import Service
-from .locator import Locator
 
-__all__ = ['Service', 'Locator']
+from .base import Service
 
+__all__ = ["Service"]

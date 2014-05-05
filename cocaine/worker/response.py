@@ -19,5 +19,38 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-# This is a namespace package
-__import__('pkg_resources').declare_namespace(__name__)
+import traceback
+
+import msgpack
+
+
+class ResponseStream(object):
+    def __init__(self, session, worker, event_name=""):
+        self._m_state = 1
+        self.worker = worker
+        self.session = session
+        self.event = event_name
+
+    def write(self, chunk):
+        chunk = msgpack.packb(chunk)
+        if self._m_state is not None:
+            self.worker.send_chunk(self.session, chunk)
+            return
+        traceback.print_stack()
+
+    def close(self):
+        if self._m_state is not None:
+            self.worker.send_choke(self.session)
+            self._m_state = None
+            return
+        traceback.print_stack()
+
+    def error(self, code, message):
+        if self._m_state is not None:
+            self.worker.send_error(self.session, code, message)
+            self.close()
+
+    @property
+    def closed(self):
+        return self._m_state is None
+
