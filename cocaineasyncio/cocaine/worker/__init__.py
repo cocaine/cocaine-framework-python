@@ -19,5 +19,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-# This is a namespace package
-__import__('pkg_resources').declare_namespace(__name__)
+
+from .worker import Worker
+
+__all__ = ["Worker"]

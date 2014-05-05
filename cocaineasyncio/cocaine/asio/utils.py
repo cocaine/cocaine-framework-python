@@ -42,6 +42,7 @@ class Timer(object):
     def stop(self):
         if self._handler is not None:
             self._handler.cancel()
+            self._handler = None
 
     def schedule_next(self):
         self._handler = self.loop.call_later(self.period,

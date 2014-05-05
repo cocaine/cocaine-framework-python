@@ -18,43 +18,40 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+import logging
 
-import asyncio
+# from ._wrappers import default
 
-
-class ChokeEvent(Exception):
-    pass
-
-
-class ServiceError(Exception):
-    def __init__(self, errnumber, reason):
-        self.errno = errnumber
-        self.reason = reason
-        super(Exception, self).__init__("%s %s" % (self.errno, self.reason))
+log = logging.getLogger("asyncio")
+log.setLevel(logging.INFO)
 
 
-class Stream(object):
+def default(f):
+    print "DEFAULT"
+
+
+class Sandbox(object):
     def __init__(self):
-        self._queue = asyncio.Queue()
-        self._done = False
+        self._events = {}
 
-    @asyncio.coroutine
-    def get(self, timeout=0):
-        if timeout > 0:
-            res = yield asyncio.wait_for(self._queue.get(), timeout)
+    def on(self, event, function):
+        try:
+            closure = function()
+        except Exception:
+            closure = default(function)()
+            if hasattr(closure, '_wrapped'):
+                function = default(function)
         else:
-            res = yield self._queue.get()
+            if not hasattr(closure, '_wrapped'):
+                function = default(function)
+        self._events[event] = function
 
-        if isinstance(res, Exception):
-            raise res
+    def invoke(self, event, request, response):
+        log.debug('invoking "%s" event', event)
+        try:
+            handler = self._events[event]
+        except KeyError:
+            log.warn('there is no handler for event %s', event)
+            response.error(-100, 'there is no handler for event %s', event)
         else:
-            raise asyncio.Return(res)
-
-    def push(self, item):
-        return self._queue.put(item)
-
-    def done(self):
-        return self._queue.put(ChokeEvent())
-
-    def error(self, errnumber, reason):
-        return self._queue.put(ServiceError(errnumber, reason))
+            handler().invoke(request, response)

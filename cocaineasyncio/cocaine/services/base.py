@@ -25,7 +25,7 @@ import logging
 
 import msgpack
 
-from cocaine.futures import Deffered
+from cocaine.futures import Stream
 from cocaine.asio.protocol import CocaineProtocol
 
 logging.basicConfig()
@@ -34,17 +34,16 @@ log.setLevel(logging.INFO)
 
 
 class BaseService(object):
-    _state_lock = asyncio.Lock()
-
     def __init__(self, host='localhost', port=10053, loop=None):
         self.loop = loop or asyncio.get_event_loop()
+        self._state_lock = asyncio.Lock()
         self.host = host
         self.port = port
         # protocol
         self.pr = None
         # should I add connection epoch
         # Epoch is usefull when on_failure is called
-        self.sessions = dict()
+        self.sessions = {}
         self.counter = 0
 
         self.api = {}
@@ -76,25 +75,24 @@ class BaseService(object):
         msg_type, session, data = result
         log.debug("type %d, session %d, chunk %s", msg_type, session, data)
 
-        deffered = self.sessions.get(session)
-        if deffered is None:
+        stream = self.sessions.get(session)
+        if stream is None:
             log.error("Unknown session numder %d" % session)
             return
 
         # replace with constants and message.initializer
         if msg_type == 4:  # RPC CHUNK
-            asyncio.async(deffered.push(msgpack.unpackb(data[0])))
+            asyncio.async(stream.push(msgpack.unpackb(data[0])))
         elif msg_type == 6:  # RPC CHOKE
-            asyncio.async(deffered.done())
+            asyncio.async(stream.done())
         elif msg_type == 5:  # RPC ERROR
-            asyncio.async(deffered.error(*data))
+            asyncio.async(stream.error(*data))
 
     def on_failure(self, exc):
         log.warn("Disconnected %s", exc)
 
-        for deffered in self.sessions.itervalues():
-            log.error("Send DisconnectionError into deffered here!!!")
-            deffered.error(-110, "DisconnectionError")
+        for stream in self.sessions.itervalues():
+            stream.error(-110, "DisconnectionError")
 
     @asyncio.coroutine
     def _invoke(self, method, *args):
@@ -110,9 +108,9 @@ class BaseService(object):
         # send message
         self.pr.write(counter, method_id, *args)
 
-        deffered = Deffered()
-        self.sessions[counter] = deffered
-        raise asyncio.Return(deffered)
+        stream = Stream()
+        self.sessions[counter] = stream
+        raise asyncio.Return(stream)
 
 
 class Locator(BaseService):
@@ -120,7 +118,7 @@ class Locator(BaseService):
         super(Locator, self).__init__(host="localhost", port=10053, loop=None)
         self.api = {"resolve": 0,
                     "update": 1,
-                    "stats": 2, }
+                    "stats": 2}
 
     @asyncio.coroutine
     def resolve(self, name):
@@ -148,7 +146,6 @@ class Service(BaseService):
             return self._invoke(name, *args)
         return on_getattr
 
-    # bad behavior. Should be rewritten
     @asyncio.coroutine
     def connect(self):
         if self.connected():
