@@ -159,6 +159,11 @@ class Worker(object):
 
         callback(message)
 
+    def terminate(self, code, reason):
+        self.pr.write(Message(RPC.TERMINATE, 0,
+                              code, reason).pack())
+        self._stop()
+
     def _dispatch_heartbeat(self, _):
         log.debug("heartbeat has been received. Stop disown timer")
         self.disown_timer.stop()
@@ -166,9 +171,7 @@ class Worker(object):
     def _dispatch_terminate(self, msg):
         log.debug("terminate has been received %s, %s" % (msg.reason,
                                                           msg.message))
-        self.pr.write(Message(RPC.TERMINATE, 0,
-                              msg.reason, msg.message).pack())
-        self._stop()
+        self.terminate(msg.reason, msg.message)
 
     def _dispatch_invoke(self, msg):
         log.debug("invoke has been received %s", msg)
