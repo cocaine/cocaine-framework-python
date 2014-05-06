@@ -32,9 +32,8 @@ from ..asio.protocol import CocaineProtocol
 from ..asio.message import RPC, Message
 from ..asio.rpc import API
 
-logging.basicConfig()
-log = logging.getLogger("asyncio")
-log.setLevel(logging.INFO)
+
+log = logging.getLogger('cocaine.service')
 
 
 class BaseService(object):
@@ -52,42 +51,39 @@ class BaseService(object):
         self.counter = itertools.count()
 
         self.api = {}
+        self._extra = {'service': self.name, 'id': id(self)}
 
     def connected(self):
         return self.pr and self.pr.connected()
 
     @asyncio.coroutine
     def connect(self):
-        log.debug("trying to connect to the '%s' service ...", self.name)
+        log.debug("checking if service connected", extra=self._extra)
         # Double checked locking
         if self.connected():
-            log.debug("already connected")
+            log.debug("already connected", extra=self._extra)
             return
 
-        log.debug("disconnected")
         with (yield self._state_lock):
             if self.connected():
-                log.debug("already connected")
+                log.debug("already connected", extra=self._extra)
                 return
 
-            log.debug("connecting to the '%s' service ...", self.name)
-            proto_factory = CocaineProtocol.factory(self.on_message,
-                                                    self.on_failure)
-
-            _, self.pr = yield self.loop.create_connection(proto_factory,
-                                                           self.host,
-                                                           self.port)
+            log.debug("connecting ...", extra=self._extra)
+            proto_factory = CocaineProtocol.factory(self.on_message, self.on_failure)
+            _, self.pr = yield self.loop.create_connection(proto_factory, self.host, self.port)
+            log.debug("successfully connected: %s", [self.host, self.port], extra=self._extra)
 
     def on_message(self, unpacked_data):
         msg = Message.initialize(unpacked_data)
-        log.debug("received message: %s", msg)
+        log.debug("received message: %s", msg, extra=self._extra)
 
         stream = self.sessions.get(msg.session)
         if stream is None:
-            log.error("unknown session id %d", msg.session)
+            log.error("unknown session id %d", msg.session, extra=self._extra)
             return
 
-        #TODO: Replace with constants and message.initializer
+        # TODO: Replace with constants and message.initializer
         if msg.id == RPC.CHUNK:
             stream.push(msgpack.unpackb(msg.data))
         elif msg.id == RPC.CHOKE:
@@ -96,22 +92,22 @@ class BaseService(object):
             stream.error(msg.errno, msg.reason)
 
     def on_failure(self, exc):
-        log.warn("service %s is disconnected %s", self.name, exc)
+        log.warn("service is disconnected: %s", exc, extra=self._extra)
 
         for stream in self.sessions.itervalues():
-            stream.error(CocaineErrno.ESRVDISCON,
-                         "service %s is disconnected" % self.name)
+            stream.error(CocaineErrno.ESRVDISCON, "service %s is disconnected" % self.name)
 
     @asyncio.coroutine
     def _invoke(self, method, *args):
+        log.debug("invoking '%s' method with args: %s", method, args, extra=self._extra)
         yield self.connect()
         method_id = self.api.get(method)
 
         if method_id is None:
-            raise Exception("Method %s is not supported" % method)
+            raise Exception("Method '%s' is not supported" % method)
 
-        # send message
         counter = self.counter.next()
+        log.debug('sending message: %s', [method_id, counter, args], extra=self._extra)
         self.pr.write(msgpack.packb([method_id, counter, args]))
 
         stream = Stream()
@@ -119,7 +115,7 @@ class BaseService(object):
         raise asyncio.Return(stream)
 
     def __getattr__(self, name):
-        log.debug("Method %s has been called", name)
+        log.debug("invoking generic method: '%s'", name, extra=self._extra)
 
         def on_getattr(*args):
             return self._invoke(name, *args)
@@ -128,14 +124,12 @@ class BaseService(object):
 
 class Locator(BaseService):
     def __init__(self, host="localhost", port=10053, loop=None):
-        super(Locator, self).__init__(name="locator", host=host,
-                                      port=port, loop=loop)
+        super(Locator, self).__init__(name="locator", host=host, port=port, loop=loop)
         self.api = API.Locator
 
 
 class Service(BaseService):
-    def __init__(self, name, host="localhost", port=10053,
-                 loop=None, version=0):
+    def __init__(self, name, host="localhost", port=10053, version=0, loop=None):
         super(Service, self).__init__(name=name, loop=loop)
         self.locator = Locator(host=host, port=port, loop=loop)
         self.api = {}
@@ -145,16 +139,18 @@ class Service(BaseService):
 
     @asyncio.coroutine
     def connect(self):
+        log.debug("%s %s %s", self.connected(), self.pr, self.pr.connected() if self.pr else None, extra=self._extra)
+        log.debug("checking if service connected", extra=self._extra)
         if self.connected():
-            log.debug("%s %d connected", self.name, id(self))
+            log.debug("already connected", extra=self._extra)
             return
 
-        log.info("%s %d is connecting", self.name, id(self))
-        f = yield self.locator.resolve(self.name)
-        service_description = yield f.get()
+        log.info("connecting ...", extra=self._extra)
+        stream = yield self.locator.resolve(self.name)
+        (self.host, self.port), version, self.api = yield stream.get()
+        log.info("successfully connected: %s", [self.host, self.port], extra=self._extra)
 
-        (self.host, self.port), version, self.api = service_description
-        # version compatability should be checked here
+        # Version compatibility should be checked here.
         if self.version == 0 or version == self.version:
             self.api = dict((v, k) for k, v in self.api.iteritems())
         else:
