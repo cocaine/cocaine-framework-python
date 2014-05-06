@@ -25,9 +25,10 @@ import logging
 
 import msgpack
 
-from cocaine.concurrent import Stream
-from cocaine.asio.protocol import CocaineProtocol
-from cocaine.asio.message import RPC, Message
+from ..concurrent import Stream
+from ..asio.protocol import CocaineProtocol
+from ..asio.message import RPC, Message
+from ..asio.rpc import API
 
 logging.basicConfig()
 log = logging.getLogger("asyncio")
@@ -114,39 +115,29 @@ class BaseService(object):
         self.sessions[counter] = stream
         raise asyncio.Return(stream)
 
-
-class Locator(BaseService):
-    def __init__(self, host="localhost", port=10053, loop=None):
-        super(Locator, self).__init__(host="localhost", port=10053, loop=None)
-        self.api = {"resolve": 0,
-                    "update": 1,
-                    "stats": 2}
-
-    @asyncio.coroutine
-    def resolve(self, name):
-        return self._invoke("resolve", name)
-
-    @asyncio.coroutine
-    def stats(self, name):
-        return self._invoke("stats", name)
-
-
-class Service(BaseService):
-    def __init__(self, name, host="localhost", port=10053, loop=None):
-        super(Service, self).__init__(loop=None)
-        self.locator = Locator(host=host, port=port, loop=loop)
-        self.name = name
-        self.api = {}
-        self.host = None
-        self.port = None
-        self.version = -1
-
     def __getattr__(self, name):
         log.debug("Method %s has been called" % name)
 
         def on_getattr(*args):
             return self._invoke(name, *args)
         return on_getattr
+
+
+class Locator(BaseService):
+    def __init__(self, host="localhost", port=10053, loop=None):
+        super(Locator, self).__init__(host=host, port=port, loop=loop)
+        self.api = API.Locator
+
+
+class Service(BaseService):
+    def __init__(self, name, host="localhost", port=10053, loop=None):
+        super(Service, self).__init__(loop=loop)
+        self.locator = Locator(host=host, port=port, loop=loop)
+        self.name = name
+        self.api = {}
+        self.host = None
+        self.port = None
+        self.version = -1
 
     @asyncio.coroutine
     def connect(self):

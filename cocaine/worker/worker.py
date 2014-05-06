@@ -25,11 +25,10 @@ import traceback
 
 import asyncio
 
-from cocaine.asio.message import RPC
-from cocaine.asio.message import Message
-from cocaine.asio.utils import Timer
-from cocaine.asio import CocaineProtocol
-
+from ..asio.message import RPC
+from ..asio.message import Message
+from ..asio.utils import Timer
+from ..asio import CocaineProtocol
 from ._wrappers import default
 from .response import ResponseStream
 from .request import RequestStream
