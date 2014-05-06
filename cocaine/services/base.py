@@ -43,10 +43,10 @@ class BaseService(object):
         self.host = host
         self.port = port
         self.name = name
-        # protocol
+        # Protocol
         self.pr = None
-        # should I add connection epoch
-        # Epoch is usefull when on_failure is called
+        # Should I add connection epoch?
+        # Epoch is useful when on_failure is called
         self.sessions = {}
         self.counter = 0
 
@@ -57,17 +57,19 @@ class BaseService(object):
 
     @asyncio.coroutine
     def connect(self):
-        # double state check
+        log.debug("trying to connect to the '%s' service ...", self.name)
+        # Double checked locking
         if self.connected():
-            log.debug("Connected")
+            log.debug("already connected")
             return
 
-        log.debug("Disconnected")
+        log.debug("disconnected")
         with (yield self._state_lock):
             if self.connected():
+                log.debug("already connected")
                 return
 
-            log.debug("Still disconnected")
+            log.debug("connecting to the '%s' service ...", self.name)
             proto_factory = CocaineProtocol.factory(self.on_message,
                                                     self.on_failure)
 
@@ -77,15 +79,14 @@ class BaseService(object):
 
     def on_message(self, unpacked_data):
         msg = Message.initialize(unpacked_data)
-        log.debug("type %d, session %d, chunk %s",
-                  msg.id, msg.session, msg.args)
+        log.debug("received message: %s", msg)
 
         stream = self.sessions.get(msg.session)
         if stream is None:
-            log.error("Unknown session numder %d", msg.session)
+            log.error("unknown session id %d", msg.session)
             return
 
-        # replace with constants and message.initializer
+        #TODO: Replace with constants and message.initializer
         if msg.id == RPC.CHUNK:
             stream.push(msgpack.unpackb(msg.data))
         elif msg.id == RPC.CHOKE:
