@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: Anton Tyurin <noxiouz@yandex-team.ru>
 Build-Depends: cdbs, debhelper (>= 7.0.13), 
  python, 
- python-central,
+ python-central | dh-python,
  python-setuptools,
 Standards-Version: 3.9.1
 Vcs-Git: git://github.com/cocaine/cocaine-framework-python.git
