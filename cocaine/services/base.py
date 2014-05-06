@@ -80,7 +80,7 @@ class BaseService(object):
 
         stream = self.sessions.get(msg.session)
         if stream is None:
-            log.error("Unknown session numder %d" % msg.session)
+            log.error("Unknown session numder %d", msg.session)
             return
 
         # replace with constants and message.initializer
@@ -116,7 +116,7 @@ class BaseService(object):
         raise asyncio.Return(stream)
 
     def __getattr__(self, name):
-        log.debug("Method %s has been called" % name)
+        log.debug("Method %s has been called", name)
 
         def on_getattr(*args):
             return self._invoke(name, *args)

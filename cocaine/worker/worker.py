@@ -168,8 +168,7 @@ class Worker(object):
         self.disown_timer.stop()
 
     def _dispatch_terminate(self, msg):
-        log.debug("terminate has been received %s, %s" % (msg.reason,
-                                                          msg.message))
+        log.debug("terminate has been received %s %s", msg.reason, msg.message)
         self.terminate(msg.reason, msg.message)
 
     def _dispatch_invoke(self, msg):
@@ -182,30 +181,30 @@ class Worker(object):
                 event_handler = event_closure()
                 event_handler.invoke(request, response, self.loop)
             else:
-                self._logger.warn("there is no handler for event %s" % msg.event)
-                response.error(-100, "there is no handler for event %s" % msg.event)
+                self._logger.warn("there is no handler for event %s", msg.event)
+                response.error(-100, "there is no handler for event %s", msg.event)
 
             self.sessions[msg.session] = request
         except (ImportError, SyntaxError) as err:
             response.error(2, "unrecoverable error: %s " % str(err))
             self.terminate(1, "Bad source code")
         except Exception as err:
-            log.error("On invoke error: %s" % err)
+            log.error("On invoke error: %s", err)
             traceback.print_stack()
             response.error(1, "Invocation error: %s" % err)
 
     def _dispatch_chunk(self, msg):
-        log.debug("Receive chunk: %d" % msg.session)
+        log.debug("Receive chunk: %d", msg.session)
         try:
             _session = self.sessions[msg.session]
             _session.push(msg.data)
         except Exception as err:
-            log.error("On push error: %s" % str(err))
+            log.error("On push error: %s", err)
             # self.terminate(1, "Push error: %s" % str(err))
             return
 
     def _dispatch_choke(self, msg):
-        log.debug("Receive choke: %d" % msg.session)
+        log.debug("Receive choke: %d", msg.session)
         _session = self.sessions.get(msg.session, None)
         if _session is not None:
             _session.done()
