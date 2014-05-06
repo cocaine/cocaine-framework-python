@@ -139,7 +139,6 @@ class Service(BaseService):
 
     @asyncio.coroutine
     def connect(self):
-        log.debug("%s %s %s", self.connected(), self.pr, self.pr.connected() if self.pr else None, extra=self._extra)
         log.debug("checking if service connected", extra=self._extra)
         if self.connected():
             log.debug("already connected", extra=self._extra)
