@@ -29,6 +29,7 @@ from ..asio.message import RPC
 from ..asio.message import Message
 from ..asio.utils import Timer
 from ..asio import CocaineProtocol
+from ..common import CocaineErrno
 from ._wrappers import default
 from .response import ResponseStream
 from .request import RequestStream
@@ -47,6 +48,7 @@ class Worker(object):
                  loop=None, **kwargs):
         if heartbeat_timeout < disown_timeout:
             raise ValueError("heartbeat timeout must be greater then disown")
+
         self.loop = loop or asyncio.get_event_loop()
 
         self.disown_timer = Timer(self.on_disown,
@@ -127,14 +129,13 @@ class Worker(object):
             # Try to construct handler.
             closure = event_handler()
         except Exception:
-            # If this callable object is not our wrapper - may raise Exception
             closure = default(event_handler)()
             if hasattr(closure, "_wrapped"):
                 event_handler = default(event_handler)
         else:
             if not hasattr(closure, "_wrapped"):
                 event_handler = default(event_handler)
-        log.debug("Attach handler for %s", event_name)
+        log.debug("attach handler for event %s", event_name)
         self._events[event_name] = event_handler
 
     # Events
@@ -176,36 +177,40 @@ class Worker(object):
         request = RequestStream()
         response = ResponseStream(msg.session, self, msg.event)
         try:
-            event_closure = self._events.get(msg.event, None)
+            event_closure = self._events.get(msg.event)
             if event_closure is not None:
                 event_handler = event_closure()
                 event_handler.invoke(request, response, self.loop)
+                self.sessions[msg.session] = request
             else:
-                self._logger.warn("there is no handler for event %s", msg.event)
-                response.error(-100, "there is no handler for event %s", msg.event)
-
-            self.sessions[msg.session] = request
+                self._logger.warn("there is no handler for event %s",
+                                  msg.event)
+                response.error(CocaineErrno.ENOHANDLER,
+                               "there is no handler for event %s" % msg.event)
         except (ImportError, SyntaxError) as err:
-            response.error(2, "unrecoverable error: %s " % str(err))
-            self.terminate(1, "Bad source code")
+            response.error(CocaineErrno.EBADSOURCE,
+                           "source is broken %s" % str(err))
+            self.terminate(CocaineErrno.EBADSOURCE,
+                           "source is broken")
         except Exception as err:
-            log.error("On invoke error: %s", err)
+            log.error("invocation failed %s", err)
             traceback.print_stack()
-            response.error(1, "Invocation error: %s" % err)
+            response.error(CocaineErrno.EINVFAILED,
+                           "invocation failed %s" % err)
 
     def _dispatch_chunk(self, msg):
-        log.debug("Receive chunk: %d", msg.session)
+        log.debug("chunk has been received %d", msg.session)
         try:
             _session = self.sessions[msg.session]
             _session.push(msg.data)
         except Exception as err:
-            log.error("On push error: %s", err)
+            log.error("pushing error %s", err)
             # self.terminate(1, "Push error: %s" % str(err))
             return
 
     def _dispatch_choke(self, msg):
-        log.debug("Receive choke: %d", msg.session)
-        _session = self.sessions.get(msg.session, None)
+        log.debug("choke has been received %d", msg.session)
+        _session = self.sessions.get(msg.session)
         if _session is not None:
             _session.done()
             self.sessions.pop(msg.session)

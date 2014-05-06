@@ -9,7 +9,7 @@ from cocaine.services import Service
 w = Worker(app="app", uuid="a", endpoint="enp",
            heartbeat_timeout=2, disown_timeout=1)
 
-node = Service("node")
+node = Service("node", version=0)
 
 
 @asyncio.coroutine

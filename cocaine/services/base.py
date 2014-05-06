@@ -26,6 +26,7 @@ import logging
 import msgpack
 
 from ..concurrent import Stream
+from ..common import CocaineErrno
 from ..asio.protocol import CocaineProtocol
 from ..asio.message import RPC, Message
 from ..asio.rpc import API
@@ -36,11 +37,12 @@ log.setLevel(logging.INFO)
 
 
 class BaseService(object):
-    def __init__(self, host='localhost', port=10053, loop=None):
+    def __init__(self, name, host='localhost', port=10053, loop=None):
         self.loop = loop or asyncio.get_event_loop()
         self._state_lock = asyncio.Lock()
         self.host = host
         self.port = port
+        self.name = name
         # protocol
         self.pr = None
         # should I add connection epoch
@@ -92,10 +94,11 @@ class BaseService(object):
             stream.error(msg.errno, msg.reason)
 
     def on_failure(self, exc):
-        log.warn("Disconnected %s", exc)
+        log.warn("service %s is disconnected %s", self.name, exc)
 
         for stream in self.sessions.itervalues():
-            stream.error(-110, "DisconnectionError")
+            stream.error(CocaineErrno.ESRVDISCON,
+                         "service %s is disconnected" % self.name)
 
     @asyncio.coroutine
     def _invoke(self, method, *args):
@@ -125,30 +128,36 @@ class BaseService(object):
 
 class Locator(BaseService):
     def __init__(self, host="localhost", port=10053, loop=None):
-        super(Locator, self).__init__(host=host, port=port, loop=loop)
+        super(Locator, self).__init__(name="locator", host=host,
+                                      port=port, loop=loop)
         self.api = API.Locator
 
 
 class Service(BaseService):
-    def __init__(self, name, host="localhost", port=10053, loop=None):
-        super(Service, self).__init__(loop=loop)
+    def __init__(self, name, host="localhost", port=10053,
+                 loop=None, version=0):
+        super(Service, self).__init__(name=name, loop=loop)
         self.locator = Locator(host=host, port=port, loop=loop)
-        self.name = name
         self.api = {}
         self.host = None
         self.port = None
-        self.version = -1
+        self.version = version
 
     @asyncio.coroutine
     def connect(self):
         if self.connected():
-            log.debug("Connected")
+            log.debug("%s %d connected", self.name, id(self))
             return
 
-        log.info("Connecting")
+        log.info("%s %d is connecting", self.name, id(self))
         f = yield self.locator.resolve(self.name)
         service_description = yield f.get()
-        (self.host, self.port), self.version, self.api = service_description
-        self.api = dict((v, k) for k, v in self.api.iteritems())
 
+        (self.host, self.port), version, self.api = service_description
+        # version compatability should be checked here
+        if self.version == 0 or version == self.version:
+            self.api = dict((v, k) for k, v in self.api.iteritems())
+        else:
+            raise Exception("wrong service `%s` API version %d, %d is needed" %
+                            (self.name, version, self.version))
         yield super(Service, self).connect()
