@@ -21,6 +21,7 @@
 from __future__ import with_statement
 
 import asyncio
+import itertools
 import logging
 
 import msgpack
@@ -48,7 +49,7 @@ class BaseService(object):
         # Should I add connection epoch?
         # Epoch is useful when on_failure is called
         self.sessions = {}
-        self.counter = 0
+        self.counter = itertools.count()
 
         self.api = {}
 
@@ -108,11 +109,9 @@ class BaseService(object):
 
         if method_id is None:
             raise Exception("Method %s is not supported" % method)
-        # make it thread-safe
-        counter = self.counter
-        self.counter += 1
 
         # send message
+        counter = self.counter.next()
         self.pr.write(msgpack.packb([method_id, counter, args]))
 
         stream = Stream()
