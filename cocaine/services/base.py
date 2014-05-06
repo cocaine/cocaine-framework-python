@@ -144,10 +144,10 @@ class Service(BaseService):
             log.debug("already connected", extra=self._extra)
             return
 
-        log.info("connecting ...", extra=self._extra)
+        log.info("resolving ...", extra=self._extra)
         stream = yield self.locator.resolve(self.name)
         (self.host, self.port), version, self.api = yield stream.get()
-        log.info("endpoint, API, version was successfully got", extra=self._extra)
+        log.info("successfully resolved", extra=self._extra)
 
         # Version compatibility should be checked here.
         if self.version == 0 or version == self.version:
