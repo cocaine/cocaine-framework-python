@@ -1,4 +1,11 @@
 #!/usr/bin/make -f
 
+version=$(shell lsb_release -r | cut -f2 | cut -d'.' -f1)
+
+ifeq ($(version),12)
 %:
 	dh $@ --with python2
+else
+include debian/lucid.mk
+endif
+
