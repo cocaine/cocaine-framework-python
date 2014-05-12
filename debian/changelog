@@ -1,3 +1,9 @@
+cocaine-framework-python (0.11.1.4) unstable; urgency=low
+
+  * Update debian/control for wheezy.
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Mon, 12 May 2014 17:53:57 +0400
+
 cocaine-framework-python (0.11.1.3) unstable; urgency=low
 
   * Fix bug with sending an event twice.
