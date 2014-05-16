@@ -1,6 +1,7 @@
 #
-#   Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
-#    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
+#    Copyright (c) 2014+ Anton Tyurin <noxiouz@yandex.ru>
+#    Copyright (c) 2014+ Evgeny Safronov <division494@gmail.com>
+#    Copyright (c) 2011-2014 Other contributors as noted in the AUTHORS file.
 #
 #    This file is part of Cocaine.
 #
@@ -18,16 +19,12 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import logging
-
-from cocaine.logging import LoggerHandler
-
-__all__ = ["core_log"]
-
-core_log = logging.getLogger("cocaine")
-core_log.setLevel(logging.ERROR)
-
-_core_logger_handler = LoggerHandler()
-_core_logger_handler.setLevel(logging.DEBUG)
-
-core_log.addHandler(_core_logger_handler)
+class CocaineErrno:
+    # no handler for requested event
+    ENOHANDLER = 200
+    # syntax error or import error
+    EBADSOURCE = 210
+    # invocation failed
+    EINVFAILED = 212
+    # service is disconnected
+    ESRVDISCON = 220

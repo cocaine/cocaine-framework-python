@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# encoding: utf-8
 #
 #    Copyright (c) 2011-2012 Andrey Sibiryov <me@kobology.ru>
 #    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
@@ -46,13 +45,12 @@ setup(
     packages=[
         "cocaine",
         "cocaine.asio",
-        "cocaine.decorators",
+        "cocaine.concurrent",
+        "cocaine.worker",
         "cocaine.services",
-        "cocaine.futures",
-        "cocaine.logging",
         "cocaine.testing",
     ],
-    install_requires=["msgpack_python", "tornado >= 3.0"],
+    install_requires=["msgpack_python", "trollius"],
     tests_require=["mockito"],
     test_suite="unittest.TestCase",
     classifiers=[

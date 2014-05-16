@@ -1,4 +1,3 @@
-# encoding: utf-8
 #
 #    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
 #    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
@@ -19,23 +18,9 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import posix
-
-import msgpack
-
-from _callablewrappers import proxy_factory
-
-__all__ = ['fs']
-
-
-def fs_request_decorator(obj):
-    def dec(func):
-        def _stat_request_hadler(chunk):
-            return func(posix.stat_result(msgpack.unpackb(chunk)))
-        return _stat_request_hadler
-    obj.push = dec(obj.push)
-    return obj
-
-
-def fs(func):
-    return proxy_factory(func, request_handler=fs_request_decorator)
+class API:
+    Locator = {
+        'resolve': 0,
+        'update': 1,
+        'stats': 2,
+    }

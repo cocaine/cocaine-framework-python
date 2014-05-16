@@ -1,39 +1,41 @@
-# coding=utf-8
-import sys
+from tornado.ioloop import IOLoop
 
-from cocaine.futures.chain import Chain
-import msgpack
+from cocaine import concurrent
 from cocaine.services import Service
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
-def example_SynchronousFetching():
-    for chunk in service.perform_sync('enqueue', 'doIt', 'SomeMessage'):
-        print('example_SynchronousFetching: Response received - {0}'.format(msgpack.loads(chunk)))
+@concurrent.engine
+def pingV0():
+    try:
+        response = yield echo.enqueue('pingV0', 'Whatever.')
+        print(response)
+        assert response == 'Whatever.'
+    except Exception as err:
+        print(repr(err))
+    finally:
+        IOLoop.current().stop()
 
 
-def example_Synchronous():
-    message = service.enqueue('doIt', 'SomeMessage').get()
-    print('example_Synchronous: Response received - {0}'.format(msgpack.loads(message)))
-
-
-def example_AsynchronousYielding():
-    message = yield service.enqueue('doIt', 'SomeMessage')
-    print('example_AsynchronousYielding: Response received - {0}'.format(msgpack.loads(message)))
-
-
-def example_AsynchronousChaining():
-    return service.enqueue('doIt', 'SomeMessage')
+@concurrent.engine
+def pingV1():
+    try:
+        response = [0, 0, 0, 0]
+        channel = echo.enqueue('pingV1')
+        response[0] = yield channel.read()
+        response[1] = yield channel.write('Whatever.')
+        response[2] = yield channel.read()
+        response[3] = yield channel.write('Bye.')
+        print(response)
+        assert response == ['Hi!', 'Whatever.', 'Another message.', 'Bye.']
+    except Exception as err:
+        print(repr(err))
+    finally:
+        IOLoop.current().stop()
 
 
 if __name__ == '__main__':
-    service = Service('Echo')
-    example_SynchronousFetching()
-    example_Synchronous()
-    Chain([example_AsynchronousYielding]).wait()
-    example_AsynchronousChaining()\
-        .then(lambda r: msgpack.loads(r.get()))\
-        .then(lambda r: sys.stdout.write('example_AsynchronousChaining: Response received - {0}\n'.format(r.get())))\
-        .wait()
-    sys.stdout.flush()
+    echo = Service('echo')
+    pingV1()
+    IOLoop.current().start()

@@ -1,5 +1,4 @@
 Framework:
- - back streaming into applications support.
  - drop logger singleton in favor to configurable objects.
  - implement logger pool.
  - implement public locator pool (it's private for services at this moment).

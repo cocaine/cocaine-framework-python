@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # For YaSubbotnik at 15.06.2013
 
-from cocaine.worker import Worker
+from cocaine.server.worker import Worker
 
 W = Worker() # Dispatcher object
 

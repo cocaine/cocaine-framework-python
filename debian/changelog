@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.0.0-alpha) unstable; urgency=low
+
+  * Alpha version.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 12 Nov 2013 18:21:00 +0400
+
 cocaine-framework-python (0.11.1.0) unstable; urgency=low
 
   * Docker uploading/managing support.

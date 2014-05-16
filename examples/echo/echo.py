@@ -1,22 +1,32 @@
 #!/usr/bin/env python
-import msgpack
 
-from cocaine.worker import Worker
-from cocaine.logging import Logger
+from cocaine.server.worker import Worker
+from cocaine.logging.defaults import log
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
 
-log = Logger()
 
-
-def echo(request, response):
+def echoV0(request, response):
     message = yield request.read()
     log.debug('Message received: \'{0}\'. Sending it back ...'.format(message))
-    response.write(msgpack.dumps(message))
+    response.write(message)
     response.close()
 
 
-W = Worker()
-W.run({
-    'ping': echo,
+def echoV1(request, response):
+    response.write('Hi!')
+    message = yield request.read()
+    log.debug('Message received: \'{0}\'. Sending it back ...'.format(message))
+    response.write(message)
+    response.write('Another message.')
+    message = yield request.read()
+    log.debug('Message received: \'{0}\'. Sending it back ...'.format(message))
+    response.write(message)
+    response.close()
+
+
+worker = Worker()
+worker.run({
+    'pingV0': echoV0,
+    'pingV1': echoV1,
 })

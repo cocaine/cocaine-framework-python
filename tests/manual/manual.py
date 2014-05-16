@@ -1,47 +1,16 @@
+#!/usr/bin/env python
 import os
-from cocaine.futures import chain
-import msgpack
 import sys
+from cocaine.protocol import ChokeEvent
+
+import msgpack
+
 from tornado.ioloop import IOLoop
 
-from cocaine.exceptions import ChokeEvent
+from cocaine import concurrent
 from cocaine.services import Service
 
-
 __author__ = 'EvgenySafronov <division494@gmail.com>'
-
-
-def collect_all(future):
-    try:
-        msgpack.loads(future.get())
-    except ChokeEvent:
-        IOLoop.current().stop()
-
-
-def then_api():
-    c = service.enqueue('chunkMe', msgpack.dumps(str(sys.argv[1])))
-    c.then(collect_all)
-    return c
-
-
-@chain.source
-def yield_api():
-    try:
-        chunk = yield service.enqueue('chunkMe', msgpack.dumps(str(sys.argv[1])))
-        chunk = msgpack.loads(chunk)
-        # size = len(chunk)
-        # counter = 0
-        while True:
-            ch = yield
-            chunk = msgpack.loads(ch)
-            # print(ch)
-            # size += len(chunk)
-            # counter += 1
-            # print(counter, len(chunk), size)
-            # if chunk == 'Done':
-            #     break
-    except ChokeEvent:
-        IOLoop.current().stop()
 
 
 if __name__ == '__main__':
@@ -49,10 +18,23 @@ if __name__ == '__main__':
         print('Usage: chunker.py NUMBER_OF_CHUNKS')
         exit(os.EX_USAGE)
 
+    @concurrent.engine
+    def test():
+        deferred = service.enqueue('spam', str(sys.argv[1]))
+        try:
+            while True:
+                chunk = yield deferred
+                if chunk == 'Done':
+                    break
+        except ChokeEvent:
+            pass
+        except Exception as err:
+            print('Error: {0}'.format(err))
+        finally:
+            loop.stop()
+
     service = Service('chunker')
-    try:
-        then_api()
-        # yield_api()
-        IOLoop.current().start()
-    except ChokeEvent:
-        print('Done')
+    df = test()
+    loop = IOLoop.current()
+    loop.start()
+    print('Done')

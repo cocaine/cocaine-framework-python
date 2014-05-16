@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 import msgpack
 
-from cocaine.worker import Worker
-from cocaine.logging import Logger
+from cocaine.server.worker import Worker
 
 __author__ = 'EvgenySafronov <division494@gmail.com>'
-
-log = Logger()
 
 
 def chunker(request, response):
@@ -22,4 +19,4 @@ def chunker(request, response):
     response.close()
 
 W = Worker()
-W.run({'chunkMe': chunker})
+W.run({'spam': chunker})
