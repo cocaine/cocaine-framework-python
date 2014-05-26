@@ -66,7 +66,7 @@ class Worker(object):
             RPC.CHOKE: self._dispatch_choke
         }
 
-        #TBD move into opts
+        # TBD move into opts
         try:
             self.appname = kwargs.get("app") or sys.argv[sys.argv.index("--app") + 1]
             self.uuid = kwargs.get("uuid") or sys.argv[sys.argv.index("--uuid") + 1]

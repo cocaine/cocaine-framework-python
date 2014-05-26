@@ -19,6 +19,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+
 class CocaineErrno:
     # no handler for requested event
     ENOHANDLER = 200

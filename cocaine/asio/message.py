@@ -70,6 +70,7 @@ PROTOCOL = {
     }
 }
 
+
 def _make_packable(m_id, m_session, args):
     def wrapper():
         return msgpack.dumps([m_id, m_session, args])
