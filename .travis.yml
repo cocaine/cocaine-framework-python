@@ -5,6 +5,8 @@ install:
   - "pip install tox"
   - "pip install flake8"
 script: tox
+notifications:
+  slack: cocaine:qDewv6ZVDt0TciQeNdE47GqG
 branches:
   only:
     - master
