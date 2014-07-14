@@ -20,8 +20,18 @@
 
 
 class API:
-    Locator = {
-        'resolve': 0,
-        'update': 1,
-        'stats': 2,
-    }
+    Locator = {0: ['resolve',
+                   {},
+                   {0: ['write', None, {}],
+                    1: ['error', {}, {}],
+                    2: ['close', {}, {}]}],
+               1: ['synchronize',
+                   {},
+                   {0: ['write', None, {}],
+                    1: ['error', {}, {}],
+                    2: ['close', {}, {}]}],
+               2: ['refresh',
+                   {},
+                   {0: ['write', None, {}],
+                    1: ['error', {}, {}],
+                    2: ['close', {}, {}]}]}

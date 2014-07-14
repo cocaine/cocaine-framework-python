@@ -78,7 +78,7 @@ def _make_packable(m_id, m_session, args):
 
 
 class BaseMessage(object):
-    def __init__(self, protocol, id_, session, *args):
+    def __init__(self, protocol, session, id_, *args):
         prototype = protocol[id_]
 
         self.id = prototype['id']
@@ -96,10 +96,10 @@ class BaseMessage(object):
 
 
 class Message(BaseMessage):
-    def __init__(self, id_, session, *args):
-        super(Message, self).__init__(PROTOCOL, id_, session, *args)
+    def __init__(self, session, id_, *args):
+        super(Message, self).__init__(PROTOCOL, session, id_, *args)
 
     @staticmethod
     def initialize(data):
-        id_, session, args = data
-        return Message(RPC.PROTOCOL_LIST[id_], session, *args)
+        session, id_, args = data
+        return Message(session, RPC.PROTOCOL_LIST[id_], *args)

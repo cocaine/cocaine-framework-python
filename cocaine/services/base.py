@@ -29,11 +29,13 @@ import msgpack
 from ..concurrent import Stream
 from ..common import CocaineErrno
 from ..asio.protocol import CocaineProtocol
-from ..asio.message import RPC, Message
 from ..asio.rpc import API
 
 
 log = logging.getLogger('cocaine.service')
+ch = logging.StreamHandler()
+ch.setFormatter(logging.Formatter('[%(levelname)s][%(id)s:%(service)s] %(message)s'))
+log.addHandler(ch)
 
 
 class BaseService(object):
@@ -48,10 +50,11 @@ class BaseService(object):
         # Should I add connection epoch?
         # Epoch is useful when on_failure is called
         self.sessions = {}
-        self.counter = itertools.count()
+        self.counter = itertools.count(1)
 
         self.api = {}
         self._extra = {'service': self.name, 'id': id(self)}
+        self.log = logging.LoggerAdapter(log, self._extra)
 
     def connected(self):
         return self.pr and self.pr.connected()
@@ -72,24 +75,18 @@ class BaseService(object):
             log.debug("connecting ...", extra=self._extra)
             proto_factory = CocaineProtocol.factory(self.on_message, self.on_failure)
             _, self.pr = yield self.loop.create_connection(proto_factory, self.host, self.port)
-            log.debug("successfully connected: %s", [self.host, self.port], extra=self._extra)
+            self.log.debug("successfully connected: %s", [self.host, self.port])
 
     def on_message(self, unpacked_data):
-        msg = Message.initialize(unpacked_data)
-        log.debug("received message: %s", msg, extra=self._extra)
-
-        stream = self.sessions.get(msg.session)
+        session, msg_type, payload = unpacked_data
+        self.log.debug("session %d, type %d, payload %s", session, msg_type, payload)
+        stream = self.sessions.get(session)
         if stream is None:
-            log.error("unknown session id %d", msg.session, extra=self._extra)
+            self.log.warning("Unknown session %d", session)
             return
 
-        # TODO: Replace with constants and message.initializer
-        if msg.id == RPC.CHUNK:
-            stream.push(msgpack.unpackb(msg.data))
-        elif msg.id == RPC.CHOKE:
-            stream.done()
-        elif msg.id == RPC.ERROR:
-            stream.error(msg.errno, msg.reason)
+        if stream.push(msg_type, payload):
+            self.sessions.pop(session, None)
 
     def on_failure(self, exc):
         log.warn("service is disconnected: %s", exc, extra=self._extra)
@@ -98,24 +95,23 @@ class BaseService(object):
             stream.error(CocaineErrno.ESRVDISCON, "service %s is disconnected" % self.name)
 
     @asyncio.coroutine
-    def _invoke(self, method, *args):
-        log.debug("invoking '%s' method with args: %s", method, args, extra=self._extra)
+    def _invoke(self, method_name, *args):
         yield self.connect()
-        method_id = self.api.get(method)
+        for method_id, (method, upstream, downstream) in self.api.iteritems():
+            if method == method_name:
+                self.log.debug("method has been found %s", method_name)
+                counter = self.counter.next()
+                log.debug('sending message: %s', [counter, method_id, args], extra=self._extra)
+                self.pr.write(msgpack.packb([counter, method_id, args]))
 
-        if method_id is None:
-            raise Exception("Method '%s' is not supported" % method)
+                f = Stream(upstream, downstream)
+                self.sessions[counter] = f
+                raise asyncio.Return(f)
 
-        counter = self.counter.next()
-        log.debug('sending message: %s', [method_id, counter, args], extra=self._extra)
-        self.pr.write(msgpack.packb([method_id, counter, args]))
-
-        stream = Stream()
-        self.sessions[counter] = stream
-        raise asyncio.Return(stream)
+        raise AttributeError(method_name)
 
     def __getattr__(self, name):
-        log.debug("invoking generic method: '%s'", name, extra=self._extra)
+        self.log.debug("invoking generic method: '%s'", name)
 
         def on_getattr(*args):
             return self._invoke(name, *args)
@@ -150,9 +146,7 @@ class Service(BaseService):
         log.info("successfully resolved", extra=self._extra)
 
         # Version compatibility should be checked here.
-        if self.version == 0 or version == self.version:
-            self.api = dict((v, k) for k, v in self.api.iteritems())
-        else:
+        if not (self.version == 0 or version == self.version):
             raise Exception("wrong service `%s` API version %d, %d is needed" %
                             (self.name, version, self.version))
         yield super(Service, self).connect()

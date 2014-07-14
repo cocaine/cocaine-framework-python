@@ -22,6 +22,10 @@
 import asyncio
 
 
+TERMINATOR = {}
+RECURSIVE = None
+
+
 class ChokeEvent(Exception):
     pass
 
@@ -34,7 +38,9 @@ class ServiceError(Exception):
 
 
 class Stream(object):
-    def __init__(self):
+    def __init__(self, up, down):
+        self.up = up
+        self.down = down
         self._queue = asyncio.Queue()
         self._done = False
 
@@ -50,11 +56,19 @@ class Stream(object):
         else:
             raise asyncio.Return(res)
 
-    def push(self, item):
-        self._queue.put_nowait(item)
-
     def done(self):
         return self._queue.put_nowait(ChokeEvent())
 
     def error(self, errnumber, reason):
         return self._queue.put_nowait(ServiceError(errnumber, reason))
+
+    def push(self, msg_type, payload):
+        dtree = self.down.get(msg_type)
+        if dtree is None:
+            raise Exception("Dispatch error")
+        _, up, down = dtree
+        if up == RECURSIVE:
+            self._queue.put_nowait(payload)
+        elif up == TERMINATOR:
+            self.done()
+            return True
