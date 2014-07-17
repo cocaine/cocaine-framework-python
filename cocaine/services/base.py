@@ -18,11 +18,15 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-from __future__ import with_statement
 
-import asyncio
+from __future__ import with_statement
 import itertools
 import logging
+
+try:
+    import asyncio
+except ImportError:
+    import trollius as asyncio
 
 import msgpack
 

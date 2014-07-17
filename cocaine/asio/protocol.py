@@ -19,10 +19,12 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-
-import asyncio
-
 import msgpack
+
+try:
+    import asyncio
+except ImportError:
+    import trollius as asyncio
 
 
 class CocaineProtocol(asyncio.Protocol):

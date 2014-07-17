@@ -23,7 +23,10 @@ import logging
 import sys
 import traceback
 
-import asyncio
+try:
+    import asyncio
+except ImportError:
+    import trollius as asyncio
 
 from ..asio.message import RPC
 from ..asio.message import Message
