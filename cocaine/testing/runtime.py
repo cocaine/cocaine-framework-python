@@ -19,11 +19,15 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os
+import logging
+
 import msgpack
 
-import os
-import asyncio
-import logging
+try:
+    import asyncio
+except ImportError:
+    import trollius as asyncio
 
 logging.basicConfig()
 log = logging.getLogger("asyncio")
