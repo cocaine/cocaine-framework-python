@@ -41,7 +41,7 @@ DEFAULT_HEARTBEAT_TIMEOUT = 20
 DEFAULT_DISOWN_TIMEOUT = 5
 
 logging.basicConfig()
-log = logging.getLogger("asyncio")
+log = logging.getLogger("cocaine.worker")
 log.setLevel(logging.DEBUG)
 
 
