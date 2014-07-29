@@ -22,10 +22,6 @@
 import asyncio
 
 
-TERMINATOR = {}
-RECURSIVE = None
-
-
 class ChokeEvent(Exception):
     pass
 
@@ -38,11 +34,10 @@ class ServiceError(Exception):
 
 
 class Stream(object):
-    def __init__(self, up, down):
-        self.up = up
-        self.down = down
+    def __init__(self, rx_tree):
         self._queue = asyncio.Queue()
         self._done = False
+        self.rx_tree = rx_tree
 
     @asyncio.coroutine
     def get(self, timeout=0):
@@ -63,12 +58,14 @@ class Stream(object):
         return self._queue.put_nowait(ServiceError(errnumber, reason))
 
     def push(self, msg_type, payload):
-        dtree = self.down.get(msg_type)
-        if dtree is None:
-            raise Exception("Dispatch error")
-        _, up, down = dtree
-        if up == RECURSIVE:
+        dispatch = self.rx_tree.get(msg_type)
+        if dispatch is None:
+            raise Exception("unexpected message type %s" % msg_type)
+        name, tx, _ = dispatch
+        # how can I recognize message type: error, chunk, choke?
+        if name == 'write':
             self._queue.put_nowait(payload)
-        elif up == TERMINATOR:
+        elif name == 'error':
+            self.error(*payload)
+        if tx == {}:
             self.done()
-            return True

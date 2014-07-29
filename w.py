@@ -3,24 +3,18 @@
 import asyncio
 
 from cocaine.worker import Worker
-from cocaine.services import Service
 
-
-w = Worker(app="app", uuid="a", endpoint="enp",
-           heartbeat_timeout=2, disown_timeout=1)
-
-node = Service("node", version=0)
+w = Worker()
 
 
 @asyncio.coroutine
 def echo(request, response):
-    yield asyncio.sleep(1)
-    inp = yield request.read(timeout=1)
-    print inp
-    fut = yield node.list()
-    result = yield fut.get()
-    print result
-    response.write(result)
+    while True:
+        c = yield request.read()
+        if c != "DONE":
+            response.write(str(c))
+        else:
+            break
     response.close()
 
 w.on("echo", echo)

@@ -41,6 +41,12 @@ logging.basicConfig()
 log = logging.getLogger("asyncio")
 log.setLevel(logging.DEBUG)
 
+# remove this
+# fh = logging.FileHandler('spam.log')
+# fh.setLevel(logging.DEBUG)
+# log.addHandler(fh)
+# log.info("HELLO")
+
 
 class Worker(object):
     def __init__(self, disown_timeout=DEFAULT_DISOWN_TIMEOUT,

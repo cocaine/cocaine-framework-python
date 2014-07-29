@@ -38,6 +38,34 @@ ch.setFormatter(logging.Formatter('[%(levelname)s][%(id)s:%(service)s] %(message
 log.addHandler(ch)
 
 
+class Tx(object):
+    def __init__(self, dtree, io_layer, counter):
+        self.api = dtree
+        self._io_layer = io_layer
+        self.counter = counter
+        self.log = logging.LoggerAdapter(log, {'service': 'tx', 'id': id(self)})
+
+    def __getattr__(self, name):
+        self.log.debug("invoking generic method: '%s'", name)
+
+        def on_getattr(*args):
+            return self._invoke(name, *args)
+        return on_getattr
+
+    @asyncio.coroutine
+    def _invoke(self, method_name, *args):
+        yield self._io_layer.connect()
+        for method_id, (method, tx_tree, rx_tree) in self.api.iteritems():
+            if method == method_name:
+                self.log.debug("method has been found %s", method_name)
+                counter = self.counter
+                self.log.debug('sending message: %s', [counter, method_id, args])
+                self._io_layer.pr.write(msgpack.packb([counter, method_id, args]))
+                raise asyncio.Return(None)
+
+        raise AttributeError(method_name)
+
+
 class BaseService(object):
     def __init__(self, name, host='localhost', port=10053, loop=None):
         self.loop = loop or asyncio.get_event_loop()
@@ -97,16 +125,19 @@ class BaseService(object):
     @asyncio.coroutine
     def _invoke(self, method_name, *args):
         yield self.connect()
-        for method_id, (method, upstream, downstream) in self.api.iteritems():
+        for method_id, (method, tx_tree, rx_tree) in self.api.iteritems():
             if method == method_name:
                 self.log.debug("method has been found %s", method_name)
                 counter = self.counter.next()
-                log.debug('sending message: %s', [counter, method_id, args], extra=self._extra)
+                self.log.debug('sending message: %s', [counter, method_id, args])
                 self.pr.write(msgpack.packb([counter, method_id, args]))
 
-                f = Stream(upstream, downstream)
-                self.sessions[counter] = f
-                raise asyncio.Return(f)
+                self.log.debug("RX TREE %s", rx_tree)
+                self.log.debug("TX TREE %s", tx_tree)
+                rx = Stream(rx_tree)
+                tx = Tx(tx_tree, self, counter)
+                self.sessions[counter] = rx
+                raise asyncio.Return((rx, tx))
 
         raise AttributeError(method_name)
 
@@ -141,8 +172,8 @@ class Service(BaseService):
             return
 
         log.info("resolving ...", extra=self._extra)
-        stream = yield self.locator.resolve(self.name)
-        (self.host, self.port), version, self.api = yield stream.get()
+        rx, _ = yield self.locator.resolve(self.name)
+        (self.host, self.port), version, self.api = yield rx.get()
         log.info("successfully resolved", extra=self._extra)
 
         # Version compatibility should be checked here.

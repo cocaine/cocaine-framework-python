@@ -19,13 +19,57 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from ..concurrent import Stream
+import asyncio
+# from ..concurrent import Stream
 
 
-class RequestStream(Stream):
+# class RequestStream(Stream):
+
+#     def read(self, **kwargs):
+#         return self.get(**kwargs)
+
+#     def close(self):
+#         return self.done()
+
+class ChokeEvent(Exception):
+    pass
+
+
+class ServiceError(Exception):
+    def __init__(self, errnumber, reason):
+        self.errno = errnumber
+        self.reason = reason
+        super(Exception, self).__init__("%s %s" % (self.errno, self.reason))
+
+
+class RequestStream(object):
+    def __init__(self):
+        self._queue = asyncio.Queue()
+        self._done = False
+
+    @asyncio.coroutine
+    def get(self, timeout=0):
+        if timeout > 0:
+            res = yield asyncio.wait_for(self._queue.get(), timeout)
+        else:
+            res = yield self._queue.get()
+
+        if isinstance(res, Exception):
+            raise res
+        else:
+            raise asyncio.Return(res)
 
     def read(self, **kwargs):
         return self.get(**kwargs)
 
     def close(self):
         return self.done()
+
+    def done(self):
+        return self._queue.put_nowait(ChokeEvent())
+
+    def error(self, errnumber, reason):
+        return self._queue.put_nowait(ServiceError(errnumber, reason))
+
+    def push(self, item):
+        self._queue.put_nowait(item)
