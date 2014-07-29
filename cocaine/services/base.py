@@ -18,11 +18,15 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-from __future__ import with_statement
 
-import asyncio
+from __future__ import with_statement
 import itertools
 import logging
+
+try:
+    import asyncio
+except ImportError:
+    import trollius as asyncio
 
 import msgpack
 
@@ -31,11 +35,7 @@ from ..common import CocaineErrno
 from ..asio.protocol import CocaineProtocol
 from ..asio.rpc import API
 
-
 log = logging.getLogger('cocaine.service')
-ch = logging.StreamHandler()
-ch.setFormatter(logging.Formatter('[%(levelname)s][%(id)s:%(service)s] %(message)s'))
-log.addHandler(ch)
 
 
 class Tx(object):

@@ -22,7 +22,10 @@
 
 __all__ = ["proxy_factory"]
 
-import asyncio
+try:
+    import asyncio
+except ImportError:
+    import trollius as asyncio
 
 import inspect
 

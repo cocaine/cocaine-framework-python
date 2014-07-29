@@ -23,7 +23,10 @@ import logging
 import sys
 import traceback
 
-import asyncio
+try:
+    import asyncio
+except ImportError:
+    import trollius as asyncio
 
 from ..asio.message import RPC
 from ..asio.message import Message
@@ -38,7 +41,7 @@ DEFAULT_HEARTBEAT_TIMEOUT = 20
 DEFAULT_DISOWN_TIMEOUT = 5
 
 logging.basicConfig()
-log = logging.getLogger("asyncio")
+log = logging.getLogger("cocaine.worker")
 log.setLevel(logging.DEBUG)
 
 # remove this
