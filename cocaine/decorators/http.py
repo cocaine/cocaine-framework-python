@@ -19,10 +19,13 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import msgpack
 import urlparse
-from tornado import escape
+import Cookie
 
+import msgpack
+
+from tornado import escape
+from tornado.httpserver import HTTPRequest
 from tornado.httputil import parse_body_arguments, HTTPHeaders
 
 from _callablewrappers import proxy_factory
@@ -112,10 +115,6 @@ def http_request_decorator(obj):
         return wrapper
     obj.push = dec(obj.push)
     return obj
-
-
-# ==========
-from tornado.httpserver import HTTPRequest, Cookie
 
 
 def _tornado_request_wrapper(data):
