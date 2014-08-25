@@ -1,6 +1,7 @@
 #
-#    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
-#    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
+#    Copyright (c) 2012+ Anton Tyurin <noxiouz@yandex.ru>
+#    Copyright (c) 2013+ Evgeny Safronov <division494@gmail.com>
+#    Copyright (c) 2011-2014 Other contributors as noted in the AUTHORS file.
 #
 #    This file is part of Cocaine.
 #
@@ -41,6 +42,11 @@ class API:
         ],
         2: [
             'refresh',
+            {
+                0: ['write', None, {}],
+                1: ['error', {}, {}],
+                2: ['close', {}, {}]
+            },
             {
                 0: ['write', None, {}],
                 1: ['error', {}, {}],
