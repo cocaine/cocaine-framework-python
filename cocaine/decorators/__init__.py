@@ -20,6 +20,6 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from ..detail.service import coroutine
+from ..detail.io import coroutine
 
 __all__ = ["coroutine"]

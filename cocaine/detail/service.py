@@ -19,60 +19,34 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import collections
 import itertools
 import logging
 import sys
 import threading
-import types
 
-try:
-    import Queue
-except ImportError:  # pragma: no cover
-    import queue as Queue
 
-import concurrent
 import msgpack
-import tornado.concurrent
-
-
-# Make it thread-safe
-class CocaineFuture(tornado.concurrent.Future):
-    def result(self, timeout=None):
-        if not self.done():
-            foo = concurrent.futures.Future()
-            chain_future(self, foo)
-            return foo.result(timeout)
-        else:
-            return super(CocaineFuture, self).result(timeout)
-
-    def wait(self, timeout=None):
-        return self.result(timeout)
-
-
-# Monkey patch
-def CocaineMonkeyPatch():
-    import tornado.concurrent
-    tornado.concurrent.TracebackFuture = CocaineFuture
-    tornado.concurrent.Future = CocaineFuture
-
-CocaineMonkeyPatch()
-# End of Monkey patch
-
+from tornado.gen import Return
 from tornado.concurrent import chain_future
-from tornado.concurrent import TracebackFuture
-from tornado.ioloop import IOLoop
-# from tornado.log import LogFormatter
 from tornado.tcpclient import TCPClient
-from tornado.gen import Return, Runner
-from tornado import stack_context
+
 
 from .api import API
+from .asyncqueue import AsyncQueue
+from .io import CocaineFuture
+from ..decorators import coroutine
+from .io import CocaineIO
 
-log = logging.getLogger("tornado")
+# cocaine defined exceptions
+from ..exceptions import ServiceError
+from ..exceptions import ChokeEvent
+from ..exceptions import InvalidMessageType
+from ..exceptions import InvalidApiVerison
+
+
+log = logging.getLogger("cocaine")
 # sh = logging.StreamHandler()
-# sh.setFormatter(LogFormatter())
-# log.setLevel(logging.DEBUG)
+# log.setLevel(logging.INFO)
 # log.addHandler(sh)
 
 
@@ -93,292 +67,8 @@ class CocaineTCPClient(TCPClient):
         return result_future
 
 
-class CocaineIO(object):
-    _instance_lock = threading.Lock()
-
-    def __init__(self, io_loop, thread):
-        self._io_loop = io_loop
-        self._thread = thread
-
-    def __getattr__(self, name):
-        return getattr(self._io_loop, name)
-
-    @staticmethod
-    def instance():
-        if not hasattr(CocaineIO, "_instance"):
-            with CocaineIO._instance_lock:
-                if not hasattr(CocaineIO, "_instance"):
-                    q = Queue.Queue(1)
-
-                    def _initialize(queue):
-                        result = None
-                        try:
-                            # create new IOLoop in the thread
-                            io_loop = IOLoop()
-                            # make it default for that thread
-                            io_loop.make_current()
-                            result = io_loop
-                            io_loop.add_callback(queue.put, result)
-                            io_loop.start()
-                        except Exception as err:  # pragma: no cover
-                            result = err
-                        finally:  # pragma: no cover
-                            queue.put(result)
-
-                    t = threading.Thread(target=_initialize,
-                                         args=(q,),
-                                         name="cocaineio_thread")
-                    t.daemon = True
-                    t.start()
-                    result = q.get(True, 1)
-
-                    if isinstance(result, IOLoop):
-                        CocaineIO._instance = CocaineIO(result, t)
-                    elif isinstance(result, Exception):  # pragma: no cover
-                        raise result
-                    else:  # pragma: no cover
-                        raise Exception("Initialization error")
-        return CocaineIO._instance
-
-    def stop(self):  # pragma: no cover
-        self.post(self._io_loop.stop)
-
-    def post(self, callback, *args, **kwargs):
-        self._io_loop.add_callback(callback, *args, **kwargs)
-
-    def add_future(self, future, callback):
-        self.post(self._io_loop.add_future, future, callback)
-
-
-def coroutine(func):
-    def wrapper(*args, **kwargs):
-        future = TracebackFuture()
-        try:
-            result = func(*args, **kwargs)
-        except (Return, StopIteration) as e:
-            result = getattr(e, 'value', None)
-        except Exception:
-            future.set_exc_info(sys.exc_info())
-            return future
-        else:
-            if isinstance(result, types.GeneratorType):
-                # Inline the first iteration of Runner.run.  This lets us
-                # avoid the cost of creating a Runner when the coroutine
-                # never actually yields, which in turn allows us to
-                # use "optional" coroutines in critical path code without
-                # performance penalty for the synchronous case.
-                try:
-                    orig_stack_contexts = stack_context._state.contexts
-                    yielded = next(result)
-                    if stack_context._state.contexts is not orig_stack_contexts:
-                        yielded = TracebackFuture()
-                        yielded.set_exception(
-                            stack_context.StackContextInconsistentError(
-                                'stack_context inconsistency (probably caused '
-                                'by yield within a "with StackContext" block)'))
-                except (StopIteration, Return) as e:
-                    future.set_result(getattr(e, 'value', None))
-                except Exception:
-                    future.set_exc_info(sys.exc_info())
-                else:
-                    # post runner into Cocaine ioloop
-                    CocaineIO.instance().post(Runner, result, future, yielded)
-                return future
-        future.set_result(result)
-        return future
-    return wrapper
-
-
-class QueueEmpty(Exception):
-    pass
-
-
-class QueueFull(Exception):
-    pass
-
-
-class AsyncQueue(object):
-    """
-    Inspired by asyncio.Queue
-    """
-
-    def __init__(self, maxsize=0, io_loop=None):
-        self._loop = io_loop or CocaineIO.instance()
-        self._maxsize = maxsize
-
-        # Futures.
-        self._getters = collections.deque()
-        # Pairs of (item, Future).
-        self._putters = collections.deque()
-        self._init(maxsize)
-
-    def _init(self, maxsize):
-        self._queue = collections.deque()
-
-    def _get(self):
-        return self._queue.popleft()
-
-    def _put(self, item):
-        self._queue.append(item)
-
-    def _consume_done_getters(self):
-        # Delete waiters at the head of the get() queue who've timed out.
-        while self._getters and self._getters[0].done():
-            self._getters.popleft()
-
-    def _consume_done_putters(self):
-        # Delete waiters at the head of the put() queue who've timed out.
-        while self._putters and self._putters[0][1].done():
-            self._putters.popleft()
-
-    def qsize(self):
-        """Number of items in the queue."""
-        return len(self._queue)
-
-    @property
-    def maxsize(self):
-        """Number of items allowed in the queue."""
-        return self._maxsize
-
-    def empty(self):
-        """Return True if the queue is empty, False otherwise."""
-        return not self._queue
-
-    def full(self):
-        """Return True if there are maxsize items in the queue.
-
-        Note: if the Queue was initialized with maxsize=0 (the default),
-        then full() is never True.
-        """
-        if self._maxsize <= 0:
-            return False
-        else:
-            return self.qsize() >= self._maxsize
-
-    @coroutine
-    def put(self, item):
-        """Put an item into the queue.
-
-        If you yield From(put()), wait until a free slot is available
-        before adding item.
-        """
-        self._consume_done_getters()
-        if self._getters:
-            assert not self._queue, (
-                'queue non-empty, why are getters waiting?')
-
-            getter = self._getters.popleft()
-
-            # Use _put and _get instead of passing item straight to getter, in
-            # case a subclass has logic that must run (e.g. JoinableQueue).
-            self._put(item)
-            getter.set_result(self._get())
-
-        elif self._maxsize > 0 and self._maxsize <= self.qsize():
-            waiter = CocaineFuture()
-
-            self._putters.append((item, waiter))
-            yield waiter
-
-        else:
-            self._put(item)
-
-    def put_nowait(self, item):
-        """Put an item into the queue without blocking.
-
-        If no free slot is immediately available, raise QueueFull.
-        """
-        self._consume_done_getters()
-        if self._getters:
-            assert not self._queue, (
-                'queue non-empty, why are getters waiting?')
-
-            getter = self._getters.popleft()
-
-            # Use _put and _get instead of passing item straight to getter, in
-            # case a subclass has logic that must run (e.g. JoinableQueue).
-            self._put(item)
-            getter.set_result(self._get())
-
-        elif self._maxsize > 0 and self._maxsize <= self.qsize():
-            raise QueueFull
-        else:
-            self._put(item)
-
-    @coroutine
-    def get(self):
-        """Remove and return an item from the queue.
-
-        If you yield From(get()), wait until a item is available.
-        """
-        self._consume_done_putters()
-        if self._putters:
-            assert self.full(), 'queue not full, why are putters waiting?'
-            item, putter = self._putters.popleft()
-            self._put(item)
-
-            # When a getter runs and frees up a slot so this putter can
-            # run, we need to defer the put for a tick to ensure that
-            # getters and putters alternate perfectly. See
-            # ChannelTest.test_wait.
-            self._loop.call_soon(putter._set_result_unless_cancelled, None)
-
-            raise Return(self._get())
-
-        elif self.qsize():
-            raise Return(self._get())
-        else:
-            waiter = CocaineFuture()
-
-            self._getters.append(waiter)
-            result = yield waiter
-            raise Return(result)
-
-    def get_nowait(self):
-        """Remove and return an item from the queue.
-
-        Return an item if one is immediately available, else raise QueueEmpty.
-        """
-        self._consume_done_putters()
-        if self._putters:
-            assert self.full(), 'queue not full, why are putters waiting?'
-            item, putter = self._putters.popleft()
-            self._put(item)
-            # Wake putter on next tick.
-            putter.set_result(None)
-
-            return self._get()
-
-        elif self.qsize():
-            return self._get()
-        else:
-            raise QueueEmpty
-
-
-class ChokeEvent(Exception):
-    pass
-
-
-class ServiceError(Exception):
-    def __init__(self, errnumber, reason):
-        self.errno = errnumber
-        self.reason = reason
-        super(Exception, self).__init__("%s %s" % (self.errno, self.reason))
-
-
-class InvalidApiVerison(ServiceError):
-    def __init__(self, name, expected_version, got_version):
-        message = "service `%s`invalid API version: expected `%d`, got `%d`" % (name, expected_version, got_version)
-        super(InvalidApiVerison, self).__init__(-999, message)
-
-
-class InvalidMessageType(ServiceError):
-    pass
-
-
 def StreamedProtocol(name, payload):
     if name == "write":
-        log.error("PAYLOAD %s", payload)
         return payload
     elif name == "error":
         return ServiceError(*payload)
@@ -495,16 +185,16 @@ class BaseService(object):
                 # ToDo: push error into current sessions
 
     def on_close(self, *args):
-        self.log.info("Pipe has been closed %s", args)
+        self.log.debug("pipe has been closed %s", args)
         with self._lock:
             self.pipe = None
             # ToDo: push error into current sessions
 
     def on_read(self, read_bytes):
-        self.log.info("Pipe: read %s", read_bytes)
+        self.log.debug("read %s", read_bytes)
         self.buffer.feed(read_bytes)
         for msg in self.buffer:
-            self.log.info("Unpacked: %s", msg)
+            self.log.debug("unpacked: %s", msg)
             try:
                 session, message_type, payload = msg
                 self.log.debug("%s, %d, %s", session, message_type, payload)
@@ -573,10 +263,10 @@ class Service(BaseService):
             log.debug("already connected", extra=self._extra)
             return
 
-        self.log.info("resolving ...", extra=self._extra)
+        self.log.debug("resolving ...", extra=self._extra)
         channel = yield self.locator.resolve(self.name)
         (self.host, self.port), version, self.api = yield channel.rx.get()
-        log.info("successfully resolved", extra=self._extra)
+        log.debug("successfully resolved", extra=self._extra)
 
         # Version compatibility should be checked here.
         if not (self.version == 0 or version == self.version):

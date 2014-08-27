@@ -23,6 +23,27 @@
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
+class ServiceError(Exception):
+    def __init__(self, errnumber, reason):
+        self.errno = errnumber
+        self.reason = reason
+        super(Exception, self).__init__("%s %s" % (self.errno, self.reason))
+
+
+class InvalidApiVerison(ServiceError):
+    def __init__(self, name, expected_version, got_version):
+        message = "service `%s`invalid API version: expected `%d`, got `%d`" % (name, expected_version, got_version)
+        super(InvalidApiVerison, self).__init__(-999, message)
+
+
+class InvalidMessageType(ServiceError):
+    pass
+
+
+class ChokeEvent(Exception):
+    pass
+
+
 class Error(Exception):
     pass
 

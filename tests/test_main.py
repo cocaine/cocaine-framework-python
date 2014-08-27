@@ -23,7 +23,6 @@ from concurrent.futures import Future
 
 from cocaine.detail.service import CocaineIO
 from cocaine.detail.service import CocaineTCPClient
-from cocaine.detail.service import CocaineMonkeyPatch
 from cocaine.detail.service import InvalidApiVerison
 from cocaine.detail.service import Rx, Tx
 from cocaine.detail.service import ServiceError, ChokeEvent, InvalidMessageType
@@ -33,8 +32,6 @@ from cocaine.services import Service
 
 import msgpack
 from nose import tools
-
-CocaineMonkeyPatch()
 
 
 @tools.raises(AttributeError)

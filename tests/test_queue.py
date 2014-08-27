@@ -1,11 +1,8 @@
 from nose import tools
 from concurrent.futures import TimeoutError
 
-from cocaine.detail.service import AsyncQueue
-from cocaine.detail.service import QueueFull, QueueEmpty
-from cocaine.detail.service import CocaineMonkeyPatch
-
-CocaineMonkeyPatch()
+from cocaine.detail.asyncqueue import AsyncQueue
+from cocaine.detail.asyncqueue import QueueFull, QueueEmpty
 
 
 def test_queue():
