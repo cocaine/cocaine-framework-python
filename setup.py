@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 #
 #    Copyright (c) 2011-2012 Andrey Sibiryov <me@kobology.ru>
-#    Copyright (c) 2011-2013 Anton Tyurin <noxiouz@yandex.ru>
+#    Copyright (c) 2012+ Anton Tyurin <noxiouz@yandex.ru>
 #    Copyright (c) 2013+ Evgeny Safronov <division494@gmail.com>
-#    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
+#    Copyright (c) 2011+ Other contributors as noted in the AUTHORS file.
 #
 #    This file is part of Cocaine.
 #
@@ -43,7 +43,7 @@ setup(
         "cocaine.detail",
         "cocaine.services",
         # "cocaine.worker",
-        # "cocaine.testing",
+        "cocaine.exceptions",
     ],
     install_requires=open('./requirements.txt').read(),
     tests_require=open('./tests/requirements.txt').read(),
