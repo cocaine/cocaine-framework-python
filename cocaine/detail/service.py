@@ -448,7 +448,7 @@ class Tx(object):
 class BaseService(object):
     # py3: msgpack by default unpacks strings as bytes.
     # Make it to unpack as strings for compatibility.
-    _msgpack_string_encoding = None if sys.version_info.major == 2 else 'utf8'
+    _msgpack_string_encoding = None if sys.version_info[0] == 2 else 'utf8'
 
     def __init__(self, name, host='localhost', port=10053, loop=None):
         self.loop = loop or CocaineIO.instance()
