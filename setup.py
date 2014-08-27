@@ -40,10 +40,11 @@ setup(
     zip_safe=False,
     packages=[
         "cocaine",
-        "cocaine.detail",
-        "cocaine.services",
+        "cocaine.common",
         "cocaine.decorators",
+        "cocaine.detail",
         "cocaine.exceptions",
+        "cocaine.services",
     ],
     install_requires=open('./requirements.txt').read(),
     tests_require=open('./tests/requirements.txt').read(),

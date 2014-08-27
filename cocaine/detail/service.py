@@ -33,8 +33,9 @@ from tornado.tcpclient import TCPClient
 
 from .api import API
 from .asyncqueue import AsyncQueue
-from .io import CocaineFuture
+from ..common import CocaineErrno
 from ..decorators import coroutine
+from .io import CocaineFuture
 from .io import CocaineIO
 
 # cocaine defined exceptions
@@ -97,14 +98,12 @@ class Rx(object):
     def done(self):
         self._done = True
 
-    # def error(self, errnumber, reason):
-    #     return self._queue.put_nowait(ServiceError(errnumber, reason))
-
     def push(self, msg_type, payload):
         dispatch = self.rx_tree.get(msg_type)
         log.debug("dispatch %s", dispatch)
         if dispatch is None:
-            raise InvalidMessageType(-998, "unexpected message type %s" % msg_type)
+            raise InvalidMessageType(CocaineErrno.INVALIDMESSAGETYPE,
+                                     "unexpected message type %s" % msg_type)
         name, rx, _ = dispatch
         log.debug("name `%s` rx `%s` %s", name, rx, _)
         self._queue.put_nowait((name, payload))
@@ -270,7 +269,5 @@ class Service(BaseService):
 
         # Version compatibility should be checked here.
         if not (self.version == 0 or version == self.version):
-            # raise Exception("wrong service `%s` API version %d, %d is needed" %
-            #                 (self.name, version, self.version))
             raise InvalidApiVerison(self.name, version, self.version)
         yield super(Service, self).connect()

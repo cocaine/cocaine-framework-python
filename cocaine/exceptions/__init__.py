@@ -22,6 +22,8 @@
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
+from ..common import CocaineErrno
+
 
 class ServiceError(Exception):
     def __init__(self, errnumber, reason):
@@ -33,7 +35,7 @@ class ServiceError(Exception):
 class InvalidApiVerison(ServiceError):
     def __init__(self, name, expected_version, got_version):
         message = "service `%s`invalid API version: expected `%d`, got `%d`" % (name, expected_version, got_version)
-        super(InvalidApiVerison, self).__init__(-999, message)
+        super(InvalidApiVerison, self).__init__(CocaineErrno.INVALIDAPIVERISON, message)
 
 
 class InvalidMessageType(ServiceError):
