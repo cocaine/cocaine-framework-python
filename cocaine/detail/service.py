@@ -67,7 +67,7 @@ from tornado.tcpclient import TCPClient
 from tornado.gen import Return, Runner
 from tornado import stack_context
 
-from cocaine.api import API
+from .api import API
 
 log = logging.getLogger("tornado")
 # sh = logging.StreamHandler()

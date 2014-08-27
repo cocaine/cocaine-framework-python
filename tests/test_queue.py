@@ -1,9 +1,9 @@
 from nose import tools
-
-from cocaine.service import AsyncQueue
-from cocaine.service import QueueFull, QueueEmpty
 from concurrent.futures import TimeoutError
-from cocaine.service import CocaineMonkeyPatch
+
+from cocaine.detail.service import AsyncQueue
+from cocaine.detail.service import QueueFull, QueueEmpty
+from cocaine.detail.service import CocaineMonkeyPatch
 
 CocaineMonkeyPatch()
 

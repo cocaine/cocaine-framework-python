@@ -21,11 +21,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os
-
 from setuptools import setup
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 setup(
     name="cocaine",
@@ -44,10 +40,9 @@ setup(
     zip_safe=False,
     packages=[
         "cocaine",
-        # "cocaine.asio",
-        # "cocaine.concurrent",
+        "cocaine.detail",
+        "cocaine.services",
         # "cocaine.worker",
-        # "cocaine.services",
         # "cocaine.testing",
     ],
     install_requires=open('./requirements.txt').read(),
@@ -59,7 +54,7 @@ setup(
         'Programming Language :: Python :: 2.7',
         # 'Programming Language :: Python :: 3.2',
         # 'Programming Language :: Python :: 3.3',
-        # 'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.4',
         "Programming Language :: Python :: Implementation :: CPython",
         # 'Development Status :: 1 - Planning',
         # 'Development Status :: 2 - Pre-Alpha',
