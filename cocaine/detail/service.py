@@ -378,6 +378,7 @@ class InvalidMessageType(ServiceError):
 
 def StreamedProtocol(name, payload):
     if name == "write":
+        log.error("PAYLOAD %s", payload)
         return payload
     elif name == "error":
         return ServiceError(*payload)
@@ -445,6 +446,12 @@ class Tx(object):
         return on_getattr
 
 
+class Channel(object):
+    def __init__(self, rx, tx):
+        self.rx = rx
+        self.tx = tx
+
+
 class BaseService(object):
     # py3: msgpack by default unpacks strings as bytes.
     # Make it to unpack as strings for compatibility.
@@ -485,12 +492,13 @@ class BaseService(object):
         with self._lock:
             if self.pipe is not None:
                 self.pipe.close()
+                # ToDo: push error into current sessions
 
     def on_close(self, *args):
         self.log.info("Pipe has been closed %s", args)
         with self._lock:
             self.pipe = None
-        # ToDo: push error into current sessions
+            # ToDo: push error into current sessions
 
     def on_read(self, read_bytes):
         self.log.info("Pipe: read %s", read_bytes)
@@ -528,7 +536,8 @@ class BaseService(object):
                 rx = Rx(rx_tree)
                 tx = Tx(tx_tree, self.pipe, counter)
                 self.sessions[counter] = rx
-                raise Return((rx, tx))
+                channel = Channel(rx=rx, tx=tx)
+                raise Return(channel)
         raise AttributeError(method_name)
 
     @property
@@ -565,8 +574,8 @@ class Service(BaseService):
             return
 
         self.log.info("resolving ...", extra=self._extra)
-        rx, _ = yield self.locator.resolve(self.name)
-        (self.host, self.port), version, self.api = yield rx.get()
+        channel = yield self.locator.resolve(self.name)
+        (self.host, self.port), version, self.api = yield channel.rx.get()
         log.info("successfully resolved", extra=self._extra)
 
         # Version compatibility should be checked here.

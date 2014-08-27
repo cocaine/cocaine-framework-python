@@ -78,8 +78,8 @@ def test_service_attribute_error():
 def test_locator():
     io = CocaineIO.instance()
     locator = Locator("localhost", 10053, loop=io)
-    rx, tx = locator.resolve("storage").wait(4)
-    endpoint, version, api = rx.get().wait(1)
+    chan = locator.resolve("storage").wait(4)
+    endpoint, version, api = chan.rx.get().wait(1)
     assert version == 1, "invalid version number %s" % version
     assert isinstance(endpoint, (list, tuple)), "invalid endpoint type %s" % type(endpoint)
     assert isinstance(api, dict)
@@ -113,8 +113,8 @@ def test_service_invalid_api_version():
 def test_node_service():
     io = CocaineIO.instance()
     node = Service("node", host="localhost", port=10053, loop=io)
-    rx, tx = node.list().wait(1)
-    app_list = rx.get().wait(1)
+    channel = node.list().wait(1)
+    app_list = channel.rx.get().wait(1)
     assert isinstance(app_list, list), "invalid app_list type `%s` %s " % (type(app_list), app_list)
 
 
