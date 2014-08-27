@@ -42,7 +42,7 @@ setup(
         "cocaine",
         "cocaine.detail",
         "cocaine.services",
-        # "cocaine.worker",
+        "cocaine.decorators",
         "cocaine.exceptions",
     ],
     install_requires=open('./requirements.txt').read(),
