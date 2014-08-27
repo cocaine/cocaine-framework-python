@@ -432,7 +432,7 @@ class Tx(object):
     @coroutine
     def _invoke(self, method_name, *args, **kwargs):
         log.debug("_invoke has been called %s %s", str(args), str(kwargs))
-        for method_id, (method, tx_tree, rx_tree) in self.tx_tree.iteritems():
+        for method_id, (method, tx_tree, rx_tree) in self.tx_tree.items():  # py3 has no iteritems
             if method == method_name:
                 log.debug("method `%s` has been found in API map", method_name)
                 self.pipe.write(msgpack.packb([self.session_id, method_id, args]))
@@ -446,6 +446,10 @@ class Tx(object):
 
 
 class BaseService(object):
+    # py3: msgpack by default unpacks strings as bytes.
+    # Make it to unpack as strings for compatibility.
+    _msgpack_string_encoding = None if sys.version_info.major == 2 else 'utf8'
+
     def __init__(self, name, host='localhost', port=10053, loop=None):
         self.loop = loop or CocaineIO.instance()
         self.host = host
@@ -464,7 +468,7 @@ class BaseService(object):
 
         # wrap into separate class
         self.pipe = None
-        self.buffer = msgpack.Unpacker()
+        self.buffer = msgpack.Unpacker(encoding=self._msgpack_string_encoding)
 
     @coroutine
     def connect(self):
@@ -512,10 +516,10 @@ class BaseService(object):
         self.log.debug("_invoke has been called %s %s", str(args), str(kwargs))
         yield self.connect()
         self.log.debug("%s", self.api)
-        for method_id, (method, tx_tree, rx_tree) in self.api.iteritems():
+        for method_id, (method, tx_tree, rx_tree) in self.api.items():  # py3 has no iteritems
             if method == method_name:
                 self.log.debug("method `%s` has been found in API map", method_name)
-                counter = self.counter.next()
+                counter = next(self.counter)  # py3 counter has no .next() method
                 self.log.debug('sending message: %s', [counter, method_id, args])
                 self.pipe.write(msgpack.packb([counter, method_id, args]))
                 self.log.debug("RX TREE %s", rx_tree)
@@ -525,7 +529,7 @@ class BaseService(object):
                 tx = Tx(tx_tree, self.pipe, counter)
                 self.sessions[counter] = rx
                 raise Return((rx, tx))
-        raise AttributeError("method_name")
+        raise AttributeError(method_name)
 
     @property
     def _connected(self):

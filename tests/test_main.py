@@ -19,8 +19,6 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import types
-
 from concurrent.futures import Future
 
 from cocaine.service import CocaineIO
@@ -82,8 +80,8 @@ def test_locator():
     rx, tx = locator.resolve("storage").wait(4)
     endpoint, version, api = rx.get().wait(1)
     assert version == 1, "invalid version number %s" % version
-    assert isinstance(endpoint, (types.ListType, types.TupleType)), "invalid endpoint type %s" % type(endpoint)
-    assert isinstance(api, types.DictType)
+    assert isinstance(endpoint, (list, tuple)), "invalid endpoint type %s" % type(endpoint)
+    assert isinstance(api, dict)
 
 
 def test_on_close():
@@ -116,7 +114,7 @@ def test_node_service():
     node = Service("node", host="localhost", port=10053, loop=io)
     rx, tx = node.list().wait(1)
     app_list = rx.get().wait(1)
-    assert isinstance(app_list, types.ListType), "invalid app_list type `%s` %s " % (type(app_list), app_list)
+    assert isinstance(app_list, list), "invalid app_list type `%s` %s " % (type(app_list), app_list)
 
 
 def test_node_service_bad_on_read():
