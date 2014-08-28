@@ -25,7 +25,11 @@ __author__ = 'Evgeny Safronov <division494@gmail.com>'
 from ..common import CocaineErrno
 
 
-class ServiceError(Exception):
+class CocaineError(Exception):
+    pass
+
+
+class ServiceError(CocaineError):
     def __init__(self, errnumber, reason):
         self.errno = errnumber
         self.reason = reason
@@ -42,7 +46,7 @@ class InvalidMessageType(ServiceError):
     pass
 
 
-class ChokeEvent(Exception):
+class ChokeEvent(CocaineError):
     pass
 
 

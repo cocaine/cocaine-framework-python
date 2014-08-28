@@ -13,5 +13,6 @@ dist/
 docs/_build
 manpages/
 *.egg-info/
+*.egg
 cocaine_toolc
 .tox/
