@@ -9,5 +9,4 @@ notifications:
   slack: cocaine:qDewv6ZVDt0TciQeNdE47GqG
 branches:
   only:
-    - master
     - v0.11
