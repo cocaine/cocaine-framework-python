@@ -139,7 +139,8 @@ class TestRx(object):
     def test_rx_done(self):
         rx = Rx(self.rx_tree)
         rx.push(2, [])
-        rx.get().wait(4)
+        rx.get().wait(1)
+        rx.get().wait(1)
 
     @tools.raises(ChokeEvent)
     def test_rx_done_empty_queue(self):

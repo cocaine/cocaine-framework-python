@@ -62,10 +62,14 @@ class CocaineTCPClient(TCPClient):
             connection_future = super(CocaineTCPClient, self).connect(host, port)
             chain_future(connection_future, result_future)
 
-        # post this to handle connection of IOStream
+        # post this to handle a connection of IOStream
         # in Cocaine IO thread
         self.io_loop.post(migrate_context)
         return result_future
+
+
+class EmptyResponse(object):
+    pass
 
 
 def StreamedProtocol(name, payload):
@@ -74,7 +78,7 @@ def StreamedProtocol(name, payload):
     elif name == "error":
         return ServiceError(*payload)
     elif name == "close":
-        return ChokeEvent()
+        return EmptyResponse()
 
 
 class Rx(object):
