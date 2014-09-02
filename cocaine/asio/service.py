@@ -449,7 +449,7 @@ class Service(AbstractService):
                 break
             except ServiceError as err:
                 raise LocatorResolveError(self.name, locator.address, err)
-            except (KeyError, AttributeError) as err:  # It means locator is disconnected.
+            except (KeyError, AttributeError, socket.error) as err:  # It means locator is disconnected.
                 log.warn("locator.resolve() throw an error: %s. %d attemp(s) left", err, attemps)
                 locator.disconnect()
                 log.debug("Disconnect locator")
