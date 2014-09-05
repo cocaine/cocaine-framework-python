@@ -29,6 +29,7 @@ except ImportError:  # pragma: no cover
     import queue as Queue
 
 from tornado.ioloop import IOLoop
+from tornado.ioloop import PeriodicCallback
 
 import concurrent
 import tornado.concurrent
@@ -157,3 +158,8 @@ class CocaineIO(object):
 
     def add_future(self, future, callback):
         self.post(self._io_loop.add_future, future, callback)
+
+
+class Timer(PeriodicCallback):
+    def __init__(self, callback, callback_time, io_loop):
+        super(Timer, self).__init__(callback, callback_time * 1000, io_loop or CocaineIO.instance())

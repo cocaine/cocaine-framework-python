@@ -45,6 +45,7 @@ setup(
         "cocaine.detail",
         "cocaine.exceptions",
         "cocaine.services",
+        "cocaine.worker",
     ],
     install_requires=open('./requirements.txt').read(),
     tests_require=open('./tests/requirements.txt').read(),

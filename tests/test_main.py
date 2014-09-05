@@ -171,3 +171,22 @@ class TestTx(object):
         tx = Tx(self.tx_tree, self.PipeMock(), 1)
         tx.dummy().wait(4)
         tx.failed().wait(4)
+
+
+def test_current_ioloop():
+    from tornado import gen
+    from tornado.ioloop import IOLoop
+
+    @gen.coroutine
+    def f():
+        io = CocaineIO.instance()
+        node = Service("node", host="localhost", port=10053, loop=io)
+        channel = yield node.list()
+        app_list = channel.rx.get().wait()
+        assert isinstance(app_list, list)
+
+    io_l = IOLoop.current()
+    io_l.run_sync(f, timeout=5)
+
+    io_l.add_future(f(), lambda x: io_l.stop())
+    io_l.start()
