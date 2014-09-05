@@ -131,7 +131,7 @@ class Worker(object):
                 stream.error(2, "unrecoverable error: %s " % str(err))
                 self.terminate(1, "Bad code")
             except Exception as err:
-                self._logger.error("On invoke error: %s" % err)
+                self._logger.error("On invoke error: %s %s" % (err, traceback.format_exc()))
                 traceback.print_stack()
                 stream.error(1, "Invocation error")
 
@@ -141,7 +141,7 @@ class Worker(object):
                 _session = self.sessions[msg.session]
                 _session.push(msg.data)
             except Exception as err:
-                self._logger.error("On push error: %s" % str(err))
+                self._logger.error("On push error: %s %s" % (err, traceback.format_exc()))
                 self.terminate(1, "Push error: %s" % str(err))
                 return
 

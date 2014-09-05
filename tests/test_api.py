@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 import unittest
 import logging
+import msgpack
 import sys
 
 from tornado.testing import AsyncTestCase
@@ -10,6 +11,7 @@ from cocaine.futures.chain import Chain
 from cocaine.testing.mocks import ServiceMock, checker
 from cocaine.exceptions import ChokeEvent
 from cocaine.asio.exceptions import TimeoutError
+from cocaine.decorators.http import _tornado_request_wrapper
 
 
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
@@ -771,6 +773,19 @@ class SynchronousApiTestCase(AsyncTestCase):
         f2 = ServiceMock(chunks=[2], T=self.T, ioLoop=self.io_loop).execute()
         self.assertEqual(2, f2.get())
         self.assertEqual(1, f1.get())
+
+    def test_wsgi(self):
+        req = ['POST',
+               '/blabla?arg=1',
+               '1.1',
+               [['User-Agent', 'curl/7.22.0 (x86_64-pc-linux-gnu) libcurl/7.22.0 OpenSSL/1.0.1 zlib/1.2.3.4 libidn/1.23 librtmp/2.3'],
+                ['Host', 'localhost:8080'],
+                ['Accept', '*/*'],
+                ['Content-Length', '6'],
+                ['Content-Type', 'application/x-www-form-urlencoded']], 'dsdsds']
+        request = _tornado_request_wrapper(msgpack.packb(req))
+        self.assertEqual(request.version, "HTTP/1.1")
+        self.assertEqual(request.protocol, "http")
 
 if __name__ == '__main__':
     unittest.main()

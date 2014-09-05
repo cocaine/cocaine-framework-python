@@ -24,9 +24,9 @@ import Cookie
 
 import msgpack
 
-from tornado import escape
-from tornado.httpserver import HTTPRequest
+import tornado
 from tornado.httputil import parse_body_arguments, HTTPHeaders
+from tornado.httpserver import HTTPRequest
 
 from _callablewrappers import proxy_factory
 
@@ -72,7 +72,7 @@ class _HTTPRequest(object):
         if 'Cookie' in self._headers:
             try:
                 cookies = Cookie.BaseCookie()
-                cookies.load(escape.native_str(self._headers['Cookie']))
+                cookies.load(tornado.escape.native_str(self._headers['Cookie']))
                 self._meta['cookies'] = dict((key, name.value) for key, name in cookies.iteritems())
             except:
                 pass
@@ -117,9 +117,38 @@ def http_request_decorator(obj):
     return obj
 
 
-def _tornado_request_wrapper(data):
-    method, uri, version, headers, body = msgpack.unpackb(data)
-    return HTTPRequest(method, uri, version, HTTPHeaders(headers), body)
+# Note: there's inconsistency between
+# native-proxy and torando-proxy in version.
+# version is sent by native as "1.1",
+# but tornado sends version as "HTTP/1.1"
+def format_http_version(version):
+    if version.startswith("HTTP"):
+        return version
+    else:
+        return "HTTP/%s" % version
+
+
+if tornado.version_info[0] >= 4:
+    # until 4.0.2 we need this workaround
+    # to avoid AttributeError in constructor of HTTPServerRequest
+    class _FakeConnection():
+        def __init__(self):
+            self.remote_ip = None
+            self.context = self
+
+    _fake_connection = _FakeConnection()
+
+    def _tornado_request_wrapper(data):
+        method, uri, version, headers, body = msgpack.unpackb(data)
+        version = format_http_version(version)
+        return HTTPRequest(method=method, uri=uri, version=version,
+                           headers=HTTPHeaders(headers), body=body,
+                           connection=_fake_connection)
+else:
+    def _tornado_request_wrapper(data):
+        method, uri, version, headers, body = msgpack.unpackb(data)
+        version = format_http_version(version)
+        return HTTPRequest(method, uri, version, HTTPHeaders(headers), body)
 
 
 def tornado_request_decorator(obj):
