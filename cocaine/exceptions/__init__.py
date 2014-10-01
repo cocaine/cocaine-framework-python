@@ -72,33 +72,33 @@ class ConnectionError(CommunicationError):
 
 
 class ConnectionResolveError(ConnectionError):
-    def __init__(self, address):
+    def __init__(self, address):  # pragma: no cover
         super(ConnectionResolveError, self).__init__(address, 'could not resolve hostname "{0}"'.format(address))
 
 
 class ConnectionRefusedError(ConnectionError):
-    def __init__(self, address):
+    def __init__(self, address):  # pragma: no cover
         super(ConnectionRefusedError, self).__init__(address, 'connection refused')
 
 
 class ConnectionTimeoutError(ConnectionError):
-    def __init__(self, address, timeout):
+    def __init__(self, address, timeout):  # pragma: no cover
         super(ConnectionTimeoutError, self).__init__(address, 'timeout ({0:.3f}s)'.format(timeout))
 
 
 class LocatorResolveError(ConnectionError):
-    def __init__(self, name, address, reason):
+    def __init__(self, name, address, reason):  # pragma: no cover
         message = 'unable to resolve API for service "{0}" because {1}'.format(name, reason)
         super(LocatorResolveError, self).__init__(address, message)
 
 
 class TimeoutError(CommunicationError):
-    def __init__(self, timeout):
+    def __init__(self, timeout):  # pragma: no cover
         super(TimeoutError, self).__init__('timeout ({0:.3f}s)'.format(timeout))
 
 
 class DisconnectionError(CommunicationError):
-    def __init__(self, name):
+    def __init__(self, name):  # pragma: no cover
         super(DisconnectionError, self).__init__('Service {0} has been disconnected'.format(name))
 
 

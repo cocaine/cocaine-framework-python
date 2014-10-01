@@ -30,7 +30,7 @@ class ChokeEvent(Exception):
 
 
 class ServiceError(Exception):
-    def __init__(self, errnumber, reason):
+    def __init__(self, errnumber, reason):  # pragma: no cover
         self.errno = errnumber
         self.reason = reason
         super(Exception, self).__init__("%s %s" % (self.errno, self.reason))

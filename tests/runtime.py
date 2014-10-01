@@ -36,6 +36,7 @@ class RuntimeMock(object):
         self.endpoint = unixsocket
         self.actions = list()
         self.event = asyncio.Event()
+        self.counter = 0
 
     def serve(self):
         @asyncio.coroutine
@@ -68,21 +69,34 @@ class RuntimeMock(object):
                     log.exception(err)
 
     def stop(self):
-        self.event.emit()
+        self.event.set()
 
 
-if __name__ == '__main__':
-    unix_socket_path = "enp"
+def install_server(path):
     l = asyncio.get_event_loop()
-    r = RuntimeMock(unix_socket_path, loop=l)
-    i = 0
+    r = RuntimeMock(path, loop=l)
+    return r
+
+
+def main(path):
+    r = install_server(path)
 
     def on_heartbeat(w):
-        global i
-        i += 1
         w.write(msgpack.packb([1, 0, []]))
-        w.write(msgpack.packb([3, i, ["ping"]]))
-        w.write(msgpack.packb([4, i, ["ping"]]))
-        w.write(msgpack.packb([6, i, []]))
+        w.write(msgpack.packb([3, r.counter, ["ping"]]))
+        w.write(msgpack.packb([4, r.counter, ["ping"]]))
+        w.write(msgpack.packb([6, r.counter, []]))
+        r.counter += 1
+        w.write(msgpack.packb([3, r.counter, ["bad_event"]]))
+        if r.counter > 1:
+            r.stop()
+
     r.on([1, 0, []], on_heartbeat)
     r.serve()
+
+
+def terminate(path):
+    pass
+
+if __name__ == '__main__':
+    main("enp")

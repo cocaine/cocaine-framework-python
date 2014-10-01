@@ -102,10 +102,7 @@ class Worker(object):
             log.debug("connecting to %s", self.endpoint)
             try:
                 io_stream = IOStream(sock, io_loop=self.cocaine_loop)
-                f = io_stream.connect(self.endpoint, callback=None)
-                if f is None:
-                    raise Exception("unable to connect")
-                self.pipe = yield f
+                self.pipe = yield io_stream.connect(self.endpoint, callback=None)
                 log.debug("connected to %s %s", self.endpoint, self.pipe)
                 self.pipe.read_until_close(callback=self.on_failure,
                                            streaming_callback=self.on_message)
