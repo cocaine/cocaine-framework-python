@@ -186,7 +186,7 @@ def test_current_ioloop():
         assert isinstance(app_list, list)
 
     io_l = IOLoop.current()
-    io_l.run_sync(f, timeout=5)
+    io_l.run_sync(f, timeout=2)
 
     io_l.add_future(f(), lambda x: io_l.stop())
     io_l.start()

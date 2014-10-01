@@ -152,8 +152,9 @@ class BaseService(object):
 
     def __init__(self, name, host='localhost', port=10053, loop=None):
         self.loop = loop or CocaineIO.instance()
-        self.host = host
-        self.port = port
+        # List of available endpoints in which service is resolved to.
+        # Looks as [["host", port2], ["host2", port2]]
+        self.endpoints = [[host, port]]
         self.name = name
 
         self._extra = {'service': self.name,
@@ -172,14 +173,28 @@ class BaseService(object):
 
     @coroutine
     def connect(self):
-        if not self._connected:
-            with self._lock:
-                if not self._connected:
-                    self.pipe = yield CocaineTCPClient(io_loop=self.loop).connect(self.host,
-                                                                                  self.port)
+        if self._connected:
+            raise Return(True)
+
+        with self._lock:
+            if self._connected:
+                raise Return(True)
+
+            self.log.error("ENDPOINTS %s", self.endpoints)
+            for host, port in self.endpoints:
+                try:
+                    self.log.info("trying %s:%d to establish connection", host, port)
+                    self.pipe = yield CocaineTCPClient(io_loop=self.loop).connect(host,
+                                                                                  port)
                     self.pipe.read_until_close(callback=self.on_close,
                                                streaming_callback=self.on_read)
+                except Exception as err:
+                    self.log.error("connection error %s", err)
+                else:
                     self.log.debug("connection has been established successfully")
+                    raise Return(True)
+
+            raise Exception("unable to establish connection")
 
     def disconnect(self):
         with self._lock:
@@ -254,9 +269,9 @@ class Service(BaseService):
     def __init__(self, name, host="localhost", port=10053, version=0, loop=None):
         super(Service, self).__init__(name=name, loop=loop)
         self.locator = Locator(host=host, port=port, loop=loop)
+        # Dispatch tree
         self.api = {}
-        self.host = None
-        self.port = None
+        # Service API version
         self.version = version
 
     @coroutine
@@ -268,8 +283,10 @@ class Service(BaseService):
 
         self.log.debug("resolving ...", extra=self._extra)
         channel = yield self.locator.resolve(self.name)
-        (self.host, self.port), version, self.api = yield channel.rx.get()
-        log.debug("successfully resolved", extra=self._extra)
+        # Set up self.endpoints for BaseService class
+        # It's used in super(Service).connect()
+        self.endpoints, version, self.api = yield channel.rx.get()
+        log.debug("successfully resolved %s", self.endpoints, extra=self._extra)
 
         # Version compatibility should be checked here.
         if not (self.version == 0 or version == self.version):
