@@ -53,7 +53,6 @@ def test_worker():
         if not response.closed:
             response.error(-1000, "testerror")
 
-    @gen.coroutine
     def bad_ping(request, response):
         import unreal_package
         del unreal_package

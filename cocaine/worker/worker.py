@@ -158,7 +158,7 @@ class Worker(object):
         finally:
             self._stop()
 
-    # General dispathc method
+    # General dispatch method
     def on_message(self, data):
         log.debug("on_message %s", data)
         self.buffer.feed(data)

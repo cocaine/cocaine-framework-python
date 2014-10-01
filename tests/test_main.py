@@ -19,13 +19,17 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import socket
+
 from concurrent.futures import Future
 
 from cocaine.detail.service import CocaineIO
 from cocaine.detail.service import CocaineTCPClient
 from cocaine.detail.service import InvalidApiVerison
 from cocaine.detail.service import Rx, Tx
+from cocaine.detail.service import BaseService
 from cocaine.detail.service import ServiceError, ChokeEvent, InvalidMessageType
+from cocaine.exceptions import ConnectionError
 
 from cocaine.services import Locator
 from cocaine.services import Service
@@ -98,6 +102,14 @@ def test_service_double_connect():
     node = Service("node", host="localhost", port=10053, loop=io)
     node.connect().wait(4)
     node.connect().wait(4)
+
+
+@tools.raises(Exception)
+def test_service_connection_failure():
+    io = CocaineIO.instance()
+    s = BaseService(name="dummy", host="localhost", port=43000, loop=io)
+    s.endpoints.append(("localhost", 43001))
+    s.connect().wait(3)
 
 
 @tools.raises(InvalidApiVerison)
@@ -190,3 +202,10 @@ def test_current_ioloop():
 
     io_l.add_future(f(), lambda x: io_l.stop())
     io_l.start()
+
+
+def test_connection_error():
+    resolve_info = socket.getaddrinfo("localhost", 10053)
+    for item in resolve_info:
+        ConnectionError(item[-1], "Test")
+    ConnectionError("UnixDomainSocket", "Test")
