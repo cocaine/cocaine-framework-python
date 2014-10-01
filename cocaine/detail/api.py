@@ -21,36 +21,7 @@
 
 
 class API:
-    Locator = {
-        0: [
-            'resolve',
-            {},
-            {
-                0: ['write', None, {}],
-                1: ['error', {}, {}],
-                2: ['close', {}, {}]
-            }
-        ],
-        1: [
-            'synchronize',
-            {},
-            {
-                0: ['write', None, {}],
-                1: ['error', {}, {}],
-                2: ['close', {}, {}]
-            }
-        ],
-        2: [
-            'refresh',
-            {
-                0: ['write', None, {}],
-                1: ['error', {}, {}],
-                2: ['close', {}, {}]
-            },
-            {
-                0: ['write', None, {}],
-                1: ['error', {}, {}],
-                2: ['close', {}, {}]
-            }
-        ]
-    }
+    Locator = {0: ['resolve', {}, {0: ['write', None], 1: ['error', {}], 2: ['close', {}]}],
+               1: ['connect', {}, {0: ['write', None], 1: ['error', {}], 2: ['close', {}]}],
+               2: ['refresh', {}, {0: ['write', None], 1: ['error', {}], 2: ['close', {}]}],
+               3: ['cluster', {}, {0: ['write', None], 1: ['error', {}], 2: ['close', {}]}]}

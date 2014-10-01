@@ -125,9 +125,9 @@ def test_node_service_bad_on_read():
 
 
 class TestRx(object):
-    rx_tree = {0: ['write', None, {}],
-               1: ['error', {}, {}],
-               2: ['close', {}, {}]}
+    rx_tree = {0: ['write', None],
+               1: ['error', {}],
+               2: ['close', {}]}
 
     @tools.raises(ServiceError)
     def test_rx_error_branch(self):

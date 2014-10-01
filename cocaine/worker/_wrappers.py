@@ -22,11 +22,6 @@
 
 __all__ = ["proxy_factory"]
 
-# import asyncio
-# from tornado import gen
-
-# import inspect
-
 
 class ChokeEvent(Exception):
     def __str__(self):
@@ -56,10 +51,7 @@ class _Coroutine(_Proxy):
 
 def type_traits(func_or_generator):
     """ Return class object depends on type of callable object """
-    # if inspect.isgeneratorfunction(func_or_generator):
     return _Coroutine
-    # else:
-        # raise ValueError("Event handler must be a generatorfunction %s" % type(func_or_generator))
 
 
 def patch_response(obj, response_handler):

@@ -104,12 +104,12 @@ class Rx(object):
 
     def push(self, msg_type, payload):
         dispatch = self.rx_tree.get(msg_type)
-        log.debug("dispatch %s", dispatch)
+        log.debug("dispatch %s %s", dispatch, payload)
         if dispatch is None:
             raise InvalidMessageType(CocaineErrno.INVALIDMESSAGETYPE,
                                      "unexpected message type %s" % msg_type)
-        name, rx, _ = dispatch
-        log.debug("name `%s` rx `%s` %s", name, rx, _)
+        name, rx = dispatch
+        log.debug("name `%s` rx `%s`", name, rx)
         self._queue.put_nowait((name, payload))
         if rx == {}:  # last transition
             self.done()
@@ -180,7 +180,6 @@ class BaseService(object):
             if self._connected:
                 raise Return(True)
 
-            self.log.error("ENDPOINTS %s", self.endpoints)
             for host, port in self.endpoints:
                 try:
                     self.log.info("trying %s:%d to establish connection", host, port)
@@ -286,7 +285,8 @@ class Service(BaseService):
         # Set up self.endpoints for BaseService class
         # It's used in super(Service).connect()
         self.endpoints, version, self.api = yield channel.rx.get()
-        log.debug("successfully resolved %s", self.endpoints, extra=self._extra)
+        self.log.debug("successfully resolved %s %s", self.endpoints,
+                       self.api, extra=self._extra)
 
         # Version compatibility should be checked here.
         if not (self.version == 0 or version == self.version):
