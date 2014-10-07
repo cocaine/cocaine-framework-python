@@ -19,13 +19,19 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+from cocaine.detail.logger import _Logger
+from cocaine.detail.service import EmptyResponse
 
-class API:
-    Locator = {0: ['resolve', {}, {0: ['write', None], 1: ['error', {}], 2: ['close', {}]}],
-               1: ['connect', {}, {0: ['write', None], 1: ['error', {}], 2: ['close', {}]}],
-               2: ['refresh', {}, {0: ['write', None], 1: ['error', {}], 2: ['close', {}]}],
-               3: ['cluster', {}, {0: ['write', None], 1: ['error', {}], 2: ['close', {}]}]}
 
-    Logger = {0: ['emit', {}, {}],
-              1: ['verbosity', {}, {0: ['write', None], 1: ['error', {}], 2: ['close', {}]}],
-              2: ['set_verbosity', {}, {0: ['write', None], 1: ['error', {}], 2: ['close', {}]}]}
+def test_logger():
+    verbosity_level = 0
+    l = _Logger()
+    empty_resp = l.set_verbosity(verbosity_level).wait(1).rx.get().wait(1)
+    assert isinstance(empty_resp, EmptyResponse)
+    verbosity = l.verbosity().wait(1).rx.get().wait(1)
+    assert verbosity[0] == verbosity_level, verbosity
+    l.emit(verbosity_level, "nosetest", "test_message", {"attr1": 1, "attr2": 2})
+    l.debug("DEBUG_MSG", {"A": 1, "B": 2})
+    l.info("INFO_MSG", {"A": 1, "B": 2})
+    l.warning("WARNING_MSG", {"A": 1, "B": 2})
+    l.error("ERROR_MSG", {"A": 1, "B": 2})
