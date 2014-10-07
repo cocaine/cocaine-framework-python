@@ -25,7 +25,7 @@ from concurrent.futures import Future
 
 from cocaine.detail.service import CocaineIO
 from cocaine.detail.service import CocaineTCPClient
-from cocaine.detail.service import InvalidApiVerison
+from cocaine.detail.service import InvalidApiVersion
 from cocaine.detail.service import Rx, Tx
 from cocaine.detail.service import BaseService
 from cocaine.detail.service import ServiceError, ChokeEvent, InvalidMessageType
@@ -112,7 +112,7 @@ def test_service_connection_failure():
     s.connect().wait(3)
 
 
-@tools.raises(InvalidApiVerison)
+@tools.raises(InvalidApiVersion)
 def test_service_invalid_api_version():
     io = CocaineIO.instance()
     node = Service("node", host="localhost", port=10053, version=100, loop=io)

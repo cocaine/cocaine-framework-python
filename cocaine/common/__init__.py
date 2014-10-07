@@ -30,6 +30,6 @@ class CocaineErrno:
     # service is disconnected
     ESRVDISCON = 220
     # service api version is unexpected
-    INVALIDAPIVERISON = 230
+    INVALIDAPIVERSION = 230
     # message type is out of protocol
     INVALIDMESSAGETYPE = 240

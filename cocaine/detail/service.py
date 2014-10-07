@@ -42,7 +42,7 @@ from .io import CocaineIO
 from ..exceptions import ServiceError
 from ..exceptions import ChokeEvent
 from ..exceptions import InvalidMessageType
-from ..exceptions import InvalidApiVerison
+from ..exceptions import InvalidApiVersion
 
 
 log = logging.getLogger("cocaine")
@@ -290,5 +290,5 @@ class Service(BaseService):
 
         # Version compatibility should be checked here.
         if not (self.version == 0 or version == self.version):
-            raise InvalidApiVerison(self.name, version, self.version)
+            raise InvalidApiVersion(self.name, version, self.version)
         yield super(Service, self).connect()
