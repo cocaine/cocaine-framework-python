@@ -39,10 +39,11 @@ from .io import CocaineFuture
 from .io import CocaineIO
 
 # cocaine defined exceptions
-from ..exceptions import ServiceError
 from ..exceptions import ChokeEvent
+from ..exceptions import DisconnectionError
 from ..exceptions import InvalidMessageType
 from ..exceptions import InvalidApiVersion
+from ..exceptions import ServiceError
 
 
 log = logging.getLogger("cocaine")
@@ -92,7 +93,12 @@ class Rx(object):
         if self._done and self._queue.empty():
             raise ChokeEvent()
 
-        name, payload = yield self._queue.get()
+        # to pull variuos service errors
+        item = yield self._queue.get()
+        if isinstance(item, Exception):
+            raise item
+
+        name, payload = item
         res = protocol(name, payload)
         if isinstance(res, Exception):
             raise res
@@ -115,6 +121,9 @@ class Rx(object):
             self.done()
         elif rx is not None:  # recursive transition
             self.rx_tree = rx
+
+    def error(self, err):
+        self._queue.put_nowait(err)
 
 
 class Tx(object):
@@ -199,13 +208,15 @@ class BaseService(object):
         with self._lock:
             if self.pipe is not None:
                 self.pipe.close()
-                # ToDo: push error into current sessions
+            for session_rx in self.sessions.values():
+                session_rx.error(DisconnectionError(self.name))
 
     def on_close(self, *args):
         self.log.debug("pipe has been closed %s", args)
         with self._lock:
             self.pipe = None
-            # ToDo: push error into current sessions
+            for session_rx in self.sessions.values():
+                session_rx.error(DisconnectionError(self.name))
 
     def on_read(self, read_bytes):
         self.log.debug("read %s", read_bytes)

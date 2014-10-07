@@ -29,7 +29,7 @@ from cocaine.detail.service import InvalidApiVersion
 from cocaine.detail.service import Rx, Tx
 from cocaine.detail.service import BaseService
 from cocaine.detail.service import ServiceError, ChokeEvent, InvalidMessageType
-from cocaine.exceptions import ConnectionError
+from cocaine.exceptions import ConnectionError, DisconnectionError
 
 from cocaine.services import Locator
 from cocaine.services import Service
@@ -125,6 +125,20 @@ def test_node_service():
     channel = node.list().wait(1)
     app_list = channel.rx.get().wait(1)
     assert isinstance(app_list, list), "invalid app_list type `%s` %s " % (type(app_list), app_list)
+
+
+@tools.raises(DisconnectionError)
+def test_node_service_disconnection():
+    io = CocaineIO.instance()
+    node = Service("node", host="localhost", port=10053, loop=io)
+    channel = node.list().wait(1)
+    node.disconnect()
+    # proper answer
+    channel.rx.get().wait(1)
+    # empty response
+    channel.rx.get().wait(1)
+    # disconnection error
+    channel.rx.get().wait(1)
 
 
 def test_node_service_bad_on_read():
