@@ -21,12 +21,10 @@
 
 from multiprocessing import Process
 
-from cocaine.worker import Worker
-
-from tornado import gen
 from nose import tools
 
 from runtime import main
+from cocaine.worker import Worker
 
 
 @tools.raises(ValueError)
@@ -43,7 +41,6 @@ def test_worker():
     socket_path = "tests/enp"
     t = Process(target=main, args=(socket_path,))
 
-    @gen.coroutine
     def ping(request, response):
         print 1
         inc = yield request.read()

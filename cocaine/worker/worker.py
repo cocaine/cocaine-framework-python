@@ -22,7 +22,6 @@
 import logging
 import socket
 import sys
-import traceback
 
 import msgpack
 from tornado import ioloop
@@ -132,18 +131,20 @@ class Worker(object):
         self.loop.start()
 
     def on(self, event_name, event_handler):
-        log.error(event_name)
-        try:
-            # Try to construct handler.
-            closure = event_handler()
-        except Exception:
-            closure = default(event_handler)()
-            if hasattr(closure, "_wrapped"):
-                event_handler = default(event_handler)
-        else:
-            if not hasattr(closure, "_wrapped"):
-                event_handler = default(event_handler)
-        log.debug("attach handler for event %s", event_name)
+        log.info("registering handler for event %s", event_name)
+        # try:
+        #     # Try to construct handler.
+        #     closure = event_handler()
+        # except Exception as err:
+        #     closure = default(event_handler)()
+        #     if hasattr(closure, "_wrapped"):
+        #         event_handler = default(event_handler)
+        # else:
+        #     if not hasattr(closure, "_wrapped"):
+        #         event_handler = default(event_handler)
+        if not hasattr(event_handler, "_wrapped"):
+            event_handler = default(event_handler)
+        log.info("handler for event %s has been attached", event_name)
         self._events[event_name] = event_handler
 
     # Events
@@ -164,7 +165,6 @@ class Worker(object):
         for i in self.buffer:
             log.debug("unpacked %s", i)
             message = Message.initialize(i)
-            print message
             callback = self._dispatcher.get(message.id)
             if callback is None:
                 raise Exception("unknown message type %s" % str(message))
@@ -206,7 +206,6 @@ class Worker(object):
                            "source is broken")
         except Exception as err:
             log.error("invocation failed %s %s", err, type(err))
-            traceback.print_stack()
             response.error(CocaineErrno.EINVFAILED,
                            "invocation failed %s" % err)
 
@@ -216,15 +215,14 @@ class Worker(object):
             _session = self.sessions[msg.session]
             _session.push(msg.data)
         except Exception as err:
-            log.error("pushing error %s", err)
-            # self.terminate(1, "Push error: %s" % str(err))
+            log.error("error occured during chunk dispatching: %s", err)
             return
 
     def _dispatch_choke(self, msg):
         log.debug("choke has been received %d", msg.session)
         _session = self.sessions.get(msg.session)
         if _session is not None:
-            _session.done()
+            _session.close()
             self.sessions.pop(msg.session)
 
     # On disconnection callback

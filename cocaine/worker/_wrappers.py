@@ -20,38 +20,33 @@
 #
 
 
+from tornado import gen
+
+from ..common import CocaineErrno
+
 __all__ = ["proxy_factory"]
 
 
-class ChokeEvent(Exception):
-    def __str__(self):
-        return 'ChokeEvent'
-
-
-class _Proxy(object):
-
-    _wrapped = True
-
-    @property
-    def closed(self):
-        return self._state is None
-
-
-class _Coroutine(_Proxy):
+class _Context(object):
     """Wrapper for coroutine function """
+    _wrapped = True
 
     def __init__(self, func):
         self._obj = func
 
     def invoke(self, request, response, loop):
-        def f(res):
-            print res.result()
-        loop.add_future(self._obj(request, response), f)
+        def trap(res):
+            try:
+                res.result()
+                if not response.closed:
+                    response.close()
+            except Exception as err:
+                response.error(CocaineErrno.EUNCAUGHTEXCEPTION, str(err))
+        loop.add_future(self._obj(request, response), trap)
 
-
-def type_traits(func_or_generator):
-    """ Return class object depends on type of callable object """
-    return _Coroutine
+    # @property
+    # def closed(self):
+    #     return self._state is None
 
 
 def patch_response(obj, response_handler):
@@ -80,8 +75,7 @@ def patch_request(obj, request_handler):
 
 def proxy_factory(func, request_handler=None, response_handler=None):
     def wrapper():
-        _factory = type_traits(func)
-        obj = _factory(func)
+        obj = _Context(func)
         if response_handler is not None:
             obj = patch_response(obj, response_handler)
         if request_handler is not None:
@@ -91,4 +85,5 @@ def proxy_factory(func, request_handler=None, response_handler=None):
 
 
 def default(func):
+    func = gen.coroutine(func)
     return proxy_factory(func, None, None)

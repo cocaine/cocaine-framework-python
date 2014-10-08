@@ -88,7 +88,7 @@ def main(path):
         w.write(msgpack.packb([r.counter, 6, []]))
         r.counter += 1
         w.write(msgpack.packb([r.counter, 3, ["bad_event"]]))
-        if r.counter > 1:
+        if r.counter > 2:
             r.stop()
 
     r.on([1, 1, []], on_heartbeat)

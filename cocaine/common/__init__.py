@@ -33,3 +33,5 @@ class CocaineErrno:
     INVALIDAPIVERSION = 230
     # message type is out of protocol
     INVALIDMESSAGETYPE = 240
+    # uncaught exception
+    EUNCAUGHTEXCEPTION = 100

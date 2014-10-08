@@ -21,19 +21,9 @@
 
 from ..detail.asyncqueue import AsyncQueue
 from ..decorators import coroutine
+from ..exceptions import ServiceError, ChokeEvent
 
 from tornado import gen
-
-
-class ChokeEvent(Exception):
-    pass
-
-
-class ServiceError(Exception):
-    def __init__(self, errnumber, reason):  # pragma: no cover
-        self.errno = errnumber
-        self.reason = reason
-        super(Exception, self).__init__("%s %s" % (self.errno, self.reason))
 
 
 class Stream(object):
@@ -43,9 +33,8 @@ class Stream(object):
 
     @coroutine
     def get(self, timeout=0):
-        # if timeout > 0:
-        #     res = yield asyncio.wait_for(self._queue.get(), timeout)
-        # else:
+        # ToDo: wrap with timeout
+        # gen.with_timeout
         res = yield self._queue.get()
 
         if isinstance(res, Exception):
