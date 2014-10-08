@@ -73,7 +73,7 @@ PROTOCOL = {
 
 def _make_packable(m_id, m_session, args):
     def wrapper():
-        return msgpack.dumps([m_id, m_session, args])
+        return msgpack.dumps([m_session, m_id, args])
     return wrapper
 
 
@@ -101,5 +101,5 @@ class Message(BaseMessage):
 
     @staticmethod
     def initialize(data):
-        id_, session, args = data
+        session, id_, args = data
         return Message(RPC.PROTOCOL_LIST[id_], session, *args)

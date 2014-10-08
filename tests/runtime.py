@@ -36,7 +36,7 @@ class RuntimeMock(object):
         self.endpoint = unixsocket
         self.actions = list()
         self.event = asyncio.Event()
-        self.counter = 0
+        self.counter = 1
 
     def serve(self):
         @asyncio.coroutine
@@ -83,11 +83,11 @@ def main(path):
 
     def on_heartbeat(w):
         w.write(msgpack.packb([1, 1, []]))
-        w.write(msgpack.packb([3, r.counter, ["ping"]]))
-        w.write(msgpack.packb([4, r.counter, ["ping"]]))
-        w.write(msgpack.packb([6, r.counter, []]))
+        w.write(msgpack.packb([r.counter, 3, ["ping"]]))
+        w.write(msgpack.packb([r.counter, 4, ["ping"]]))
+        w.write(msgpack.packb([r.counter, 6, []]))
         r.counter += 1
-        w.write(msgpack.packb([3, r.counter, ["bad_event"]]))
+        w.write(msgpack.packb([r.counter, 3, ["bad_event"]]))
         if r.counter > 1:
             r.stop()
 

@@ -164,6 +164,7 @@ class Worker(object):
         for i in self.buffer:
             log.debug("unpacked %s", i)
             message = Message.initialize(i)
+            print message
             callback = self._dispatcher.get(message.id)
             if callback is None:
                 raise Exception("unknown message type %s" % str(message))
