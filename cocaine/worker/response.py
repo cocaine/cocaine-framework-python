@@ -23,6 +23,8 @@ import traceback
 
 import msgpack
 
+from ..common import CocaineErrno
+
 
 class ResponseStream(object):
     def __init__(self, session, worker, event_name=""):
@@ -30,6 +32,15 @@ class ResponseStream(object):
         self.worker = worker
         self.session = session
         self.event = event_name
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_value is not None:
+            self.error(CocaineErrno.EUNCAUGHTEXCEPTION, str(exc_value))
+        else:
+            self.close()
 
     def write(self, chunk):
         chunk = msgpack.packb(chunk)
@@ -40,15 +51,19 @@ class ResponseStream(object):
 
     def close(self):
         if self._m_state is not None:
-            self.worker.send_choke(self.session)
-            self._m_state = None
+            try:
+                self.worker.send_choke(self.session)
+            finally:
+                self._m_state = None
             return
         traceback.print_stack()  # pragma: no cover
 
     def error(self, code, message):
         if self._m_state is not None:
-            self.worker.send_error(self.session, code, message)
-            self.close()
+            try:
+                self.worker.send_error(self.session, code, message)
+            finally:
+                self.close()
 
     @property
     def closed(self):

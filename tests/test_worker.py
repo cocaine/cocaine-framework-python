@@ -45,10 +45,9 @@ def test_worker():
         print 1
         inc = yield request.read()
         print 2, inc
-        response.write("A")
-        print 3
-        if not response.closed:
-            response.error(-1000, "testerror")
+        with response:
+            response.write("A")
+            print 3
 
     def bad_ping(request, response):
         import unreal_package
