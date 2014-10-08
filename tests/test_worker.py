@@ -41,13 +41,16 @@ def test_worker():
     socket_path = "tests/enp"
     t = Process(target=main, args=(socket_path,))
 
+    res = list()
+
     def ping(request, response):
-        print 1
+        res.append(1)
         inc = yield request.read()
-        print 2, inc
+        res.append(2)
+        res.append(inc)
         with response:
             response.write("A")
-            print 3
+            res.append(3)
 
     def bad_ping(request, response):
         import unreal_package
@@ -63,6 +66,7 @@ def test_worker():
     t.join(1)
     w.run({"ping": ping,
            "bad_ping": bad_ping})
+    assert res[:4] == [1, 2, 'ping', 3], res[:4]
 
 
 def test_worker_unable_to_connect():
