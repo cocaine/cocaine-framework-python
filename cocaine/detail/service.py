@@ -119,7 +119,7 @@ class Rx(object):
         self._queue.put_nowait((name, payload))
         if rx == {}:  # last transition
             self.done()
-        elif rx is not None:  # recursive transition
+        elif rx is not None:  # not a recursive transition
             self.rx_tree = rx
 
     def error(self, err):
@@ -131,14 +131,22 @@ class Tx(object):
         self.tx_tree = tx_tree
         self.session_id = session_id
         self.pipe = pipe
+        self._done = False
 
     @coroutine
     def _invoke(self, method_name, *args, **kwargs):
+        if self._done:
+            raise ChokeEvent()
+
         log.debug("_invoke has been called %s %s", str(args), str(kwargs))
-        for method_id, (method, tx_tree, rx_tree) in self.tx_tree.items():  # py3 has no iteritems
+        for method_id, (method, tx_tree) in self.tx_tree.items():  # py3 has no iteritems
             if method == method_name:
                 log.debug("method `%s` has been found in API map", method_name)
                 self.pipe.write(msgpack.packb([self.session_id, method_id, args]))
+                if tx_tree == {}:  # last transition
+                    self.done()
+                elif tx_tree is not None:  # not a recursive transition
+                    self.tx_tree = tx_tree
                 raise Return(None)
         raise AttributeError("method_name")
 
@@ -146,6 +154,9 @@ class Tx(object):
         def on_getattr(*args, **kwargs):
             return self._invoke(name, *args, **kwargs)
         return on_getattr
+
+    def done(self):
+        self._done = True
 
 
 class Channel(object):

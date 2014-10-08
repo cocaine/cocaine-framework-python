@@ -172,6 +172,7 @@ class Worker(object):
                 callback(message)
 
     def terminate(self, code, reason):
+        log.error("terminated")
         self.pipe.write(Message(RPC.TERMINATE, 0,
                                 code, reason).pack())
         self._stop()

@@ -186,7 +186,7 @@ class TestRx(object):
 
 
 class TestTx(object):
-    tx_tree = {0: ['dummy', None, {}]}
+    tx_tree = {0: ['dummy', None]}
 
     class PipeMock(object):
         def write(self, *args):
