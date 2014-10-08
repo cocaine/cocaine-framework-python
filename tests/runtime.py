@@ -82,7 +82,7 @@ def main(path):
     r = install_server(path)
 
     def on_heartbeat(w):
-        w.write(msgpack.packb([1, 0, []]))
+        w.write(msgpack.packb([1, 1, []]))
         w.write(msgpack.packb([3, r.counter, ["ping"]]))
         w.write(msgpack.packb([4, r.counter, ["ping"]]))
         w.write(msgpack.packb([6, r.counter, []]))
@@ -91,7 +91,7 @@ def main(path):
         if r.counter > 1:
             r.stop()
 
-    r.on([1, 0, []], on_heartbeat)
+    r.on([1, 1, []], on_heartbeat)
     r.serve()
 
 

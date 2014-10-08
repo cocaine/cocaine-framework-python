@@ -33,7 +33,6 @@ from ..detail.io import Timer
 from .message import RPC
 from .message import Message
 from ..decorators import coroutine
-# from ..asio import CocaineProtocol
 from ..common import CocaineErrno
 from ._wrappers import default
 from .response import ResponseStream
@@ -90,7 +89,7 @@ class Worker(object):
         self.pr = None
 
         # avoid unnecessary dublicate packing of message
-        self._heartbeat_msg = Message(RPC.HEARTBEAT, 0).pack()
+        self._heartbeat_msg = Message(RPC.HEARTBEAT, 1).pack()
 
     def async_connect(self):
         # proto_factory = CocaineProtocol.factory(self.on_message,
@@ -173,7 +172,7 @@ class Worker(object):
 
     def terminate(self, code, reason):
         log.error("terminated")
-        self.pipe.write(Message(RPC.TERMINATE, 0,
+        self.pipe.write(Message(RPC.TERMINATE, 1,
                                 code, reason).pack())
         self._stop()
 
@@ -234,7 +233,7 @@ class Worker(object):
 
     # Private:
     def _send_handshake(self):
-        self.pipe.write(Message(RPC.HANDSHAKE, 0, self.uuid).pack())
+        self.pipe.write(Message(RPC.HANDSHAKE, 1, self.uuid).pack())
 
     def _send_heartbeat(self):
         self.disown_timer.start()
