@@ -29,7 +29,7 @@ def test_logger():
     empty_resp = l.set_verbosity(verbosity_level).wait(1).rx.get().wait(1)
     assert isinstance(empty_resp, EmptyResponse)
     verbosity = l.verbosity().wait(1).rx.get().wait(1)
-    assert verbosity[0] == verbosity_level, verbosity
+    assert verbosity == verbosity_level, verbosity
     l.emit(verbosity_level, "nosetest", "test_message", {"attr1": 1, "attr2": 2})
     l.debug("DEBUG_MSG", {"A": 1, "B": 2})
     l.info("INFO_MSG", {"A": 1, "B": 2})

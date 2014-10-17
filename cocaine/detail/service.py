@@ -75,7 +75,10 @@ class EmptyResponse(object):
 
 def StreamedProtocol(name, payload):
     if name == "write":
-        return payload
+        if len(payload) == 1:
+            return payload[0]
+        else:
+            return payload
     elif name == "error":
         return ServiceError(*payload)
     elif name == "close":
