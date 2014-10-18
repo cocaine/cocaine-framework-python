@@ -192,6 +192,7 @@ class BaseService(object):
 
         # wrap into separate class
         self.pipe = None
+        self.address = None
         self.buffer = msgpack.Unpacker(encoding=self._msgpack_string_encoding)
 
     @coroutine
@@ -213,6 +214,7 @@ class BaseService(object):
                 except Exception as err:
                     self.log.error("connection error %s", err)
                 else:
+                    self.address = (host, port)
                     self.log.debug("connection has been established successfully")
                     raise Return(True)
 
