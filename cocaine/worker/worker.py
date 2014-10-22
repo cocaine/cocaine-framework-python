@@ -120,7 +120,7 @@ class Worker(object):
         if binds is None:
             binds = {}
         # attach handlers
-        for event, handler in binds.iteritems():
+        for event, handler in binds.items():  # py3
             self.on(event, handler)
 
         # schedule connection establishment
