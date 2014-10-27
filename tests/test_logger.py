@@ -20,14 +20,13 @@
 #
 
 from cocaine.detail.logger import _Logger
-from cocaine.detail.service import EmptyResponse
 
 
 def test_logger():
     verbosity_level = 0
     l = _Logger()
     empty_resp = l.set_verbosity(verbosity_level).wait(1).rx.get().wait(1)
-    assert isinstance(empty_resp, EmptyResponse)
+    assert empty_resp == [], empty_resp
     verbosity = l.verbosity().wait(1).rx.get().wait(1)
     assert verbosity == verbosity_level, verbosity
     l.emit(verbosity_level, "nosetest", "test_message", {"attr1": 1, "attr2": 2})

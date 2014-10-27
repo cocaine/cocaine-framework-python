@@ -74,7 +74,7 @@ class EmptyResponse(object):
 
 
 def StreamedProtocol(name, payload):
-    if name == "write":
+    if name == "write" or name == "value":
         if len(payload) == 1:
             return payload[0]
         else:
