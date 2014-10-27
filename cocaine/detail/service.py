@@ -73,8 +73,8 @@ class EmptyResponse(object):
     pass
 
 
-def StreamedProtocol(name, payload):
-    if name == "write" or name == "value":
+def StreamingProtocol(name, payload):
+    if name == "write":
         if len(payload) == 1:
             return payload[0]
         else:
@@ -85,14 +85,38 @@ def StreamedProtocol(name, payload):
         return EmptyResponse()
 
 
+def PrimitiveProtocol(name, payload):
+    if name == "value":
+        if len(payload) == 1:
+            return payload[0]
+        else:
+            return payload
+    elif name == "error":
+        return ServiceError(*payload)
+
+
+def NullProtocol(name, payload):
+    return (name, payload)
+
+
+def detect_protocol_type(rx_tree):
+    for name, _ in rx_tree.values():
+        if name in ('value'):
+            return PrimitiveProtocol
+        elif name in ('write'):
+            return StreamingProtocol
+    return NullProtocol
+
+
 class Rx(object):
     def __init__(self, rx_tree):
         self._queue = AsyncQueue()
         self._done = False
         self.rx_tree = rx_tree
+        self.default_protocol = detect_protocol_type(rx_tree)
 
     @coroutine
-    def get(self, timeout=0, protocol=StreamedProtocol):
+    def get(self, timeout=0, protocol=None):
         if self._done and self._queue.empty():
             raise ChokeEvent()
 
@@ -100,6 +124,9 @@ class Rx(object):
         item = yield self._queue.get()
         if isinstance(item, Exception):
             raise item
+
+        if protocol is None:
+            protocol = self.default_protocol
 
         name, payload = item
         res = protocol(name, payload)
