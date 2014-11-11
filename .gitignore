@@ -16,3 +16,6 @@ manpages/
 *.egg
 cocaine_toolc
 .tox/
+.coverage
+reports/
+
