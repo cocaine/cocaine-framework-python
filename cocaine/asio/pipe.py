@@ -98,7 +98,10 @@ class Pipe(object):
         self.address = None
         self._ioLoop.stop_listening(self.sock.fileno())
         self.sock.close()
-        # Seems there's no point
+        # To detach that sock fron eventloop
+        # we must know fd. If we set sock to None
+        # there's no way to find fd out.
+        # Also there's no place where None is checked.
         # self.sock = None
 
     def _onConnectionTimeout(self, address):
