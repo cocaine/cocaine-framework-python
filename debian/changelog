@@ -1,3 +1,9 @@
+cocaine-framework-python (0.11.1.10) unstable; urgency=low
+
+  * Close pipe in Readable stream instead of detaching from eventloop
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 12 Nov 2014 17:46:21 +0400
+
 cocaine-framework-python (0.11.1.9) unstable; urgency=low
 
   * don't set self.sock = None in Pipe.close

@@ -111,17 +111,18 @@ class ReadableStream(object):
             # Bad solution. On python 2.7 and higher - use memoryview and bytearray
             length = self._pipe.read(self._tmp_buff, len(self._tmp_buff))
             if length <= 0:
-                if length == 0:
-                    # Remote side has closed connection
-                    # Stop fd polling
-                    self._loop.stop_listening(self._pipe.fileno())
+                if length == 0:  # Remote side closed the connection
+                    # This method stops the polling of fd
+                    # in the eventloop.
+                    # And it's safe to call it here,
+                    # as _pipe.close checks state of the socket.
+                    # If pipe is already closed,
+                    # this method does nothing.
+                    self._pipe.close()
 
                     # Notify consumer if it wished
                     if self._on_pipe_closed is not None:
                         self._on_pipe_closed()
-
-                    # Should I close pipe here?
-                    # Does consumer take responsibility for that?
 
                     # drop socket ref
                     self._pipe = None
@@ -155,8 +156,9 @@ class WritableStream(object):
             self._process_events()
 
     def _process_events(self):
-        # All data was sent - so unbind writable event
+        # All data has been sent - so unbind writable event
         if len(self._buffer) == 0:
+            # Be sure that socket is in a proper connected state
             if self._attached:
                 self._loop.unregister_write_event(self._pipe.fileno())
                 self._attached = False
