@@ -98,7 +98,8 @@ class Pipe(object):
         self.address = None
         self._ioLoop.stop_listening(self.sock.fileno())
         self.sock.close()
-        self.sock = None
+        # Seems there's no point
+        # self.sock = None
 
     def _onConnectionTimeout(self, address):
         if self._connectionTimeoutTuple:
