@@ -1,3 +1,9 @@
+cocaine-framework-python (0.11.1.11) unstable; urgency=low
+
+  * Increase disown timeout to avoid the spiral of death
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Thu, 20 Nov 2014 11:35:21 +0400
+
 cocaine-framework-python (0.11.1.10) unstable; urgency=low
 
   * Close pipe in Readable stream instead of detaching from eventloop

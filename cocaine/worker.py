@@ -42,7 +42,14 @@ from cocaine.exceptions import RequestError
 
 class Worker(object):
 
-    def __init__(self, init_args=None, disown_timeout=2, heartbeat_timeout=20):
+    # heartber_timeout should be passed to the worker as
+    # it's configured in a profile.
+    # Although runtime replies to heartbeat ASAP, in v0.11
+    # ioloop can be blocked for a long period of time, i.e. when
+    # docker container is being pulled by engine.
+    # Morever a disconnection from runtime can be detected by
+    # reading zero bytes from UNIX socket (endpoint).
+    def __init__(self, init_args=None, disown_timeout=10, heartbeat_timeout=20):
         self._logger = core_log
         self._init_endpoint(init_args or sys.argv)
 
