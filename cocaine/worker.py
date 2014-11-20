@@ -42,7 +42,7 @@ from cocaine.exceptions import RequestError
 
 class Worker(object):
 
-    # heartber_timeout should be passed to the worker as
+    # heartbeat_timeout should be passed to the worker as
     # it's configured in a profile.
     # Although runtime replies to heartbeat ASAP, in v0.11
     # ioloop can be blocked for a long period of time, i.e. when
