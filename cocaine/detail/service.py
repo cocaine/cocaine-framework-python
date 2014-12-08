@@ -248,11 +248,8 @@ class BaseService(object):
             raise Exception("unable to establish connection")
 
     def disconnect(self):
-        with self._lock:
-            if self.pipe is not None:
-                self.pipe.close()
-            for session_rx in self.sessions.values():
-                session_rx.error(DisconnectionError(self.name))
+        if self.pipe is not None:
+            self.pipe.close()
 
     def on_close(self, *args):
         self.log.debug("pipe has been closed %s", args)
