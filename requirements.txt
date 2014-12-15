@@ -1,3 +1,3 @@
 msgpack_python
 tornado>=4.0
-futures
+toro>=0.7

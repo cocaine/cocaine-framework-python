@@ -27,7 +27,6 @@ import msgpack
 from tornado import ioloop
 from tornado.iostream import IOStream
 
-from ..detail.io import CocaineIO
 from ..detail.io import Timer
 from .message import RPC
 from .message import Message
@@ -52,7 +51,6 @@ class Worker(object):
         if heartbeat_timeout < disown_timeout:
             raise ValueError("heartbeat timeout must be greater then disown")
 
-        self.cocaine_loop = CocaineIO.instance()
         self.loop = loop or ioloop.IOLoop.current()
         self.pipe = None
         self.buffer = msgpack.Unpacker()
@@ -91,15 +89,13 @@ class Worker(object):
         self._heartbeat_msg = Message(RPC.HEARTBEAT, 1).pack()
 
     def async_connect(self):
-        # proto_factory = CocaineProtocol.factory(self.on_message,
-        #                                         self.on_failure)
 
         @coroutine
         def on_connect():
             sock = socket.socket(socket.AF_UNIX)
             log.debug("connecting to %s", self.endpoint)
             try:
-                io_stream = IOStream(sock, io_loop=self.cocaine_loop)
+                io_stream = IOStream(sock, io_loop=self.loop)
                 self.pipe = yield io_stream.connect(self.endpoint, callback=None)
                 log.debug("connected to %s %s", self.endpoint, self.pipe)
                 self.pipe.read_until_close(callback=self.on_failure,
@@ -114,7 +110,7 @@ class Worker(object):
                 return
             self.on_failure()
 
-        self.cocaine_loop.add_future(on_connect(), lambda x: None)
+        self.loop.add_future(on_connect(), lambda x: None)
 
     def run(self, binds=None):
         if binds is None:
@@ -132,16 +128,6 @@ class Worker(object):
 
     def on(self, event_name, event_handler):
         log.info("registering handler for event %s", event_name)
-        # try:
-        #     # Try to construct handler.
-        #     closure = event_handler()
-        # except Exception as err:
-        #     closure = default(event_handler)()
-        #     if hasattr(closure, "_wrapped"):
-        #         event_handler = default(event_handler)
-        # else:
-        #     if not hasattr(closure, "_wrapped"):
-        #         event_handler = default(event_handler)
         if not hasattr(event_handler, "_wrapped"):
             event_handler = default(event_handler)
         log.info("handler for event %s has been attached", event_name)

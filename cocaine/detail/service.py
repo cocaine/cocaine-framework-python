@@ -27,16 +27,14 @@ import threading
 
 import msgpack
 from tornado.gen import Return
-from tornado.concurrent import chain_future
 from tornado.tcpclient import TCPClient
+from tornado.ioloop import IOLoop
 
 
 from .api import API
 from .asyncqueue import AsyncQueue
 from ..common import CocaineErrno
 from ..decorators import coroutine
-from .io import CocaineFuture
-from .io import CocaineIO
 
 # cocaine defined exceptions
 from ..exceptions import ChokeEvent
@@ -50,23 +48,6 @@ log = logging.getLogger("cocaine")
 # sh = logging.StreamHandler()
 # log.setLevel(logging.INFO)
 # log.addHandler(sh)
-
-
-class CocaineTCPClient(TCPClient):
-    def __init__(self, *args, **kwargs):
-        super(CocaineTCPClient, self).__init__(*args, **kwargs)
-
-    def connect(self, host, port):
-        result_future = CocaineFuture()
-
-        def migrate_context():
-            connection_future = super(CocaineTCPClient, self).connect(host, port)
-            chain_future(connection_future, result_future)
-
-        # post this to handle a connection of IOStream
-        # in Cocaine IO thread
-        self.io_loop.post(migrate_context)
-        return result_future
 
 
 class EmptyResponse(object):
@@ -201,7 +182,7 @@ class BaseService(object):
     _msgpack_string_encoding = None if sys.version_info[0] == 2 else 'utf8'
 
     def __init__(self, name, host='localhost', port=10053, loop=None):
-        self.loop = loop or CocaineIO.instance()
+        self.loop = loop or IOLoop.current()
         # List of available endpoints in which service is resolved to.
         # Looks as [["host", port2], ["host2", port2]]
         self.endpoints = [[host, port]]
@@ -234,8 +215,7 @@ class BaseService(object):
             for host, port in self.endpoints:
                 try:
                     self.log.info("trying %s:%d to establish connection", host, port)
-                    self.pipe = yield CocaineTCPClient(io_loop=self.loop).connect(host,
-                                                                                  port)
+                    self.pipe = yield TCPClient(io_loop=self.loop).connect(host, port)
                     self.pipe.read_until_close(callback=self.on_close,
                                                streaming_callback=self.on_read)
                 except Exception as err:

@@ -19,15 +19,26 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+from tornado.ioloop import IOLoop
+from tornado import gen
+
 from cocaine.detail.logger import _Logger
 
 
 def test_logger():
+    io = IOLoop.current()
     verbosity_level = 0
     l = _Logger()
-    empty_resp = l.set_verbosity(verbosity_level).wait(1).rx.get().wait(1)
+
+    @gen.coroutine
+    def set_verbosity():
+        ch = yield l.set_verbosity(verbosity_level)
+        res = yield ch.rx.get()
+        raise gen.Return(res)
+
+    empty_resp = io.run_sync(set_verbosity)
     assert empty_resp == [], empty_resp
-    verbosity = l.verbosity().wait(1).rx.get().wait(1)
+    verbosity = io.run_sync(io.run_sync(l.verbosity).rx.get)
     assert verbosity == verbosity_level, verbosity
     l.emit(verbosity_level, "nosetest", "test_message", {"attr1": 1, "attr2": 2})
     l.debug("DEBUG_MSG", {"A": 1, "B": 2})
