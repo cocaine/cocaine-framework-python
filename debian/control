@@ -5,16 +5,18 @@ Maintainer: Anton Tyurin <noxiouz@yandex-team.ru>
 Build-Depends: cdbs, debhelper (>= 7.0.13), 
  python, 
  python-central,
- python-setuptools,
- python-futures
-Standards-Version: 3.9.1
+ python-setuptools
+Standards-Version: 3.9.3
 Vcs-Git: git://github.com/cocaine/cocaine-framework-python.git
 Vcs-Browser: https://github.com/cocaine/cocaine-framework-python
 XS-Python-Version: >= 2.6
 
 Package: cocaine-framework-python
 Architecture: any
-Depends: ${misc:Depends}, ${python:Depends}, python-msgpack | msgpack-python, python-tornado (> 3.1)
+Depends: ${misc:Depends}, ${python:Depends}, 
+ python-msgpack | msgpack-python, 
+ python-tornado (>= 4.0),
+ python-toro,
 XB-Python-Version: >= 2.6
 Description: Cocaine - Python Framework
  A simple framework to ease the developing of Cocaine apps.
