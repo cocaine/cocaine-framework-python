@@ -216,6 +216,7 @@ class BaseService(object):
                 try:
                     self.log.info("trying %s:%d to establish connection", host, port)
                     self.pipe = yield TCPClient(io_loop=self.loop).connect(host, port)
+                    self.pipe.set_nodelay(True)
                     self.pipe.read_until_close(callback=self.on_close,
                                                streaming_callback=self.on_read)
                 except Exception as err:
