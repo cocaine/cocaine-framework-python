@@ -22,7 +22,6 @@
 import itertools
 import logging
 import sys
-import threading
 
 
 import msgpack
@@ -33,6 +32,7 @@ from tornado.ioloop import IOLoop
 
 from .api import API
 from .asyncqueue import AsyncQueue
+from .asyncqueue import AsyncLock
 from ..common import CocaineErrno
 from ..decorators import coroutine
 
@@ -196,7 +196,7 @@ class BaseService(object):
         self.counter = itertools.count(1)
         self.api = {}
 
-        self._lock = threading.Lock()
+        self._lock = AsyncLock()
 
         # wrap into separate class
         self.pipe = None
@@ -208,7 +208,7 @@ class BaseService(object):
         if self._connected:
             raise Return(True)
 
-        with self._lock:
+        with (yield self._lock.acquire()):
             if self._connected:
                 raise Return(True)
 
@@ -229,15 +229,19 @@ class BaseService(object):
             raise Exception("unable to establish connection")
 
     def disconnect(self):
-        if self.pipe is not None:
-            self.pipe.close()
+        if self.pipe is None:
+            return
+
+        self.pipe.set_close_callback(lambda x: None)
+        self.pipe.close()
+        self.pipe = None
+
+        for session_rx in self.sessions.values():
+            session_rx.error(DisconnectionError(self.name))
 
     def on_close(self, *args):
         self.log.debug("pipe has been closed %s", args)
-        with self._lock:
-            self.pipe = None
-            for session_rx in self.sessions.values():
-                session_rx.error(DisconnectionError(self.name))
+        self.disconnect()
 
     def on_read(self, read_bytes):
         self.log.debug("read %s", read_bytes)

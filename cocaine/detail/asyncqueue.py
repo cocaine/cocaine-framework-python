@@ -22,3 +22,4 @@
 import toro
 
 AsyncQueue = toro.Queue
+AsyncLock = toro.Lock
