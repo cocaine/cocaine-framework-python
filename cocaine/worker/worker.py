@@ -168,8 +168,8 @@ class Worker(object):
         self.disown_timer.stop()
 
     def _dispatch_terminate(self, msg):
-        log.debug("terminate has been received %s %s", msg.reason, msg.message)
-        self.terminate(msg.reason, msg.message)
+        log.debug("terminate has been received %s %s", msg.errno, msg.reason)
+        self.terminate(msg.errno, msg.reason)
 
     def _dispatch_invoke(self, msg):
         log.debug("invoke has been received %s", msg)
