@@ -1,3 +1,11 @@
+cocaine-framework-python (0.12.0.1-rc6) unstable; urgency=low
+
+  * [Service] Replace threading.Lock with AsyncLock. Fix handling of
+  disconnection
+  * [Worker] Fix handling of terminate message: wrong names of properties.
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Thu, 25 Dec 2014 12:05:08 +0400 
+
 cocaine-framework-python (0.12.0.1-rc5) unstable; urgency=low
 
   * [Service] set_nodelay(True) to decrease latency as it's not set
