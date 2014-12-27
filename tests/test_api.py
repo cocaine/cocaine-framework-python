@@ -19,13 +19,21 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+from tornado.ioloop import IOLoop
 
-class API:
-    Locator = {0: ['resolve', {}, {0: ['value', {}], 1: ['error', {}]}],
-               1: ['connect', {}, {0: ['write', None], 1: ['error', {}], 2: ['close', {}]}],
-               2: ['refresh', {}, {0: ['value', {}], 1: ['error', {}]}],
-               3: ['cluster', {}, {0: ['value', {}], 1: ['error', {}]}]}
+from cocaine.services import Service
+from cocaine.detail.api import API
 
-    Logger = {0: ['emit', {}, {}],
-              1: ['verbosity', {}, {0: ['value', {}], 1: ['error', {}]}],
-              2: ['set_verbosity', {}, {0: ['value', {}], 1: ['error', {}]}]}
+
+def test_verify_locator_api():
+    io = IOLoop.current()
+    l = Service("locator")
+    io.run_sync(l.connect)
+    assert l.api == API.Locator, "%s\n%s" % (API.Locator, l.api)
+
+
+def test_verify_logger_api():
+    io = IOLoop.current()
+    l = Service("logging")
+    io.run_sync(l.connect)
+    assert l.api == API.Logger, "%s\n%s" % (API.Logger, l.api)

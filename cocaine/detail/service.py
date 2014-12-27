@@ -45,9 +45,6 @@ from ..exceptions import ServiceError
 
 
 log = logging.getLogger("cocaine")
-# sh = logging.StreamHandler()
-# log.setLevel(logging.INFO)
-# log.addHandler(sh)
 
 
 class EmptyResponse(object):
