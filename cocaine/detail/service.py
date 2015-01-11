@@ -298,13 +298,14 @@ class Locator(BaseService):
 
 
 class Service(BaseService):
-    def __init__(self, name, host="localhost", port=10053, version=0, loop=None):
+    def __init__(self, name, seed=None, host="localhost", port=10053, version=0, loop=None):
         super(Service, self).__init__(name=name, loop=loop)
         self.locator = Locator(host=host, port=port, loop=loop)
         # Dispatch tree
         self.api = {}
         # Service API version
         self.version = version
+        self.seed = seed
 
     @coroutine
     def connect(self):
@@ -314,7 +315,10 @@ class Service(BaseService):
             return
 
         self.log.debug("resolving ...", extra=self._extra)
-        channel = yield self.locator.resolve(self.name)
+        if self.seed is not None:
+            channel = yield self.locator.resolve(self.name, self.seed)
+        else:
+            channel = yield self.locator.resolve(self.name)
         # Set up self.endpoints for BaseService class
         # It's used in super(Service).connect()
         self.endpoints, version, self.api = yield channel.rx.get()

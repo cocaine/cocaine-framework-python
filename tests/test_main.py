@@ -54,6 +54,14 @@ def test_locator():
     assert isinstance(api, dict)
 
 
+def test_service_with_seed():
+    io = IOLoop.current()
+    n1 = Service("node", seed="TEST_SEED")
+    channel = io.run_sync(n1.list)
+    app_list = io.run_sync(channel.rx.get)
+    assert isinstance(app_list, list)
+
+
 def test_on_close():
     io = IOLoop.current()
     locator = Locator("localhost", 10053, loop=io)
