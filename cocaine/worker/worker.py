@@ -128,8 +128,17 @@ class Worker(object):
 
     def on(self, event_name, event_handler):
         log.info("registering handler for event %s", event_name)
-        if not hasattr(event_handler, "_wrapped"):
-            event_handler = default(event_handler)
+        try:
+            # Try to construct handler.
+            closure = event_handler()
+        except Exception:
+            # If this callable object is not our wrapper - may raise Exception
+            closure = default(event_handler)()
+            if hasattr(closure, "_wrapped"):
+                event_handler = default(event_handler)
+        else:
+            if not hasattr(closure, "_wrapped"):
+                event_handler = default(event_handler)
         log.info("handler for event %s has been attached", event_name)
         self._events[event_name] = event_handler
 
@@ -191,9 +200,9 @@ class Worker(object):
             self.terminate(CocaineErrno.EBADSOURCE,
                            "source is broken")
         except Exception as err:
-            log.error("invocation failed %s %s", err, type(err))
+            log.error("failed to invoke %s %s", err, type(err))
             response.error(CocaineErrno.EINVFAILED,
-                           "invocation failed %s" % err)
+                           "failed to invoke %s" % err)
 
     def _dispatch_chunk(self, msg):
         log.debug("chunk has been received %d", msg.session)

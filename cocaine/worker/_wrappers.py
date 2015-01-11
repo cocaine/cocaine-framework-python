@@ -44,16 +44,12 @@ class _Context(object):
                 response.error(CocaineErrno.EUNCAUGHTEXCEPTION, str(err))
         loop.add_future(self._obj(request, response), trap)
 
-    # @property
-    # def closed(self):
-    #     return self._state is None
-
 
 def patch_response(obj, response_handler):
     def decorator(handler):
         def dec(func):
-            def wrapper(request, response):
-                return func(request, handler(response))
+            def wrapper(request, response, loop):
+                return func(request, handler(response), loop)
             return wrapper
         return dec
 
@@ -64,8 +60,8 @@ def patch_response(obj, response_handler):
 def patch_request(obj, request_handler):
     def req_decorator(handler):
         def dec(func):
-            def wrapper(request, response):
-                return func(handler(request), response)
+            def wrapper(request, response, loop):
+                return func(handler(request), response, loop)
             return wrapper
         return dec
 
@@ -74,6 +70,8 @@ def patch_request(obj, request_handler):
 
 
 def proxy_factory(func, request_handler=None, response_handler=None):
+    func = gen.coroutine(func)
+
     def wrapper():
         obj = _Context(func)
         if response_handler is not None:
@@ -85,5 +83,4 @@ def proxy_factory(func, request_handler=None, response_handler=None):
 
 
 def default(func):
-    func = gen.coroutine(func)
-    return proxy_factory(func, None, None)
+    return proxy_factory(func, request_handler=None, response_handler=None)

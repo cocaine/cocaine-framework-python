@@ -203,11 +203,11 @@ class BaseService(object):
     @coroutine
     def connect(self):
         if self._connected:
-            raise Return(True)
+            return
 
         with (yield self._lock.acquire()):
             if self._connected:
-                raise Return(True)
+                return
 
             for host, port in self.endpoints:
                 try:
@@ -221,7 +221,7 @@ class BaseService(object):
                 else:
                     self.address = (host, port)
                     self.log.debug("connection has been established successfully")
-                    raise Return(True)
+                    return
 
             raise Exception("unable to establish connection")
 
