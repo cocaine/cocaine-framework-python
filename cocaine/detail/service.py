@@ -53,7 +53,7 @@ class EmptyResponse(object):
 
 
 def StreamingProtocol(name, payload):
-    if name == "write":
+    if name == "write":  # pragma: no cover
         if len(payload) == 1:
             return payload[0]
         else:

@@ -22,11 +22,13 @@
 import socket
 
 from tornado.ioloop import IOLoop
+import toro
 
 from cocaine.detail.service import InvalidApiVersion
 from cocaine.detail.service import Rx, Tx
 from cocaine.detail.service import BaseService
 from cocaine.detail.service import ServiceError, ChokeEvent, InvalidMessageType
+from cocaine.detail.service import PrimitiveProtocol, StreamingProtocol, NullProtocol
 from cocaine.exceptions import ConnectionError, DisconnectionError
 from cocaine.worker.request import Stream
 
@@ -142,7 +144,7 @@ class TestRx(object):
     def test_rx_done(self):
         rx = Rx(self.rx_tree)
         rx.push(2, [])
-        self.io.run_sync(rx.get)
+        self.io.run_sync(lambda: rx.get(timeout=1))
         self.io.run_sync(rx.get)
 
     @tools.raises(ChokeEvent)
@@ -162,6 +164,13 @@ class TestRx(object):
         rx.push(4, [])
         io.run_sync(rx.get)
 
+    @tools.raises(ChokeEvent)
+    def test_rx_on_done(self):
+        io = IOLoop.current()
+        rx = Rx(self.rx_tree)
+        rx.done()
+        io.run_sync(rx.get)
+
 
 class TestTx(object):
     tx_tree = {0: ['dummy', None]}
@@ -175,6 +184,13 @@ class TestTx(object):
         tx = Tx(self.tx_tree, self.PipeMock(), 1)
         tx.dummy().wait(4)
         tx.failed().wait(4)
+
+    @tools.raises(ChokeEvent)
+    def test_tx_on_done(self):
+        io = IOLoop.current()
+        tx = Tx(self.tx_tree, self.PipeMock(), 1)
+        tx.done()
+        io.run_sync(tx.get)
 
 
 def test_current_ioloop():
@@ -209,3 +225,33 @@ def test_stream():
     stream = Stream(io_loop=io)
     stream.error(100, "TESTERROR")
     io.run_sync(stream.get)
+
+
+@tools.raises(toro.Timeout)
+def test_stream_timeout():
+    io = IOLoop.current()
+    stream = Stream(io_loop=io)
+    io.run_sync(lambda: stream.get(timeout=0.5))
+
+
+def test_primitive_protocol():
+    assert NullProtocol("A", 1) == ("A", 1)
+    primitive_single_payload = ["A"]
+    primitive = PrimitiveProtocol("value", primitive_single_payload)
+    assert primitive == primitive_single_payload[0], primitive
+    primitive_sequence_payload = ["A", "B", "C"]
+    primitive = PrimitiveProtocol("value", primitive_sequence_payload)
+    assert primitive == primitive_sequence_payload, primitive
+    primitive_error = PrimitiveProtocol("error", ["A", 100])
+    assert isinstance(primitive_error, ServiceError), primitive_error
+
+
+def test_streaming_protocol():
+    streaming_single_payload = ["A"]
+    streaming = StreamingProtocol("write", streaming_single_payload)
+    assert streaming == streaming_single_payload[0], streaming
+    streaming_sequence_payload = ["A", "B", "C"]
+    streaming = StreamingProtocol("write", streaming_sequence_payload)
+    assert streaming == streaming_sequence_payload, streaming
+    streaming_error = StreamingProtocol("error", ["A", 100])
+    assert isinstance(streaming_error, ServiceError), streaming_error
