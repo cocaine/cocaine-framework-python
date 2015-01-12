@@ -47,19 +47,19 @@ log.setLevel(logging.DEBUG)
 class Worker(object):
     def __init__(self, disown_timeout=DEFAULT_DISOWN_TIMEOUT,
                  heartbeat_timeout=DEFAULT_HEARTBEAT_TIMEOUT,
-                 loop=None, **kwargs):
+                 io_loop=None, **kwargs):
         if heartbeat_timeout < disown_timeout:
             raise ValueError("heartbeat timeout must be greater then disown")
 
-        self.loop = loop or ioloop.IOLoop.current()
+        self.io_loop = io_loop or ioloop.IOLoop.current()
         self.pipe = None
         self.buffer = msgpack.Unpacker()
 
         self.disown_timer = Timer(self.on_disown,
-                                  disown_timeout, self.loop)
+                                  disown_timeout, self.io_loop)
 
         self.heartbeat_timer = Timer(self.on_heartbeat_timer,
-                                     heartbeat_timeout, self.loop)
+                                     heartbeat_timeout, self.io_loop)
 
         self._dispatcher = {
             RPC.HEARTBEAT: self._dispatch_heartbeat,
@@ -95,7 +95,7 @@ class Worker(object):
             sock = socket.socket(socket.AF_UNIX)
             log.debug("connecting to %s", self.endpoint)
             try:
-                io_stream = IOStream(sock, io_loop=self.loop)
+                io_stream = IOStream(sock, io_loop=self.io_loop)
                 self.pipe = yield io_stream.connect(self.endpoint, callback=None)
                 log.debug("connected to %s %s", self.endpoint, self.pipe)
                 self.pipe.read_until_close(callback=self.on_failure,
@@ -110,7 +110,7 @@ class Worker(object):
                 return
             self.on_failure()
 
-        self.loop.add_future(on_connect(), lambda x: None)
+        self.io_loop.add_future(on_connect(), lambda x: None)
 
     def run(self, binds=None):
         if binds is None:
@@ -124,7 +124,7 @@ class Worker(object):
         # start heartbeat timer
         self.heartbeat_timer.start()
 
-        self.loop.start()
+        self.io_loop.start()
 
     def on(self, event_name, event_handler):
         log.info("registering handler for event %s", event_name)
@@ -182,13 +182,13 @@ class Worker(object):
 
     def _dispatch_invoke(self, msg):
         log.debug("invoke has been received %s", msg)
-        request = RequestStream()
+        request = RequestStream(self.io_loop)
         response = ResponseStream(msg.session, self, msg.event)
         try:
             event_closure = self._events.get(msg.event)
             if event_closure is not None:
                 event_handler = event_closure()
-                event_handler.invoke(request, response, self.loop)
+                event_handler.invoke(request, response, self.io_loop)
                 self.sessions[msg.session] = request
             else:
                 log.warn("there is no handler for event %s", msg.event)
@@ -244,4 +244,4 @@ class Worker(object):
         self.pipe.write(Message(RPC.ERROR, session, code, msg).pack())
 
     def _stop(self):
-        self.loop.stop()
+        self.io_loop.stop()

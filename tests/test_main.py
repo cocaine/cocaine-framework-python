@@ -206,6 +206,6 @@ def test_connection_error():
 @tools.raises(ServiceError)
 def test_stream():
     io = IOLoop.current()
-    stream = Stream()
+    stream = Stream(io_loop=io)
     stream.error(100, "TESTERROR")
     io.run_sync(stream.get)

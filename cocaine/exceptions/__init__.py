@@ -33,7 +33,7 @@ class ServiceError(CocaineError):
     def __init__(self, errnumber, reason):
         self.errno = errnumber
         self.reason = reason
-        super(Exception, self).__init__("%s %s" % (self.errno, self.reason))
+        super(ServiceError, self).__init__("%s %s" % (self.errno, self.reason))
 
 
 class InvalidApiVersion(ServiceError):

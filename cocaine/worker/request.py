@@ -19,6 +19,8 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import datetime
+
 from ..detail.asyncqueue import AsyncQueue
 from ..decorators import coroutine
 from ..exceptions import ServiceError, ChokeEvent
@@ -27,15 +29,17 @@ from tornado import gen
 
 
 class Stream(object):
-    def __init__(self):
-        self._queue = AsyncQueue()
+    def __init__(self, io_loop):
+        self._queue = AsyncQueue(io_loop=io_loop)
         self._done = False
 
     @coroutine
     def get(self, timeout=0):
-        # ToDo: wrap with timeout
-        # gen.with_timeout
-        res = yield self._queue.get()
+        if timeout == 0:
+            res = yield self._queue.get()
+        else:
+            deadline = datetime.timedelta(seconds=timeout)
+            res = yield self._queue.get(deadline=deadline)
 
         if isinstance(res, Exception):
             raise res

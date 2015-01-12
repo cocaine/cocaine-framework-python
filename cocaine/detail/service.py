@@ -19,6 +19,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import datetime
 import itertools
 import logging
 import sys
@@ -87,8 +88,9 @@ def detect_protocol_type(rx_tree):
 
 
 class Rx(object):
-    def __init__(self, rx_tree):
-        self._queue = AsyncQueue()
+    def __init__(self, rx_tree, io_loop=None):
+        self._io_loop = io_loop or IOLoop.current()
+        self._queue = AsyncQueue(io_loop=self._io_loop)
         self._done = False
         self.rx_tree = rx_tree
         self.default_protocol = detect_protocol_type(rx_tree)
@@ -99,7 +101,12 @@ class Rx(object):
             raise ChokeEvent()
 
         # to pull variuos service errors
-        item = yield self._queue.get()
+        if timeout == 0:
+            item = yield self._queue.get()
+        else:
+            deadline = datetime.timedelta(seconds=timeout)
+            item = yield self._queue.get(deadline)
+
         if isinstance(item, Exception):
             raise item
 
@@ -179,7 +186,7 @@ class BaseService(object):
     _msgpack_string_encoding = None if sys.version_info[0] == 2 else 'utf8'
 
     def __init__(self, name, host='localhost', port=10053, loop=None):
-        self.loop = loop or IOLoop.current()
+        self.io_loop = loop or IOLoop.current()
         # List of available endpoints in which service is resolved to.
         # Looks as [["host", port2], ["host2", port2]]
         self.endpoints = [[host, port]]
@@ -212,7 +219,7 @@ class BaseService(object):
             for host, port in self.endpoints:
                 try:
                     self.log.info("trying %s:%d to establish connection", host, port)
-                    self.pipe = yield TCPClient(io_loop=self.loop).connect(host, port)
+                    self.pipe = yield TCPClient(io_loop=self.io_loop).connect(host, port)
                     self.pipe.set_nodelay(True)
                     self.pipe.read_until_close(callback=self.on_close,
                                                streaming_callback=self.on_read)
@@ -273,7 +280,7 @@ class BaseService(object):
                 self.log.debug("RX TREE %s", rx_tree)
                 self.log.debug("TX TREE %s", tx_tree)
 
-                rx = Rx(rx_tree)
+                rx = Rx(rx_tree, io_loop=self.io_loop)
                 tx = Tx(tx_tree, self.pipe, counter)
                 self.sessions[counter] = rx
                 channel = Channel(rx=rx, tx=tx)
