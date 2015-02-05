@@ -45,6 +45,20 @@ from ..exceptions import InvalidApiVersion
 from ..exceptions import ServiceError
 
 
+LOCATOR_DEFAULT_HOST = '127.0.0.1'
+LOCATOR_DEFAULT_PORT = 10053
+
+if '--locator' in sys.argv:
+    try:
+        index = sys.argv.index('--locator') + 1
+        host, _, port = sys.argv[index].rpartition(':')
+        if host:
+            LOCATOR_DEFAULT_HOST = host
+        if port.isdigit():
+            LOCATOR_DEFAULT_PORT = int(port)
+    except Exception:
+        pass
+
 log = logging.getLogger("cocaine")
 
 
@@ -185,7 +199,7 @@ class BaseService(object):
     # Make it to unpack as strings for compatibility.
     _msgpack_string_encoding = None if sys.version_info[0] == 2 else 'utf8'
 
-    def __init__(self, name, host='localhost', port=10053, loop=None):
+    def __init__(self, name, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, loop=None):
         self.io_loop = loop or IOLoop.current()
         # List of available endpoints in which service is resolved to.
         # Looks as [["host", port2], ["host2", port2]]
@@ -298,14 +312,15 @@ class BaseService(object):
 
 
 class Locator(BaseService):
-    def __init__(self, host="localhost", port=10053, loop=None):
+    def __init__(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, loop=None):
         super(Locator, self).__init__(name="locator",
                                       host=host, port=port, loop=loop)
         self.api = API.Locator
 
 
 class Service(BaseService):
-    def __init__(self, name, seed=None, host="localhost", port=10053, version=0, loop=None):
+    def __init__(self, name, seed=None,
+                 host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, version=0, loop=None):
         super(Service, self).__init__(name=name, loop=loop)
         self.locator = Locator(host=host, port=port, loop=loop)
         # Dispatch tree
