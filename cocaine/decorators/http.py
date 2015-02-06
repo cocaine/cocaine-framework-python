@@ -23,7 +23,7 @@
 try:
     import urlparse
     import Cookie as cookies
-except ImportError:
+except ImportError:  # pragma: no cover
     from urllib import parse as urlparse
     from http import cookies
 
