@@ -60,6 +60,7 @@ if '--locator' in sys.argv:
         pass
 
 log = logging.getLogger("cocaine")
+log.setLevel(logging.CRITICAL)
 
 
 class EmptyResponse(object):

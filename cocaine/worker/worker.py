@@ -41,7 +41,6 @@ DEFAULT_DISOWN_TIMEOUT = 5
 
 logging.basicConfig()
 log = logging.getLogger("cocaine")
-log.setLevel(logging.DEBUG)
 
 
 class Worker(object):
