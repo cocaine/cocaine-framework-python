@@ -251,7 +251,6 @@ class BaseService(object):
         if self.pipe is None:
             return
 
-        self.pipe.set_close_callback(lambda x: None)
         self.pipe.close()
         self.pipe = None
 
