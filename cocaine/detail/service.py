@@ -95,9 +95,9 @@ def NullProtocol(name, payload):
 
 def detect_protocol_type(rx_tree):
     for name, _ in rx_tree.values():
-        if name in ('value'):
+        if name == 'value':
             return PrimitiveProtocol
-        elif name in ('write'):
+        elif name == 'write':
             return StreamingProtocol
     return NullProtocol
 
