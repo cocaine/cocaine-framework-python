@@ -23,9 +23,15 @@ import datetime
 
 from ..detail.asyncqueue import AsyncQueue
 from ..decorators import coroutine
-from ..exceptions import ServiceError, ChokeEvent
+from ..exceptions import ChokeEvent
 
 from tornado import gen
+
+
+class RequestError(Exception):
+    def __init__(self, code, reason):
+        self.code = code
+        self.reason = reason
 
 
 class Stream(object):
@@ -53,7 +59,7 @@ class Stream(object):
         return self._queue.put_nowait(ChokeEvent())
 
     def error(self, errnumber, reason):
-        return self._queue.put_nowait(ServiceError(errnumber, reason))
+        return self._queue.put_nowait(RequestError(errnumber, reason))
 
 
 class RequestStream(Stream):

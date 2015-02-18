@@ -67,26 +67,28 @@ class EmptyResponse(object):
     pass
 
 
+class ProtocolError(object):
+    __slots__ = ("code", "reason")
+
+    def __init__(self, code, reason):
+        self.code = code
+        self.reason = reason
+
+
 def StreamingProtocol(name, payload):
     if name == "write":  # pragma: no cover
-        if len(payload) == 1:
-            return payload[0]
-        else:
-            return payload
+        return payload[0] if len(payload) == 1 else payload
     elif name == "error":
-        return ServiceError(*payload)
+        return ProtocolError(*payload)
     elif name == "close":
         return EmptyResponse()
 
 
 def PrimitiveProtocol(name, payload):
     if name == "value":
-        if len(payload) == 1:
-            return payload[0]
-        else:
-            return payload
+        return payload[0] if len(payload) == 1 else payload
     elif name == "error":
-        return ServiceError(*payload)
+        return ProtocolError(*payload)
 
 
 def NullProtocol(name, payload):
@@ -103,10 +105,11 @@ def detect_protocol_type(rx_tree):
 
 
 class Rx(object):
-    def __init__(self, rx_tree, io_loop=None):
+    def __init__(self, rx_tree, io_loop=None, servicename=None):
         self._io_loop = io_loop or IOLoop.current()
         self._queue = AsyncQueue(io_loop=self._io_loop)
         self._done = False
+        self.servicename = servicename
         self.rx_tree = rx_tree
         self.default_protocol = detect_protocol_type(rx_tree)
 
@@ -130,8 +133,8 @@ class Rx(object):
 
         name, payload = item
         res = protocol(name, payload)
-        if isinstance(res, Exception):
-            raise res
+        if isinstance(res, ProtocolError):
+            raise ServiceError(self.servicename, res.reason, res.code)
         else:
             raise Return(res)
 
@@ -142,7 +145,7 @@ class Rx(object):
         dispatch = self.rx_tree.get(msg_type)
         log.debug("dispatch %s %s", dispatch, payload)
         if dispatch is None:
-            raise InvalidMessageType(CocaineErrno.INVALIDMESSAGETYPE,
+            raise InvalidMessageType(self.servicename, CocaineErrno.INVALIDMESSAGETYPE,
                                      "unexpected message type %s" % msg_type)
         name, rx = dispatch
         log.debug("name `%s` rx `%s`", name, rx)

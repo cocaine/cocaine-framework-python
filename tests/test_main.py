@@ -27,10 +27,10 @@ import toro
 from cocaine.detail.service import InvalidApiVersion
 from cocaine.detail.service import Rx, Tx
 from cocaine.detail.service import BaseService
-from cocaine.detail.service import ServiceError, ChokeEvent, InvalidMessageType
+from cocaine.detail.service import ServiceError, ChokeEvent, InvalidMessageType, ProtocolError
 from cocaine.detail.service import PrimitiveProtocol, StreamingProtocol, NullProtocol
 from cocaine.exceptions import ConnectionError, DisconnectionError
-from cocaine.worker.request import Stream
+from cocaine.worker.request import Stream, RequestError
 
 from cocaine.services import Locator
 from cocaine.services import Service
@@ -219,7 +219,7 @@ def test_connection_error():
     ConnectionError("UnixDomainSocket", "Test")
 
 
-@tools.raises(ServiceError)
+@tools.raises(RequestError)
 def test_stream():
     io = IOLoop.current()
     stream = Stream(io_loop=io)
@@ -243,7 +243,7 @@ def test_primitive_protocol():
     primitive = PrimitiveProtocol("value", primitive_sequence_payload)
     assert primitive == primitive_sequence_payload, primitive
     primitive_error = PrimitiveProtocol("error", ["A", 100])
-    assert isinstance(primitive_error, ServiceError), primitive_error
+    assert isinstance(primitive_error, ProtocolError), primitive_error
 
 
 def test_streaming_protocol():
@@ -254,4 +254,4 @@ def test_streaming_protocol():
     streaming = StreamingProtocol("write", streaming_sequence_payload)
     assert streaming == streaming_sequence_payload, streaming
     streaming_error = StreamingProtocol("error", ["A", 100])
-    assert isinstance(streaming_error, ServiceError), streaming_error
+    assert isinstance(streaming_error, ProtocolError), streaming_error

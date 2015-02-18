@@ -30,16 +30,17 @@ class CocaineError(Exception):
 
 
 class ServiceError(CocaineError):
-    def __init__(self, errnumber, reason):
-        self.errno = errnumber
+    def __init__(self, servicename, reason, code):
+        self.servicename = servicename
+        self.code = code
         self.reason = reason
-        super(ServiceError, self).__init__("%s %s" % (self.errno, self.reason))
+        super(ServiceError, self).__init__('error in service "{0}" - {1} [{2}]'.format(servicename, reason, code))
 
 
 class InvalidApiVersion(ServiceError):
-    def __init__(self, name, expected_version, got_version):
-        message = "service `%s`invalid API version: expected `%d`, got `%d`" % (name, expected_version, got_version)
-        super(InvalidApiVersion, self).__init__(CocaineErrno.INVALIDAPIVERSION, message)
+    def __init__(self, servicename, expected_version, got_version):
+        message = "invalid API version: expected `%d`, got `%d`" % (expected_version, got_version)
+        super(InvalidApiVersion, self).__init__(servicename, message, CocaineErrno.INVALIDAPIVERSION)
 
 
 class InvalidMessageType(ServiceError):
