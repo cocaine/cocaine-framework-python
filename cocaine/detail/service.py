@@ -297,7 +297,7 @@ class BaseService(object):
                 self.log.debug("RX TREE %s", rx_tree)
                 self.log.debug("TX TREE %s", tx_tree)
 
-                rx = Rx(rx_tree, io_loop=self.io_loop)
+                rx = Rx(rx_tree, io_loop=self.io_loop, servicename=self.name)
                 tx = Tx(tx_tree, self.pipe, counter)
                 self.sessions[counter] = rx
                 channel = Channel(rx=rx, tx=tx)
