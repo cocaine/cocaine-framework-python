@@ -20,9 +20,28 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from tornado.gen import coroutine
+import functools
 
-from .http import http, tornado_http
-from .wsgi import wsgi
+from .http import tornado_http
 
-__all__ = ["coroutine", "http", "tornado_http", "wsgi"]
+from tornado.wsgi import WSGIContainer
+
+
+def start_response(func, status, response_headers, exc_info=None):
+    if exc_info:
+        try:
+            raise (exc_info[0], exc_info[1], exc_info[2])
+        finally:
+            exc_info = None  # Avoid circular ref.
+
+    return func.write_head(int(status.split(' ')[0]), response_headers)
+
+
+def wsgi(application):
+    @tornado_http
+    def wrapper(request, response):
+        req = yield request.read()
+        for data in application(WSGIContainer.environ(req), functools.partial(start_response, response)):
+            response.write(data)
+        response.close()
+    return wrapper
