@@ -20,9 +20,9 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-__author__ = 'Evgeny Safronov <division494@gmail.com>'
-
 from ..common import CocaineErrno
+
+__author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
 class CocaineError(Exception):

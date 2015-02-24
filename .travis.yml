@@ -6,6 +6,8 @@ install:
   - "pip install flake8"
   - "ci/travis.sh"
 script: tox && python setup.py nosetests
+notifications:
+  slack: cocaine:qDewv6ZVDt0TciQeNdE47GqG
 branches:
   only:
     - v0.11
