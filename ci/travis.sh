@@ -18,7 +18,7 @@ make_env () {
     echo "Build & install packages..."
     build_cocaine
     echo "Waiting..."
-    sleep(5)
+    sleep 5
 }
 
 make_env
