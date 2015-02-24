@@ -12,3 +12,4 @@ branches:
   only:
     - v0.11
     - master
+after_success: coveralls
