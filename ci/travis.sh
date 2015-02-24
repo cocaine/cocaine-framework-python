@@ -8,7 +8,7 @@ build_cocaine () {
   git clone --recursive https://github.com/cocaine/cocaine-core.git -b master
   cd cocaine-core
   yes | sudo mk-build-deps -i
-  yes | debuild -uc -us -j8
+  yes | debuild -uc -us
   cd .. && sudo dpkg -i *.deb || sudo apt-get install -f && rm -rf cocaine-core 
 }
 
