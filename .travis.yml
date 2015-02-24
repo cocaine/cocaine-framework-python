@@ -6,7 +6,7 @@ install:
   - "pip install flake8"
   - "sudo apt-get update -qq && sudo apt-get install -qq devscripts build-essential equivs python-software-properties"
   - "git clone --recursive https://github.com/cocaine/cocaine-core.git -b master"
-  - "cd cocaine-core && tests/ci/travis.sh"
+  - "cd cocaine-core && tests/ci/travis.sh && cd .. && dpkg -i *.deb || apt-get install -f && rm -rf cocaine-core"
 script: tox
 branches:
   only:
