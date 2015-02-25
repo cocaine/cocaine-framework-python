@@ -1,9 +1,12 @@
 language: python
 python:
   - "2.7"
+  - "3.4"
+  - "pypy"
+before_install:
+  - "ci/travis.sh"
 install:
   - "pip install tox flake8 python-coveralls"
-  - "ci/travis.sh"
 script: tox && python setup.py nosetests
 notifications:
   slack: cocaine:qDewv6ZVDt0TciQeNdE47GqG
