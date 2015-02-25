@@ -19,7 +19,8 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from multiprocessing import Process
+# from multiprocessing import Process
+from threading import Thread
 
 from nose import tools
 
@@ -39,7 +40,7 @@ def test_worker_missing_args():
 
 def test_worker():
     socket_path = "tests/enp"
-    t = Process(target=main, args=(socket_path,))
+    t = Thread(target=main, args=(socket_path,))
 
     res = list()
 

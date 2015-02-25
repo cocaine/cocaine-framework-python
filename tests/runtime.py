@@ -21,82 +21,59 @@
 
 import msgpack
 
-import os
-import trollius as asyncio
-import logging
-
-logging.basicConfig()
-log = logging.getLogger("asyncio")
-log.setLevel(logging.DEBUG)
+from tornado import netutil
+from tornado import ioloop
+from tornado import gen
+from tornado import tcpserver
 
 
-class RuntimeMock(object):
-    def __init__(self, unixsocket, loop=None):
-        self.loop = loop or asyncio.get_event_loop()
-        self.endpoint = unixsocket
+class RuntimeMock(tcpserver.TCPServer):
+    def __init__(self, unixsocket, io_loop=None):
+        super(RuntimeMock, self).__init__(io_loop=io_loop or ioloop.IOLoop.current())
+        self.io_loop = io_loop or ioloop.IOLoop.current()
         self.actions = list()
-        self.event = asyncio.Event()
         self.counter = 1
-
-    def serve(self):
-        @asyncio.coroutine
-        def _serve():
-            yield asyncio.async(asyncio.start_unix_server(self.on_client,
-                                                          path=self.endpoint,
-                                                          loop=self.loop))
-            yield self.event.wait()
-
-        try:
-            self.loop.run_until_complete(_serve())
-        finally:
-            os.remove(self.endpoint)
+        self.endpoint = unixsocket
+        self.add_socket(netutil.bind_unix_socket(unixsocket))
 
     def on(self, message, action):
         self.actions.append((message, action))
 
-    @asyncio.coroutine
-    def on_client(self, reader, writer):
+    @gen.coroutine
+    def handle_stream(self, stream, address):
         buff = msgpack.Unpacker()
-        while not reader.at_eof():
-            data = yield reader.read(100)
+        while True:
+            data = yield stream.read_bytes(1024, partial=True)
             buff.feed(data)
             for i in buff:
-                log.info("%s", i)
                 try:
-                    map(lambda clb: apply(clb, (writer,)),
+                    map(lambda clb: apply(clb, (stream,)),
                         [cbk for trigger, cbk in self.actions if trigger == i])
                 except Exception as err:
-                    log.exception(err)
+                    print(err)
 
     def stop(self):
-        self.event.set()
+        self.io_loop.stop()
 
 
-def install_server(path):
-    l = asyncio.get_event_loop()
-    r = RuntimeMock(path, loop=l)
-    return r
-
-
-def main(path):
-    r = install_server(path)
+def main(path, timeout=10):
+    loop = ioloop.IOLoop()
+    loop.make_current()
+    s = RuntimeMock(path)
 
     def on_heartbeat(w):
         w.write(msgpack.packb([1, 1, []]))
-        w.write(msgpack.packb([r.counter, 3, ["ping"]]))
-        w.write(msgpack.packb([r.counter, 4, ["ping"]]))
-        w.write(msgpack.packb([r.counter, 6, []]))
-        r.counter += 1
-        w.write(msgpack.packb([r.counter, 3, ["bad_event"]]))
-        if r.counter > 2:
-            r.stop()
+        w.write(msgpack.packb([s.counter, 3, ["ping"]]))
+        w.write(msgpack.packb([s.counter, 4, ["ping"]]))
+        w.write(msgpack.packb([s.counter, 6, []]))
+        s.counter += 1
+        w.write(msgpack.packb([s.counter, 3, ["bad_event"]]))
+        if s.counter > 2:
+            s.stop()
 
-    r.on([1, 1, []], on_heartbeat)
-    r.serve()
-
-
-def terminate(path):
-    pass
+    s.on([1, 1, []], on_heartbeat)
+    s.io_loop.call_later(timeout, s.io_loop.stop)
+    s.io_loop.start()
 
 if __name__ == '__main__':
     main("enp")
