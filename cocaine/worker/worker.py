@@ -23,11 +23,11 @@ import logging
 import socket
 import sys
 
-import msgpack
 from tornado import ioloop
 from tornado.iostream import IOStream
 
 from ..detail.io import Timer
+from ..detail.util import msgpack_unpacker
 from .message import RPC
 from .message import Message
 from ..decorators import coroutine
@@ -39,11 +39,11 @@ from .request import RequestStream
 DEFAULT_HEARTBEAT_TIMEOUT = 20
 DEFAULT_DISOWN_TIMEOUT = 5
 
-logging.basicConfig()
 log = logging.getLogger("cocaine")
 
 
 class Worker(object):
+
     def __init__(self, disown_timeout=DEFAULT_DISOWN_TIMEOUT,
                  heartbeat_timeout=DEFAULT_HEARTBEAT_TIMEOUT,
                  io_loop=None, **kwargs):
@@ -52,7 +52,7 @@ class Worker(object):
 
         self.io_loop = io_loop or ioloop.IOLoop.current()
         self.pipe = None
-        self.buffer = msgpack.Unpacker()
+        self.buffer = msgpack_unpacker()
 
         self.disown_timer = Timer(self.on_disown,
                                   disown_timeout, self.io_loop)
@@ -209,7 +209,7 @@ class Worker(object):
             _session = self.sessions[msg.session]
             _session.push(msg.data)
         except Exception as err:
-            log.error("error occured during chunk dispatching: %s", err)
+            log.exception("error occured during chunk dispatching: %s", err)
             return
 
     def _dispatch_choke(self, msg):

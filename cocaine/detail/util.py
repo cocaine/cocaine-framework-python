@@ -1,5 +1,8 @@
-#!/usr/bin/env python3
-#    Copyright (c) 2014 Anton Tyurin <noxiouz@yandex.ru>
+#
+#    Copyright (c) 2012+ Anton Tyurin <noxiouz@yandex.ru>
+#    Copyright (c) 2013+ Evgeny Safronov <division494@gmail.com>
+#    Copyright (c) 2011-2014 Other contributors as noted in the AUTHORS file.
+#
 #    This file is part of Cocaine.
 #
 #    Cocaine is free software; you can redistribute it and/or modify
@@ -16,20 +19,19 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from cocaine.worker import Worker
+import sys
+from functools import partial
+
+import msgpack
 
 
-def echo(request, response):
-    inc = yield request.read()
-    response.write(str(inc))
-    response.close()
-
-
-def main():
-    w = Worker()
-    w.on("ping", echo)
-    w.run()
-
-
-if __name__ == '__main__':
-    main()
+if sys.version_info[0] == 2:
+    msgpack_packb = msgpack.packb
+    msgpack_unpackb = msgpack.unpackb
+    msgpack_unpacker = msgpack.Unpacker
+else:
+    # py3: msgpack by default unpacks strings as bytes.
+    # Make it to unpack as strings for compatibility.
+    msgpack_packb = msgpack.packb
+    msgpack_unpackb = partial(msgpack.unpackb, encoding="utf8")
+    msgpack_unpacker = partial(msgpack.Unpacker, encoding="utf8")

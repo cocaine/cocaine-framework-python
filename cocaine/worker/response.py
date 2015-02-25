@@ -21,8 +21,7 @@
 
 import traceback
 
-import msgpack
-
+from ..detail.util import msgpack_packb
 from ..common import CocaineErrno
 
 
@@ -43,7 +42,7 @@ class ResponseStream(object):
             self.close()
 
     def write(self, chunk):
-        chunk = msgpack.packb(chunk)
+        chunk = msgpack_packb(chunk)
         if self._m_state is not None:
             self.worker.send_chunk(self.session, chunk)
             return

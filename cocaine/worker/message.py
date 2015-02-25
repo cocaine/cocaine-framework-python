@@ -18,7 +18,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import msgpack
+from cocaine.detail.util import msgpack_packb
 
 
 class RPC:
@@ -73,7 +73,7 @@ PROTOCOL = {
 
 def _make_packable(m_id, m_session, args):
     def wrapper():
-        return msgpack.dumps([m_session, m_id, args])
+        return msgpack_packb([m_session, m_id, args])
     return wrapper
 
 

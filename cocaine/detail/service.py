@@ -25,7 +25,6 @@ import logging
 import sys
 
 
-import msgpack
 from tornado.gen import Return
 from tornado.tcpclient import TCPClient
 from tornado.ioloop import IOLoop
@@ -36,6 +35,7 @@ from .asyncqueue import AsyncQueue
 from .asyncqueue import AsyncLock
 from ..common import CocaineErrno
 from ..decorators import coroutine
+from .util import msgpack_packb, msgpack_unpacker
 
 # cocaine defined exceptions
 from ..exceptions import ChokeEvent
@@ -175,7 +175,7 @@ class Tx(object):
         for method_id, (method, tx_tree) in self.tx_tree.items():  # py3 has no iteritems
             if method == method_name:
                 log.debug("method `%s` has been found in API map", method_name)
-                self.pipe.write(msgpack.packb([self.session_id, method_id, args]))
+                self.pipe.write(msgpack_packb([self.session_id, method_id, args]))
                 if tx_tree == {}:  # last transition
                     self.done()
                 elif tx_tree is not None:  # not a recursive transition
@@ -199,9 +199,6 @@ class Channel(object):
 
 
 class BaseService(object):
-    # py3: msgpack by default unpacks strings as bytes.
-    # Make it to unpack as strings for compatibility.
-    _msgpack_string_encoding = None if sys.version_info[0] == 2 else 'utf8'
 
     def __init__(self, name, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, loop=None):
         self.io_loop = loop or IOLoop.current()
@@ -223,7 +220,7 @@ class BaseService(object):
         # wrap into separate class
         self.pipe = None
         self.address = None
-        self.buffer = msgpack.Unpacker(encoding=self._msgpack_string_encoding)
+        self.buffer = msgpack_unpacker()
 
     @coroutine
     def connect(self):
@@ -293,7 +290,7 @@ class BaseService(object):
                 self.log.debug("method `%s` has been found in API map", method_name)
                 counter = next(self.counter)  # py3 counter has no .next() method
                 self.log.debug('sending message: %s', [counter, method_id, args])
-                self.pipe.write(msgpack.packb([counter, method_id, args]))
+                self.pipe.write(msgpack_packb([counter, method_id, args]))
                 self.log.debug("RX TREE %s", rx_tree)
                 self.log.debug("TX TREE %s", tx_tree)
 

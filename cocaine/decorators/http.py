@@ -27,8 +27,6 @@ except ImportError:  # pragma: no cover
     from urllib import parse as urlparse
     from http import cookies
 
-import msgpack
-
 from tornado import escape
 from tornado.httputil import (
     parse_body_arguments,
@@ -36,6 +34,7 @@ from tornado.httputil import (
     HTTPServerRequest)
 
 from ..worker._wrappers import proxy_factory
+from ..detail.util import msgpack_unpackb
 
 
 __all__ = ["http", "tornado_http"]
@@ -43,7 +42,7 @@ __all__ = ["http", "tornado_http"]
 
 class _HTTPRequest(object):
     def __init__(self, data):
-        method, url, version, headers, self._body = msgpack.unpackb(data)
+        method, url, version, headers, self._body = msgpack_unpackb(data)
         self._meta = dict()
         self._headers = dict(headers)
         self._meta['method'] = method
@@ -136,7 +135,7 @@ def format_http_version(version):
 
 
 def _tornado_request_wrapper(data):
-    method, uri, version, headers, body = msgpack.unpackb(data)
+    method, uri, version, headers, body = msgpack_unpackb(data)
     version = format_http_version(version)
     return HTTPServerRequest(method, uri, version, HTTPHeaders(headers), body)
 

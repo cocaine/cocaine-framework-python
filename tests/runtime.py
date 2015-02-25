@@ -19,6 +19,8 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import sys
+
 import msgpack
 
 from tornado import netutil
@@ -28,6 +30,8 @@ from tornado import tcpserver
 
 
 class RuntimeMock(tcpserver.TCPServer):
+    _msgpack_string_encoding = None if sys.version_info[0] == 2 else 'utf8'
+
     def __init__(self, unixsocket, io_loop=None):
         super(RuntimeMock, self).__init__(io_loop=io_loop or ioloop.IOLoop.current())
         self.io_loop = io_loop or ioloop.IOLoop.current()
@@ -47,8 +51,9 @@ class RuntimeMock(tcpserver.TCPServer):
             buff.feed(data)
             for i in buff:
                 try:
-                    map(lambda clb: apply(clb, (stream,)),
-                        [cbk for trigger, cbk in self.actions if trigger == i])
+                    handlers = [cbk for trigger, cbk in self.actions if trigger == i]
+                    for h in handlers:
+                        yield h(stream)
                 except Exception as err:
                     print(err)
 
@@ -61,19 +66,34 @@ def main(path, timeout=10):
     loop.make_current()
     s = RuntimeMock(path)
 
+    @gen.coroutine
     def on_heartbeat(w):
-        w.write(msgpack.packb([1, 1, []]))
-        w.write(msgpack.packb([s.counter, 3, ["ping"]]))
-        w.write(msgpack.packb([s.counter, 4, ["ping"]]))
-        w.write(msgpack.packb([s.counter, 6, []]))
-        s.counter += 1
-        w.write(msgpack.packb([s.counter, 3, ["bad_event"]]))
-        if s.counter > 2:
+        if sys.version_info[0] == 2:
+            packer = msgpack.Packer()
+        else:
+            packer = msgpack.Packer(use_bin_type=True)
+        if s.counter >= 3:
             s.stop()
+            return
+        req = ['POST',
+               '/blabla?arg=1', '1.1',
+               [['User-Agent', 'curl/7.22.0 (x86_64-pc-linux-gnu) libcurl/7.22.0 OpenSSL/1.0.1 zlib/1.2.3.4 libidn/1.23 librtmp/2.3'],
+                ['Host', 'localhost:8080'], ['Accept', '*/*'], ['Content-Length', '6'], ['Content-Type', 'application/x-www-form-urlencoded']],
+               'dsdsds']
+        yield w.write(packer.pack([1, 1, []]))
+        yield w.write(packer.pack([s.counter, 3, ["ping"]]))
+        yield w.write(packer.pack([s.counter, 4, ["pong"]]))
+        yield w.write(packer.pack([s.counter, 6, []]))
+        s.counter += 1
+        yield w.write(packer.pack([s.counter, 3, ["bad_event"]]))
+        s.counter += 1
+        yield w.write(packer.pack([s.counter, 3, ["http"]]))
+        yield w.write(packer.pack([s.counter, 4, [packer.pack(req)]]))
+        yield w.write(packer.pack([s.counter, 6, []]))
 
     s.on([1, 1, []], on_heartbeat)
     s.io_loop.call_later(timeout, s.io_loop.stop)
-    s.io_loop.start()
+
 
 if __name__ == '__main__':
     main("enp")

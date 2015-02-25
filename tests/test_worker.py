@@ -19,13 +19,18 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-# from multiprocessing import Process
-from threading import Thread
+import logging
 
 from nose import tools
 
 from runtime import main
 from cocaine.worker import Worker
+
+from cocaine.decorators import wsgi
+
+
+log = logging.getLogger("cocaine")
+log.setLevel(logging.DEBUG)
 
 
 @tools.raises(ValueError)
@@ -40,9 +45,25 @@ def test_worker_missing_args():
 
 def test_worker():
     socket_path = "tests/enp"
-    t = Thread(target=main, args=(socket_path,))
 
     res = list()
+    wsgi_res = {"body": list(),
+                "status": None,
+                "headers": None}
+
+    def collector(func):
+        def wrapper(environ, start_response):
+            def g(func):
+                def w(status, headers):
+                    wsgi_res["status"] = status
+                    wsgi_res["headers"] = headers
+                    print(wsgi_res)
+                    return func(status, headers)
+                return w
+            result = func(environ, g(start_response))
+            wsgi_res["body"].extend(result)
+            return res
+        return wrapper
 
     def ping(request, response):
         res.append(1)
@@ -57,17 +78,29 @@ def test_worker():
         import unreal_package
         del unreal_package
 
+    @collector
+    def wsgi_app(environ, start_response):
+        response_body = 'Method %s' % environ['REQUEST_METHOD']
+        status = '200 OK'
+        response_headers = [('Content-Type', 'text/plain'),
+                            ('Content-Length', str(len(response_body)))]
+        start_response(status, response_headers)
+        return [response_body, "A"]
+
     kwargs = dict(app="testapp",
                   endpoint=socket_path,
                   uuid="randomuuid",
                   disown_timeout=1,
                   heartbeat_timeout=2)
+    main(socket_path, 10)
     w = Worker(**kwargs)
-    t.start()
-    t.join(1)
     w.run({"ping": ping,
-           "bad_ping": bad_ping})
-    assert res[:4] == [1, 2, 'ping', 3], res[:4]
+           "bad_ping": bad_ping,
+           "http": wsgi(wsgi_app)})
+    assert res[:4] == [1, 2, 'pong', 3], res[:4]
+    assert wsgi_res["body"] == ["Method POST", "A"], wsgi_res
+    assert wsgi_res["status"] == '200 OK', wsgi_res
+    assert wsgi_res["headers"] == [('Content-Type', 'text/plain'), ('Content-Length', '11')], wsgi_res["headers"]
 
 
 def test_worker_unable_to_connect():
