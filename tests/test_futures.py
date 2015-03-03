@@ -47,11 +47,11 @@ def blocking_func_exception():
 
 def test_threaded_result():
     io = IOLoop.current()
-    r = io.run_sync(blocking_func)
+    r = io.run_sync(blocking_func, timeout=2)
     assert r == "DONE"
 
 
 @tools.raises(TestException)
 def test_threaded_exception():
     io = IOLoop.current()
-    io.run_sync(blocking_func_exception)
+    io.run_sync(blocking_func_exception, timeout=2)

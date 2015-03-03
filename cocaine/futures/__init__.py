@@ -42,9 +42,9 @@ class ConcurrentWorker(object):
     def _run(self):
         try:
             result = self._func(*self._args, **self._kwargs)
-            self._io_loop.add_callback(lambda: self._future.set_result(result))
+            self._io_loop.add_callback(self._future.set_result, result)
         except Exception as err:
-            self._io_loop.add_callback(lambda: self._future.set_exception(err))
+            self._io_loop.add_callback(self._future.set_exception, err)
 
     def execute(self):
         self._worker.start()
