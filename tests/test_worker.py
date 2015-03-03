@@ -20,13 +20,15 @@
 #
 
 import logging
+import sys
 
 from nose import tools
 
-from runtime import main
+from runtime import main, HEADERS, BODY, HTTP_VERSION
 from cocaine.worker import Worker
 
 from cocaine.decorators import wsgi
+from cocaine.decorators import http
 
 
 log = logging.getLogger("cocaine")
@@ -50,6 +52,8 @@ def test_worker():
     wsgi_res = {"body": list(),
                 "status": None,
                 "headers": None}
+
+    http_res = {}
 
     def collector(func):
         def wrapper(environ, start_response):
@@ -87,20 +91,42 @@ def test_worker():
         start_response(status, response_headers)
         return [response_body, "A"]
 
+    @http
+    def http_test(request, response):
+        req = yield request.read()
+        http_res["req"] = req
+        response.write_head(200, {'Content-Type': 'text/plain'})
+        response.write("OK")
+        response.close()
+
     kwargs = dict(app="testapp",
                   endpoint=socket_path,
                   uuid="randomuuid",
                   disown_timeout=1,
                   heartbeat_timeout=2)
+
     main(socket_path, 10)
     w = Worker(**kwargs)
     w.run({"ping": ping,
            "bad_ping": bad_ping,
+           "http_test": http_test,
            "http": wsgi(wsgi_app)})
+
     assert res[:4] == [1, 2, 'pong', 3], res[:4]
     assert wsgi_res["body"] == ["Method POST", "A"], wsgi_res
     assert wsgi_res["status"] == '200 OK', wsgi_res
     assert wsgi_res["headers"] == [('Content-Type', 'text/plain'), ('Content-Length', '11')], wsgi_res["headers"]
+
+    req = http_res["req"]
+
+    assert req.body == BODY, req.body
+    assert req.headers == dict(HEADERS), req.headers
+    assert req.meta["version"] == HTTP_VERSION, req.meta["version"]
+    if sys.version_info[0] == 2:
+        assert req.request == {'dsdsds': '', 'arg': '1'}, req.request
+    else:
+        assert req.request == {'dsdsds': b'', 'arg': '1'}, req.request
+    assert req.files == {}, req.files
 
 
 def test_worker_unable_to_connect():

@@ -29,6 +29,14 @@ from tornado import gen
 from tornado import tcpserver
 
 
+METHOD = 'POST'
+URI = '/blabla?arg=1'
+HTTP_VERSION = '1.1'
+HEADERS = [['User-Agent', 'curl/7.22.0 (x86_64-pc-linux-gnu) libcurl/7.22.0 OpenSSL/1.0.1 zlib/1.2.3.4 libidn/1.23 librtmp/2.3'],
+           ['Host', 'localhost:8080'], ['Accept', '*/*'], ['Content-Length', '6'], ['Content-Type', 'application/x-www-form-urlencoded']]
+BODY = 'dsdsds'
+
+
 class RuntimeMock(tcpserver.TCPServer):
     _msgpack_string_encoding = None if sys.version_info[0] == 2 else 'utf8'
 
@@ -72,14 +80,10 @@ def main(path, timeout=10):
             packer = msgpack.Packer()
         else:
             packer = msgpack.Packer(use_bin_type=True)
-        if s.counter >= 3:
+        if s.counter > 3:
             s.stop()
             return
-        req = ['POST',
-               '/blabla?arg=1', '1.1',
-               [['User-Agent', 'curl/7.22.0 (x86_64-pc-linux-gnu) libcurl/7.22.0 OpenSSL/1.0.1 zlib/1.2.3.4 libidn/1.23 librtmp/2.3'],
-                ['Host', 'localhost:8080'], ['Accept', '*/*'], ['Content-Length', '6'], ['Content-Type', 'application/x-www-form-urlencoded']],
-               'dsdsds']
+        req = [METHOD, URI, HTTP_VERSION, HEADERS, BODY]
         yield w.write(packer.pack([1, 1, []]))
         yield w.write(packer.pack([s.counter, 3, ["ping"]]))
         yield w.write(packer.pack([s.counter, 4, ["pong"]]))
@@ -88,6 +92,10 @@ def main(path, timeout=10):
         yield w.write(packer.pack([s.counter, 3, ["bad_event"]]))
         s.counter += 1
         yield w.write(packer.pack([s.counter, 3, ["http"]]))
+        yield w.write(packer.pack([s.counter, 4, [packer.pack(req)]]))
+        yield w.write(packer.pack([s.counter, 6, []]))
+        s.counter += 1
+        yield w.write(packer.pack([s.counter, 3, ["http_test"]]))
         yield w.write(packer.pack([s.counter, 4, [packer.pack(req)]]))
         yield w.write(packer.pack([s.counter, 6, []]))
 

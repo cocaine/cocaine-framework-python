@@ -62,8 +62,7 @@ class _HTTPRequest(object):
         tmp = urlparse.parse_qs(urlparse.urlparse(url).query)
         self._request = dict((k, v[0]) for k, v in tmp.items() if len(v) > 0)
         self._files = None
-        args = dict()
-        files = dict()
+        args, files = dict(), dict()
         parse_body_arguments(self._headers.get("Content-Type", ""), self._body, args, files)
         self._request.update(dict((k, v[0]) for k, v in args.items() if len(v) > 0))
         self._files = files
