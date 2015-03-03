@@ -27,7 +27,6 @@ import sys
 
 from tornado.gen import Return
 from tornado.tcpclient import TCPClient
-from tornado.ioloop import IOLoop
 
 
 from .api import API
@@ -36,6 +35,7 @@ from .asyncqueue import AsyncLock
 from ..common import CocaineErrno
 from ..decorators import coroutine
 from .util import msgpack_packb, msgpack_unpacker
+from .util import get_curent_ioloop
 
 # cocaine defined exceptions
 from ..exceptions import ChokeEvent
@@ -75,7 +75,7 @@ class ProtocolError(object):
         self.reason = reason
 
 
-def StreamingProtocol(name, payload):
+def streaming_protocol(name, payload):
     if name == "write":  # pragma: no cover
         return payload[0] if len(payload) == 1 else payload
     elif name == "error":
@@ -84,29 +84,29 @@ def StreamingProtocol(name, payload):
         return EmptyResponse()
 
 
-def PrimitiveProtocol(name, payload):
+def primitive_protocol(name, payload):
     if name == "value":
         return payload[0] if len(payload) == 1 else payload
     elif name == "error":
         return ProtocolError(*payload)
 
 
-def NullProtocol(name, payload):
+def null_protocol(name, payload):
     return (name, payload)
 
 
 def detect_protocol_type(rx_tree):
     for name, _ in rx_tree.values():
         if name == 'value':
-            return PrimitiveProtocol
+            return primitive_protocol
         elif name == 'write':
-            return StreamingProtocol
-    return NullProtocol
+            return streaming_protocol
+    return null_protocol
 
 
 class Rx(object):
     def __init__(self, rx_tree, io_loop=None, servicename=None):
-        self._io_loop = io_loop or IOLoop.current()
+        self._io_loop = get_curent_ioloop(io_loop)
         self._queue = AsyncQueue(io_loop=self._io_loop)
         self._done = False
         self.servicename = servicename
@@ -201,7 +201,7 @@ class Channel(object):
 class BaseService(object):
 
     def __init__(self, name, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, loop=None):
-        self.io_loop = loop or IOLoop.current()
+        self.io_loop = get_curent_ioloop(loop)
         # List of available endpoints in which service is resolved to.
         # Looks as [["host", port2], ["host2", port2]]
         self.endpoints = [[host, port]]

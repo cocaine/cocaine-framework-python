@@ -28,7 +28,7 @@ from cocaine.detail.service import InvalidApiVersion
 from cocaine.detail.service import Rx, Tx
 from cocaine.detail.service import BaseService
 from cocaine.detail.service import ServiceError, ChokeEvent, InvalidMessageType, ProtocolError
-from cocaine.detail.service import PrimitiveProtocol, StreamingProtocol, NullProtocol
+from cocaine.detail.service import primitive_protocol, streaming_protocol, null_protocol
 from cocaine.exceptions import ConnectionError, DisconnectionError
 from cocaine.worker.request import Stream, RequestError
 
@@ -235,23 +235,23 @@ def test_stream_timeout():
 
 
 def test_primitive_protocol():
-    assert NullProtocol("A", 1) == ("A", 1)
+    assert null_protocol("A", 1) == ("A", 1)
     primitive_single_payload = ["A"]
-    primitive = PrimitiveProtocol("value", primitive_single_payload)
+    primitive = primitive_protocol("value", primitive_single_payload)
     assert primitive == primitive_single_payload[0], primitive
     primitive_sequence_payload = ["A", "B", "C"]
-    primitive = PrimitiveProtocol("value", primitive_sequence_payload)
+    primitive = primitive_protocol("value", primitive_sequence_payload)
     assert primitive == primitive_sequence_payload, primitive
-    primitive_error = PrimitiveProtocol("error", ["A", 100])
+    primitive_error = primitive_protocol("error", ["A", 100])
     assert isinstance(primitive_error, ProtocolError), primitive_error
 
 
 def test_streaming_protocol():
     streaming_single_payload = ["A"]
-    streaming = StreamingProtocol("write", streaming_single_payload)
+    streaming = streaming_protocol("write", streaming_single_payload)
     assert streaming == streaming_single_payload[0], streaming
     streaming_sequence_payload = ["A", "B", "C"]
-    streaming = StreamingProtocol("write", streaming_sequence_payload)
+    streaming = streaming_protocol("write", streaming_sequence_payload)
     assert streaming == streaming_sequence_payload, streaming
-    streaming_error = StreamingProtocol("error", ["A", 100])
+    streaming_error = streaming_protocol("error", ["A", 100])
     assert isinstance(streaming_error, ProtocolError), streaming_error

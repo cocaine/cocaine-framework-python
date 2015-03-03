@@ -22,6 +22,8 @@
 import sys
 from functools import partial
 
+from tornado.ioloop import IOLoop
+
 import msgpack
 
 
@@ -35,3 +37,7 @@ else:
     msgpack_packb = msgpack.packb
     msgpack_unpackb = partial(msgpack.unpackb, encoding="utf8")
     msgpack_unpacker = partial(msgpack.Unpacker, encoding="utf8")
+
+
+def get_curent_ioloop(loop):
+    return loop or IOLoop.current(instance=False) or IOLoop.IOLoop()
