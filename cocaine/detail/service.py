@@ -26,6 +26,7 @@ import sys
 
 
 from tornado.gen import Return
+from tornado.ioloop import IOLoop
 from tornado.tcpclient import TCPClient
 
 
@@ -47,6 +48,8 @@ from ..exceptions import ServiceError
 
 LOCATOR_DEFAULT_HOST = '127.0.0.1'
 LOCATOR_DEFAULT_PORT = 10053
+
+SYNC_CONNECTION_TIMEOUT = 5
 
 if '--locator' in sys.argv:
     try:
@@ -351,3 +354,26 @@ class Service(BaseService):
         if not (self.version == 0 or version == self.version):
             raise InvalidApiVersion(self.name, version, self.version)
         yield super(Service, self).connect()
+
+
+class SyncService(object):
+    def __init__(self, *args, **kwargs):
+        # to make sure we don't use current eventloop
+        # for the current thread
+        get_current_ioloop(kwargs.get("loop"))
+
+        self._io_loop = IOLoop()
+        kwargs["loop"] = self._io_loop
+        timeout = kwargs.pop("connection_timeout2", SYNC_CONNECTION_TIMEOUT)
+        self._service = Service(*args, **kwargs)
+
+        # establish connection
+        self._io_loop.run_sync(self._service.connect, timeout=timeout)
+
+    def __getattr__(self, name):
+        def on_getattr(*args, **kwargs):
+            return self._io_loop.run_sync(lambda: self._service._invoke(name, *args, **kwargs))
+        return on_getattr
+
+    def run_sync(self, future, timeout=None):
+        return self._io_loop.run_sync(lambda: future, timeout=timeout)

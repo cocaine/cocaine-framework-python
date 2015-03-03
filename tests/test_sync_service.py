@@ -19,11 +19,10 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-# It's provided for backward compatibility with 0.11.x
+from cocaine.services import SyncService
 
-from ..detail.service import Service
-from ..detail.service import SyncService
-from ..detail.service import EmptyResponse
-from ..detail.service import Locator
 
-__all__ = ["Service", "SyncService", "Locator", "EmptyResponse"]
+def test_sync_service():
+    s = SyncService("node")
+    ls = s.run_sync(s.list().rx.get(), timeout=10)
+    assert isinstance(ls, list), ls
