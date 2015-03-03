@@ -35,7 +35,7 @@ from .asyncqueue import AsyncLock
 from ..common import CocaineErrno
 from ..decorators import coroutine
 from .util import msgpack_packb, msgpack_unpacker
-from .util import get_curent_ioloop
+from .util import get_current_ioloop
 
 # cocaine defined exceptions
 from ..exceptions import ChokeEvent
@@ -106,7 +106,7 @@ def detect_protocol_type(rx_tree):
 
 class Rx(object):
     def __init__(self, rx_tree, io_loop=None, servicename=None):
-        self._io_loop = get_curent_ioloop(io_loop)
+        self._io_loop = get_current_ioloop(io_loop)
         self._queue = AsyncQueue(io_loop=self._io_loop)
         self._done = False
         self.servicename = servicename
@@ -201,7 +201,7 @@ class Channel(object):
 class BaseService(object):
 
     def __init__(self, name, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, loop=None):
-        self.io_loop = get_curent_ioloop(loop)
+        self.io_loop = get_current_ioloop(loop)
         # List of available endpoints in which service is resolved to.
         # Looks as [["host", port2], ["host2", port2]]
         self.endpoints = [[host, port]]

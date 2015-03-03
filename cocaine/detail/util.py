@@ -39,5 +39,5 @@ else:
     msgpack_unpacker = partial(msgpack.Unpacker, encoding="utf8")
 
 
-def get_curent_ioloop(loop):
+def get_current_ioloop(loop):
     return loop or IOLoop.current(instance=False) or IOLoop.IOLoop()
