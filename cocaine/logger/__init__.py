@@ -19,31 +19,8 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from tornado.ioloop import IOLoop
-from tornado import gen
-
-from cocaine.logger import Logger
+from cocaine.detail.logger import Logger
+from cocaine.detail.logger import CocaineHandler
 
 
-def test_logger():
-    io = IOLoop.current()
-    verbosity_level = 0
-    l = Logger()
-    l2 = Logger()
-    assert id(l) == id(l2)
-
-    @gen.coroutine
-    def set_verbosity():
-        ch = yield l.set_verbosity(verbosity_level)
-        res = yield ch.rx.get()
-        raise gen.Return(res)
-
-    empty_resp = io.run_sync(set_verbosity)
-    assert empty_resp == [], empty_resp
-    verbosity = io.run_sync(io.run_sync(l.verbosity).rx.get)
-    assert verbosity == verbosity_level, verbosity
-    l.emit(verbosity_level, "nosetest", "test_message", {"attr1": 1, "attr2": 2})
-    l.debug("DEBUG_MSG", {"A": 1, "B": 2})
-    l.info("INFO_MSG", {"A": 1, "B": 2})
-    l.warning("WARNING_MSG", {"A": 1, "B": 2})
-    l.error("ERROR_MSG", {"A": 1, "B": 2})
+__all__ = ["Logger", "CocaineHandler"]
