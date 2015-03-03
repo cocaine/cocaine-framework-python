@@ -87,7 +87,7 @@ class Logger(Service):
 
 class CocaineHandler(logging.Handler):
     def __init__(self, *args, **kwargs):
-        super(CocaineHandler, self).__init__()
+        logging.Handler.__init__(self)
 
         self._logger = Logger(*args, **kwargs)
         self.level_binds = {
