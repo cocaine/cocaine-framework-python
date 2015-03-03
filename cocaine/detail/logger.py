@@ -98,7 +98,7 @@ class CocaineHandler(logging.Handler):
         }
 
     def emit(self, record):
-        def dummy(*args):
+        def dummy(*args):  # pragma: no cover
             pass
         msg = self.format(record)
         self.level_binds.get(record.levelno, dummy)(msg)

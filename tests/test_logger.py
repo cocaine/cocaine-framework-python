@@ -19,10 +19,13 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import logging
+
 from tornado.ioloop import IOLoop
 from tornado import gen
 
 from cocaine.logger import Logger
+from cocaine.logger import CocaineHandler
 
 
 def test_logger():
@@ -47,3 +50,11 @@ def test_logger():
     l.info("INFO_MSG", {"A": 1, "B": 2})
     l.warning("WARNING_MSG", {"A": 1, "B": 2})
     l.error("ERROR_MSG", {"A": 1, "B": 2})
+    l.debug("GGGGG")
+
+
+def test_handler():
+    l = logging.getLogger("test.cocaine")
+    lh = CocaineHandler()
+    l.addHandler(lh)
+    l.info("TEST")

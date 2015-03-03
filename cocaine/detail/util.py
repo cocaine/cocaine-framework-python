@@ -31,7 +31,7 @@ if sys.version_info[0] == 2:
     msgpack_packb = msgpack.packb
     msgpack_unpackb = msgpack.unpackb
     msgpack_unpacker = msgpack.Unpacker
-else:
+else:  # pragma: no cover
     # py3: msgpack by default unpacks strings as bytes.
     # Make it to unpack as strings for compatibility.
     msgpack_packb = msgpack.packb
