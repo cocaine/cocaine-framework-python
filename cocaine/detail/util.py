@@ -40,4 +40,4 @@ else:  # pragma: no cover
 
 
 def get_current_ioloop(loop):
-    return loop or IOLoop.current(instance=False) or IOLoop.IOLoop()
+    return loop or IOLoop.current(instance=False) or IOLoop()
