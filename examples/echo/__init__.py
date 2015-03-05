@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 #    Copyright (c) 2014 Anton Tyurin <noxiouz@yandex.ru>
 #    This file is part of Cocaine.
 #
