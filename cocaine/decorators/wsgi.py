@@ -22,14 +22,14 @@
 
 import functools
 
-from .http import tornado_http
+from .http_dec import tornado_http
 
 from tornado.wsgi import WSGIContainer
 
 
 def start_response(func, status, response_headers, exc_info=None):
-    if exc_info:
-        try:
+    if exc_info:  # pragma: no cover
+        try:  # pragma: no cover
             raise (exc_info[0], exc_info[1], exc_info[2])
         finally:
             exc_info = None  # Avoid circular ref.

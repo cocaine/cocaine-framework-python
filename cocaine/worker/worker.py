@@ -158,12 +158,12 @@ class Worker(object):
         self.buffer.feed(data)
         for i in self.buffer:
             log.debug("unpacked %s", i)
-            message = Message.initialize(i)
-            callback = self._dispatcher.get(message.id)
-            if callback is None:
-                raise Exception("unknown message type %s" % str(message))
-            else:
+            try:
+                message = Message.initialize(i)
+                callback = self._dispatcher.get(message.id)
                 callback(message)
+            except Exception as err:
+                log.warn("error %s occured while handling %s", err, i)
 
     def terminate(self, code, reason):
         log.error("terminated")
@@ -208,16 +208,14 @@ class Worker(object):
         try:
             _session = self.sessions[msg.session]
             _session.push(msg.data)
-        except Exception as err:
-            log.exception("error occured during chunk dispatching: %s", err)
-            return
+        except KeyError as err:
+            log.warn("no session %s", err)
 
     def _dispatch_choke(self, msg):
         log.debug("choke has been received %d", msg.session)
-        _session = self.sessions.get(msg.session)
+        _session = self.sessions.pop(msg.session, None)
         if _session is not None:
             _session.close()
-            self.sessions.pop(msg.session)
 
     # On disconnection callback
     def on_failure(self, *args):

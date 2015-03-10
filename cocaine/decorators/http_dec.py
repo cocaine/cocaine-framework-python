@@ -42,7 +42,8 @@ __all__ = ["http", "tornado_http"]
 
 class _HTTPRequest(object):
     def __init__(self, data):
-        method, url, version, headers, self._body = msgpack_unpackb(data)
+        unpacked_data = msgpack_unpackb(data)
+        method, url, version, headers, self._body = unpacked_data
         self._meta = dict()
         self._headers = dict(headers)
         self._meta['method'] = method
@@ -56,7 +57,7 @@ class _HTTPRequest(object):
                 parsed_cookies = cookies.BaseCookie()
                 parsed_cookies.load(escape.native_str(self._headers['Cookie']))
                 self._meta['parsed_cookies'] = dict((key, name.value) for key, name in parsed_cookies.items())
-            except:
+            except Exception:
                 pass
 
         tmp = urlparse.parse_qs(urlparse.urlparse(url).query)
@@ -134,7 +135,8 @@ def format_http_version(version):
 
 
 def _tornado_request_wrapper(data):
-    method, uri, version, headers, body = msgpack_unpackb(data)
+    unpacked_data = msgpack_unpackb(data)
+    method, uri, version, headers, body = unpacked_data
     version = format_http_version(version)
     return HTTPServerRequest(method, uri, version, HTTPHeaders(headers), body)
 

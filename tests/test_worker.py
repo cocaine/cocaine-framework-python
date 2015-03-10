@@ -79,8 +79,11 @@ def test_worker():
             res.append(3)
 
     def bad_ping(request, response):
-        import unreal_package
-        del unreal_package
+        raise Exception("Exception")
+
+    def notclosed(request, response):
+        yield request.read()
+        response.write("A")
 
     @collector
     def wsgi_app(environ, start_response):
@@ -109,6 +112,7 @@ def test_worker():
     w = Worker(**kwargs)
     w.run({"ping": ping,
            "bad_ping": bad_ping,
+           "notclosed": notclosed,
            "http_test": http_test,
            "http": wsgi(wsgi_app)})
 

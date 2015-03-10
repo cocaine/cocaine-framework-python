@@ -20,7 +20,7 @@
 #
 
 
-from cocaine.decorators.http import (
+from cocaine.decorators.http_dec import (
     format_http_version,
     _HTTPRequest
 )

@@ -22,7 +22,7 @@
 
 from tornado.gen import coroutine
 
-from .http import http, tornado_http
+from .http_dec import http, tornado_http
 from .wsgi import wsgi
 
 __all__ = ["coroutine", "http", "tornado_http", "wsgi"]

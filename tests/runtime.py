@@ -80,8 +80,9 @@ def main(path, timeout=10):
             packer = msgpack.Packer()
         else:
             packer = msgpack.Packer(use_bin_type=True)
-        if s.counter > 3:
-            s.stop()
+        if s.counter > 6:
+            yield w.write(packer.pack([1, 2, [2, "terminate"]]))
+            s.io_loop.add_callback(s.stop)
             return
         req = [METHOD, URI, HTTP_VERSION, HEADERS, BODY]
         yield w.write(packer.pack([1, 1, []]))
@@ -98,7 +99,17 @@ def main(path, timeout=10):
         yield w.write(packer.pack([s.counter, 3, ["http_test"]]))
         yield w.write(packer.pack([s.counter, 4, [packer.pack(req)]]))
         yield w.write(packer.pack([s.counter, 6, []]))
-
+        s.counter += 1
+        yield w.write(packer.pack([s.counter + 100, 4, ["bad_ping"]]))
+        yield w.write(packer.pack([s.counter, 104, ["bad_ping"]]))
+        s.counter += 1
+        yield w.write(packer.pack([s.counter, 3, ["bad_ping"]]))
+        yield w.write(packer.pack([s.counter, 4, ["A"]]))
+        yield w.write(packer.pack([s.counter, 6, []]))
+        s.counter += 1
+        yield w.write(packer.pack([s.counter, 3, ["notclosed"]]))
+        yield w.write(packer.pack([s.counter, 4, ["A"]]))
+        yield w.write(packer.pack([s.counter, 6, []]))
     s.on([1, 1, []], on_heartbeat)
     s.io_loop.call_later(timeout, s.io_loop.stop)
 

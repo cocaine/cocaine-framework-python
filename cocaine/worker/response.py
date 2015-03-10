@@ -55,7 +55,6 @@ class ResponseStream(object):
             finally:
                 self._m_state = None
             return
-        traceback.print_stack()  # pragma: no cover
 
     def error(self, code, message):
         if self._m_state is not None:
