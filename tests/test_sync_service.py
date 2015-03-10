@@ -19,10 +19,18 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import logging
+
 from cocaine.services import SyncService
+
+
+log = logging.getLogger("cocaine")
+log.setLevel(logging.DEBUG)
 
 
 def test_sync_service():
     s = SyncService("node")
-    ls = s.run_sync(s.list().rx.get(), timeout=10)
+    for _ in range(50):
+        log.info("NEXT")
+        ls = s.run_sync(s.list().rx.get(), timeout=10)
     assert isinstance(ls, list), ls
