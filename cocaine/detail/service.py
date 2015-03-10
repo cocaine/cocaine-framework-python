@@ -364,7 +364,7 @@ class SyncService(object):
 
         self._io_loop = IOLoop()
         kwargs["loop"] = self._io_loop
-        timeout = kwargs.pop("connection_timeout2", SYNC_CONNECTION_TIMEOUT)
+        timeout = kwargs.pop("connection_timeout", SYNC_CONNECTION_TIMEOUT)
         self._service = Service(*args, **kwargs)
 
         # establish connection
