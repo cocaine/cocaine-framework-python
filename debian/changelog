@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.0.1-rc12) unstable; urgency=low
+
+  * [Service] Detach sessions on disconnect
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 04 Mar 2015 16:53:53 +0300
+
 cocaine-framework-python (0.12.0.1-rc11) unstable; urgency=low
 
   * [Service] Add a concept of SyncService to use from synchronous code
@@ -24,7 +30,7 @@ cocaine-framework-python (0.12.0.1-rc6) unstable; urgency=low
   disconnection
   * [Worker] Fix handling of terminate message: wrong names of properties.
 
- -- Anton Tyurin <noxiouz@yandex-team.ru>  Thu, 25 Dec 2014 12:05:08 +0400 
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Thu, 25 Dec 2014 12:05:08 +0400
 
 cocaine-framework-python (0.12.0.1-rc5) unstable; urgency=low
 
@@ -35,7 +41,7 @@ cocaine-framework-python (0.12.0.1-rc5) unstable; urgency=low
 
 cocaine-framework-python (0.12.0.1-rc4) unstable; urgency=low
 
-  * [Package] Fix deps 
+  * [Package] Fix deps
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 16 Dec 2014 17:58:22 +0400
 
@@ -190,7 +196,7 @@ cocaine-framework-python (0.10.6.7) unstable; urgency=low
 
 cocaine-framework-python (0.10.6.6) unstable; urgency=low
 
-  * Move cocaine-tornado-proxy here 
+  * Move cocaine-tornado-proxy here
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 14 Aug 2013 14:04:00 +0400
 
@@ -203,7 +209,7 @@ cocaine-framework-python (0.10.6.5) unstable; urgency=low
 cocaine-framework-python (0.10.6.4) unstable; urgency=low
 
   * Fix tools
-  * Don't close response stream if event handler didn't close it. 
+  * Don't close response stream if event handler didn't close it.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 07 Aug 2013 18:27:54 +0400
 
@@ -220,7 +226,7 @@ cocaine-framework-python (0.10.6.1) unstable; urgency=low
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 07 Aug 2013 16:05:28 +0400
 
 cocaine-framework-python (0.10.6.0) unstable; urgency=low
-  
+
   * IPV6 support
   * Basic `tornado.concurrent.Future` and python 3.3 `concurrent.futures.Future` support
   * Add timeout for asynchronous operations
@@ -244,9 +250,9 @@ cocaine-framework-python (0.10.5.6) unstable; urgency=low
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 30 Jul 2013 15:10:24 +0400
 
 cocaine-framework-python (0.10.5.5) unstable; urgency=low
-  
+
   * reduce memory consumption
-  * increase productivity of IO 
+  * increase productivity of IO
   * temporarily deleted manpages
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 12 Jul 2013 18:10:47 +0400
@@ -271,7 +277,7 @@ cocaine-framework-python (0.10.5-2) unstable; urgency=low
 
 cocaine-framework-python (0.10.5-1) unstable; urgency=low
 
-  * Critiacal bug with not collecting services with GC fixed. 
+  * Critiacal bug with not collecting services with GC fixed.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Thu, 27 Jun 2013 16:27:39 +0400
 

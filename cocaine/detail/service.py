@@ -23,6 +23,7 @@ import datetime
 import itertools
 import logging
 import sys
+import weakref
 
 
 from tornado.gen import Return
@@ -153,7 +154,7 @@ class Rx(object):
         name, rx = dispatch
         log.debug("name `%s` rx `%s`", name, rx)
         self._queue.put_nowait((name, payload))
-        if rx == {}:  # last transition
+        if rx == {}:  # the last transition
             self.done()
         elif rx is not None:  # not a recursive transition
             self.rx_tree = rx
@@ -214,7 +215,7 @@ class BaseService(object):
                        'id': id(self)}
         self.log = logging.LoggerAdapter(log, self._extra)
 
-        self.sessions = {}
+        self.sessions = weakref.WeakValueDictionary()
         self.counter = itertools.count(1)
         self.api = {}
 
@@ -257,8 +258,12 @@ class BaseService(object):
         self.pipe.close()
         self.pipe = None
 
-        for session_rx in self.sessions.values():
-            session_rx.error(DisconnectionError(self.name))
+        # detach rx from sessions
+        # and send errors to all of the open sessions
+        sessions = self.sessions
+        while sessions:
+            _, rx = sessions.popitem()
+            rx.error(DisconnectionError(self.name))
 
     def on_close(self, *args):
         self.log.debug("pipe has been closed %s", args)
