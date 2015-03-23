@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.0.1-rc13) unstable; urgency=low
+
+  * [Worker] Add a disown timer in a separate thread
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Mon, 23 Mar 2015 17:49:13 +0300
+
 cocaine-framework-python (0.12.0.1-rc12) unstable; urgency=low
 
   * [Service] Detach sessions on disconnect
