@@ -26,12 +26,13 @@ import sys
 from tornado import ioloop
 from tornado.iostream import IOStream
 
+from ..common import CocaineErrno
+from ..decorators import coroutine
 from ..detail.io import Timer
 from ..detail.util import msgpack_unpacker
+from .disowntimer import DisownTimer
 from .message import RPC
 from .message import Message
-from ..decorators import coroutine
-from ..common import CocaineErrno
 from ._wrappers import default
 from .response import ResponseStream
 from .request import RequestStream
@@ -56,6 +57,10 @@ class Worker(object):
 
         self.disown_timer = Timer(self.on_disown,
                                   disown_timeout, self.io_loop)
+
+        # it's a fallback mechanism to track
+        # that we are disowned even when the main thread is blocked
+        self.threaded_disown_timer = DisownTimer(disown_timeout * 2)
 
         self.heartbeat_timer = Timer(self.on_heartbeat_timer,
                                      heartbeat_timeout, self.io_loop)
@@ -101,13 +106,15 @@ class Worker(object):
                                            streaming_callback=self.on_message)
             except Exception as err:
                 log.error("unable to connect to '%s' %s", self.endpoint, err)
-            else:
-                log.debug("sending handshake")
-                self._send_handshake()
-                log.debug("sending heartbeat")
-                self._send_heartbeat()
+                self.on_failure()
                 return
-            self.on_failure()
+
+            log.debug("sending handshake")
+            self._send_handshake()
+            log.debug("sending heartbeat")
+            self._send_heartbeat()
+            log.debug("start threaded_disown_timer")
+            self.threaded_disown_timer.start()
 
         self.io_loop.add_future(on_connect(), lambda x: None)
 
@@ -173,6 +180,7 @@ class Worker(object):
 
     def _dispatch_heartbeat(self, _):
         log.debug("heartbeat has been received. Stop disown timer")
+        self.threaded_disown_timer.notify()
         self.disown_timer.stop()
 
     def _dispatch_terminate(self, msg):
@@ -241,4 +249,5 @@ class Worker(object):
         self.pipe.write(Message(RPC.ERROR, session, code, msg).pack())
 
     def _stop(self):
+        self.threaded_disown_timer.stop()
         self.io_loop.stop()
