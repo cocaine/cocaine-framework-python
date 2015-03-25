@@ -60,7 +60,8 @@ class Worker(object):
 
         # it's a fallback mechanism to track
         # that we are disowned even when the main thread is blocked
-        self.threaded_disown_timer = DisownTimer(disown_timeout * 2)
+        # 42 is the universal answer. It's the fallback mechanism
+        self.threaded_disown_timer = DisownTimer(disown_timeout * 42)
 
         self.heartbeat_timer = Timer(self.on_heartbeat_timer,
                                      heartbeat_timeout, self.io_loop)
