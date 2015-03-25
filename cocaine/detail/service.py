@@ -37,7 +37,7 @@ from .asyncqueue import AsyncLock
 from ..common import CocaineErrno
 from ..decorators import coroutine
 from .util import msgpack_packb, msgpack_unpacker
-from .util import get_current_ioloop
+from .util import create_new_io_loop
 
 # cocaine defined exceptions
 from ..exceptions import ChokeEvent
@@ -110,7 +110,10 @@ def detect_protocol_type(rx_tree):
 
 class Rx(object):
     def __init__(self, rx_tree, io_loop=None, servicename=None):
-        self._io_loop = get_current_ioloop(io_loop)
+        # If it's not the main thread
+        # and a current IOloop doesn't exist here,
+        # IOLoop.instance becomes self._io_loop
+        self._io_loop = io_loop or IOLoop.current()
         self._queue = AsyncQueue(io_loop=self._io_loop)
         self._done = False
         self.servicename = servicename
@@ -204,8 +207,11 @@ class Channel(object):
 
 class BaseService(object):
 
-    def __init__(self, name, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, loop=None):
-        self.io_loop = get_current_ioloop(loop)
+    def __init__(self, name, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, io_loop=None):
+        # If it's not the main thread
+        # and a current IOloop doesn't exist here,
+        # IOLoop.instance becomes self._io_loop
+        self.io_loop = io_loop or IOLoop.current()
         # List of available endpoints in which service is resolved to.
         # Looks as [["host", port2], ["host2", port2]]
         self.endpoints = [[host, port]]
@@ -320,17 +326,17 @@ class BaseService(object):
 
 
 class Locator(BaseService):
-    def __init__(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, loop=None):
+    def __init__(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, io_loop=None):
         super(Locator, self).__init__(name="locator",
-                                      host=host, port=port, loop=loop)
+                                      host=host, port=port, io_loop=io_loop)
         self.api = API.Locator
 
 
 class Service(BaseService):
     def __init__(self, name, seed=None,
-                 host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, version=0, loop=None):
-        super(Service, self).__init__(name=name, loop=loop)
-        self.locator = Locator(host=host, port=port, loop=loop)
+                 host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, version=0, io_loop=None):
+        super(Service, self).__init__(name=name, io_loop=io_loop)
+        self.locator = Locator(host=host, port=port, io_loop=io_loop)
         # Dispatch tree
         self.api = {}
         # Service API version
@@ -363,12 +369,8 @@ class Service(BaseService):
 
 class SyncService(object):
     def __init__(self, *args, **kwargs):
-        # to make sure we don't use current eventloop
-        # for the current thread
-        get_current_ioloop(kwargs.get("loop"))
-
-        self._io_loop = IOLoop()
-        kwargs["loop"] = self._io_loop
+        self._io_loop = kwargs.get("io_loop") or create_new_io_loop()
+        kwargs["io_loop"] = self._io_loop
         timeout = kwargs.pop("connection_timeout", SYNC_CONNECTION_TIMEOUT)
         self._service = Service(*args, **kwargs)
 

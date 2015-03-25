@@ -23,7 +23,7 @@ import logging
 import socket
 import sys
 
-from tornado import ioloop
+from tornado.ioloop import IOLoop
 from tornado.iostream import IOStream
 
 from ..common import CocaineErrno
@@ -51,7 +51,7 @@ class Worker(object):
         if heartbeat_timeout < disown_timeout:
             raise ValueError("heartbeat timeout must be greater then disown")
 
-        self.io_loop = io_loop or ioloop.IOLoop.current()
+        self.io_loop = io_loop or IOLoop.current()
         self.pipe = None
         self.buffer = msgpack_unpacker()
 

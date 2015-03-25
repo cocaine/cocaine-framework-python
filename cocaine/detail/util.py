@@ -39,5 +39,24 @@ else:  # pragma: no cover
     msgpack_unpacker = partial(msgpack.Unpacker, encoding="utf8")
 
 
-def get_current_ioloop(loop):
-    return loop or IOLoop.current(instance=False) or IOLoop()
+def create_new_io_loop():
+    """Returns new IOLoop and doesn't set it current.
+    It's definetely usefull for Sync services to not to stop
+    IOLoop.current or IOLoop.instance"""
+    # get a current IOLoop to store
+    # we don't want to get IOLoop.instance
+    old = IOLoop.current(instance=False)
+
+    # create new IOLoop and sets it current
+    io_loop = IOLoop()
+    # io_loop is set curent now, we need to avoid it
+    # by replacing the current value with `old`
+    if old:
+        # `old` was a current IOLoop, make it again
+        old.make_current()
+    else:
+        # this thread had no current IOLoop
+        # so make it cleat again
+        IOLoop.clear_current()
+
+    return io_loop

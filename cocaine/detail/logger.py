@@ -62,9 +62,10 @@ class Logger(Service):
         return cls._current.instance
 
     @thread_once
-    def __init__(self, host="localhost", port=10053, loop=None):
+    def __init__(self, host="localhost", port=10053, io_loop=None):
         super(Logger, self).__init__(name="logging",
-                                     host=host, port=port, loop=loop)
+                                     host=host, port=port,
+                                     io_loop=io_loop)
         self.api = API.Logger
         try:
             setattr(self, "target", "app/%s" % sys.argv[sys.argv.index("--app") + 1])

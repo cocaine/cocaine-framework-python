@@ -20,9 +20,10 @@
 #
 
 import logging
+import threading
 
 from cocaine.services import SyncService
-
+from cocaine.detail.util import create_new_io_loop
 
 log = logging.getLogger("cocaine")
 log.setLevel(logging.DEBUG)
@@ -34,3 +35,9 @@ def test_sync_service():
         log.info("NEXT")
         ls = s.run_sync(s.list().rx.get(), timeout=1)
     assert isinstance(ls, list), ls
+
+
+def test_create_new_io_loop():
+    t = threading.Thread(target=create_new_io_loop)
+    t.start()
+    t.join()

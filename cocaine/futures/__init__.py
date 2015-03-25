@@ -21,9 +21,9 @@
 
 import threading
 
+from tornado.ioloop import IOLoop
 from tornado.concurrent import Future
 
-from cocaine.detail.util import get_current_ioloop
 
 __all__ = ["ConcurrentWorker", "threaded"]
 
@@ -31,7 +31,7 @@ __all__ = ["ConcurrentWorker", "threaded"]
 class ConcurrentWorker(object):
     def __init__(self, func, io_loop=None, args=(), kwargs=None):
         self._func = func
-        self._io_loop = get_current_ioloop(io_loop)
+        self._io_loop = io_loop or IOLoop.current()
         self._args = args
         self._kwargs = kwargs or {}
         self._future = Future()
