@@ -38,6 +38,7 @@ from cocaine.sessioncontext import Request
 
 from cocaine.logging.log import core_log
 from cocaine.exceptions import RequestError
+from cocaine.disowntimer import DisownTimer
 
 
 class Worker(object):
@@ -60,6 +61,11 @@ class Worker(object):
 
         self.disown_timer = ev.Timer(self.on_disown, disown_timeout, self.loop)
         self.heartbeat_timer = ev.Timer(self.on_heartbeat, heartbeat_timeout, self.loop)
+
+        # it's a fallback mechanism to track
+        # that we are disowned even when the main thread is blocked
+        # 42 is the universal answer. It's the fallback mechanism
+        self.threaded_disown_timer = DisownTimer(disown_timeout * 42)
 
         if isinstance(self.endpoint, types.TupleType) or isinstance(self.endpoint, types.ListType):
             if len(self.endpoint) == 2:
@@ -108,10 +114,12 @@ class Worker(object):
         self._send_heartbeat()
 
         self.heartbeat_timer.start()
+        self.threaded_disown_timer.start()
         self.loop.run()
 
     def terminate(self, reason, msg):
         self.w_stream.write(Message(message.RPC_TERMINATE, 0, reason, msg).pack())
+        self.threaded_disown_timer.stop()
         self.loop.stop()
         exit(1)
 
@@ -161,6 +169,7 @@ class Worker(object):
 
         elif msg.id == message.RPC_HEARTBEAT:
             self._logger.debug("Receive heartbeat. Stop disown timer")
+            self.threaded_disown_timer.notify()
             self.disown_timer.stop()
 
         elif msg.id == message.RPC_TERMINATE:
