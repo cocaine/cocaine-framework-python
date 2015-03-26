@@ -28,6 +28,7 @@ import weakref
 
 from tornado.gen import Return
 from tornado.ioloop import IOLoop
+from tornado.iostream import StreamClosedError
 from tornado.tcpclient import TCPClient
 
 
@@ -178,6 +179,9 @@ class Tx(object):
         if self._done:
             raise ChokeEvent()
 
+        if self.pipe is None:
+            raise StreamClosedError()
+
         log.debug("_invoke has been called %s %s", str(args), str(kwargs))
         for method_id, (method, tx_tree) in self.tx_tree.items():  # py3 has no iteritems
             if method == method_name:
@@ -188,7 +192,7 @@ class Tx(object):
                 elif tx_tree is not None:  # not a recursive transition
                     self.tx_tree = tx_tree
                 raise Return(None)
-        raise AttributeError("method_name")
+        raise AttributeError(method_name)
 
     def __getattr__(self, name):
         def on_getattr(*args, **kwargs):
