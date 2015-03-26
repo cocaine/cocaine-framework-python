@@ -1,3 +1,9 @@
+cocaine-framework-python (0.11.1.12) unstable; urgency=low
+
+  * Add threaded disown timer
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Thu, 26 Mar 2015 13:49:05 +0300
+
 cocaine-framework-python (0.11.1.11) unstable; urgency=low
 
   * Increase disown timeout to avoid the spiral of death
