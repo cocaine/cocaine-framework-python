@@ -31,7 +31,7 @@ log.setLevel(logging.DEBUG)
 
 def test_sync_service():
     s = SyncService("node")
-    for _ in range(50):
+    for _ in range(5):
         log.info("NEXT")
         ls = s.run_sync(s.list().rx.get(), timeout=1)
     assert isinstance(ls, list), ls

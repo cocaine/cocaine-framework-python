@@ -48,8 +48,12 @@ from ..exceptions import InvalidApiVersion
 from ..exceptions import ServiceError
 
 
+log = logging.getLogger("cocaine")
+log.setLevel(logging.CRITICAL)
+
 LOCATOR_DEFAULT_HOST = '127.0.0.1'
 LOCATOR_DEFAULT_PORT = 10053
+LOCATOR_DEFAULT_ENDPOINT = ((LOCATOR_DEFAULT_HOST, LOCATOR_DEFAULT_PORT),)
 
 SYNC_CONNECTION_TIMEOUT = 5
 
@@ -63,9 +67,6 @@ if '--locator' in sys.argv:
             LOCATOR_DEFAULT_PORT = int(port)
     except Exception:
         pass
-
-log = logging.getLogger("cocaine")
-log.setLevel(logging.CRITICAL)
 
 
 class EmptyResponse(object):
@@ -210,15 +211,14 @@ class Channel(object):
 
 
 class BaseService(object):
-
-    def __init__(self, name, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, io_loop=None):
+    def __init__(self, name, endpoints, io_loop=None):
         # If it's not the main thread
         # and a current IOloop doesn't exist here,
         # IOLoop.instance becomes self._io_loop
         self.io_loop = io_loop or IOLoop.current()
         # List of available endpoints in which service is resolved to.
         # Looks as [["host", port2], ["host2", port2]]
-        self.endpoints = [[host, port]]
+        self.endpoints = endpoints
         self.name = name
 
         self._extra = {'service': self.name,
@@ -247,7 +247,7 @@ class BaseService(object):
 
             for host, port in self.endpoints:
                 try:
-                    self.log.info("trying %s:%d to establish connection", host, port)
+                    self.log.info("trying %s:%d to establish connection %s", host, port, self.name)
                     self.pipe = yield TCPClient(io_loop=self.io_loop).connect(host, port)
                     self.pipe.set_nodelay(True)
                     self.pipe.read_until_close(callback=self.on_close,
@@ -262,6 +262,7 @@ class BaseService(object):
             raise Exception("unable to establish connection")
 
     def disconnect(self):
+        self.log.debug("disconnect has been called %s", self.name)
         if self.pipe is None:
             return
 
@@ -276,7 +277,7 @@ class BaseService(object):
             rx.error(DisconnectionError(self.name))
 
     def on_close(self, *args):
-        self.log.debug("pipe has been closed %s", args)
+        self.log.debug("pipe has been closed %s %s", args, self.name)
         self.disconnect()
 
     def on_read(self, read_bytes):
@@ -308,7 +309,7 @@ class BaseService(object):
                 self.log.debug("method `%s` has been found in API map", method_name)
                 counter = next(self.counter)  # py3 counter has no .next() method
                 self.log.debug('sending message: %s', [counter, method_id, args])
-                self.pipe.write(msgpack_packb([counter, method_id, args]))
+                yield self.pipe.write(msgpack_packb([counter, method_id, args]))
                 self.log.debug("RX TREE %s", rx_tree)
                 self.log.debug("TX TREE %s", tx_tree)
 
@@ -330,17 +331,18 @@ class BaseService(object):
 
 
 class Locator(BaseService):
-    def __init__(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, io_loop=None):
+    def __init__(self, endpoints=LOCATOR_DEFAULT_ENDPOINT, io_loop=None):
         super(Locator, self).__init__(name="locator",
-                                      host=host, port=port, io_loop=io_loop)
+                                      endpoints=endpoints, io_loop=io_loop)
         self.api = API.Locator
 
 
 class Service(BaseService):
-    def __init__(self, name, seed=None,
-                 host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, version=0, io_loop=None):
-        super(Service, self).__init__(name=name, io_loop=io_loop)
-        self.locator = Locator(host=host, port=port, io_loop=io_loop)
+    def __init__(self, name, endpoints=LOCATOR_DEFAULT_ENDPOINT,
+                 seed=None, version=0, locator=None, io_loop=None):
+        super(Service, self).__init__(name=name, endpoints=LOCATOR_DEFAULT_ENDPOINT, io_loop=io_loop)
+        self.locator_endpoints = endpoints
+        self.locator = locator
         # Dispatch tree
         self.api = {}
         # Service API version
@@ -349,21 +351,28 @@ class Service(BaseService):
 
     @coroutine
     def connect(self):
-        self.log.debug("checking if service connected", extra=self._extra)
+        self.log.debug("checking if service connected")
         if self._connected:
-            log.debug("already connected", extra=self._extra)
+            self.log.debug("already connected")
             return
 
-        self.log.debug("resolving ...", extra=self._extra)
-        if self.seed is not None:
-            channel = yield self.locator.resolve(self.name, self.seed)
-        else:
-            channel = yield self.locator.resolve(self.name)
-        # Set up self.endpoints for BaseService class
-        # It's used in super(Service).connect()
-        self.endpoints, version, self.api = yield channel.rx.get()
-        self.log.debug("successfully resolved %s %s", self.endpoints,
-                       self.api, extra=self._extra)
+        self.log.debug("resolving ...")
+        # create locator here if it was not passed to us
+        locator = self.locator or Locator(endpoints=self.locator_endpoints, io_loop=self.io_loop)
+        try:
+            if self.seed is not None:
+                channel = yield locator.resolve(self.name, self.seed)
+            else:
+                channel = yield locator.resolve(self.name)
+            # Set up self.endpoints for BaseService class
+            # It's used in super(Service).connect()
+            self.endpoints, version, self.api = yield channel.rx.get()
+        finally:
+            if self.locator is None:
+                # disconnect locator as we created it
+                locator.disconnect()
+
+        self.log.debug("successfully resolved %s %s", self.endpoints, self.api)
 
         # Version compatibility should be checked here.
         if not (self.version == 0 or version == self.version):
