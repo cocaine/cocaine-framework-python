@@ -1,4 +1,11 @@
-cocaine-framework-python (0.12.0.0-rc14) unstable; urgency=low
+cocaine-framework-python (0.12.0.1-rc16) unstable; urgency=low
+
+  * [Service] Support a list of endpoints
+  * [Service] Dispose Locator in connect if it was passed to __init__
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 01 Apr 2015 15:55:15 +0300
+
+cocaine-framework-python (0.12.0.1-rc14) unstable; urgency=low
 
   * [IOLoop] Simplify IOLoop policy: Service uses IOLoop.current()
 
