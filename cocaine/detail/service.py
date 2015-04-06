@@ -20,6 +20,7 @@
 #
 
 import datetime
+import functools
 import itertools
 import logging
 import sys
@@ -210,6 +211,14 @@ class Channel(object):
         self.tx = tx
 
 
+def weak_wrapper(weak_service, method_name, *args, **kwargs):
+    service = weak_service()
+    if service is None:
+        return
+
+    return getattr(service, method_name)(*args, **kwargs)
+
+
 class BaseService(object):
     def __init__(self, name, endpoints, io_loop=None):
         # If it's not the main thread
@@ -250,8 +259,8 @@ class BaseService(object):
                     self.log.info("trying %s:%d to establish connection %s", host, port, self.name)
                     self.pipe = yield TCPClient(io_loop=self.io_loop).connect(host, port)
                     self.pipe.set_nodelay(True)
-                    self.pipe.read_until_close(callback=self.on_close,
-                                               streaming_callback=self.on_read)
+                    self.pipe.read_until_close(callback=functools.partial(weak_wrapper, weakref.ref(self), "on_close"),
+                                               streaming_callback=functools.partial(weak_wrapper, weakref.ref(self), "on_read"))
                 except Exception as err:
                     self.log.error("connection error %s", err)
                 else:
@@ -328,6 +337,11 @@ class BaseService(object):
         def on_getattr(*args, **kwargs):
             return self._invoke(name, *args, **kwargs)
         return on_getattr
+
+    def __del__(self):
+        # we have to close owned connection
+        # otherwise it would be a fd-leak
+        self.disconnect()
 
 
 class Locator(BaseService):

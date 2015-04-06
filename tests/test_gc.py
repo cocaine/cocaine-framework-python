@@ -19,21 +19,24 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import gc
+import weakref
+
 from tornado.ioloop import IOLoop
 
 from cocaine.services import Service
-from cocaine.detail.api import API
+
+io = IOLoop.current()
 
 
-def test_verify_locator_api():
-    io = IOLoop.current()
-    l = Service("locator")
-    io.run_sync(l.connect, timeout=2)
-    assert l.api == API.Locator, "%s\n%s" % (API.Locator, l.api)
-
-
-def test_verify_logger_api():
-    io = IOLoop.current()
-    l = Service("logging")
-    io.run_sync(l.connect, timeout=2)
-    assert l.api == API.Logger, "%s\n%s" % (API.Logger, l.api)
+def test_ref_count_of_service():
+    s = Service("storage")
+    ws = weakref.ref(s)
+    io.run_sync(s.connect, timeout=2)
+    wpipe = weakref.ref(s.pipe)
+    fd = wpipe().fileno().fileno()
+    s = None
+    gc.collect()
+    # there should be no referres to the service
+    assert ws() is None, gc.get_referrers(ws())
+    assert fd not in io._handlers, "%d %s" % (fd, io._handlers)
