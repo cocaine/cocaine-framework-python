@@ -295,7 +295,7 @@ class BaseService(object):
         for msg in self.buffer:
             self.log.debug("unpacked: %s", msg)
             try:
-                session, message_type, payload = msg
+                session, message_type, payload = msg[:3]  # skip extra fields
                 self.log.debug("%s, %d, %s", session, message_type, payload)
             except Exception as err:
                 self.log.error("malformed message: `%s` %s", err, str(msg))
