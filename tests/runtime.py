@@ -161,7 +161,7 @@ def main_v1(path, timeout=10):
         yield w.write(packer.pack([s.counter, 2, []]))
         s.counter += 1
         yield w.write(packer.pack([s.counter, 0, ["err_res"]]))
-        yield w.write(packer.pack([s.counter, 1, [100, "test_err"]]))
+        yield w.write(packer.pack([s.counter, 1, [(-100, 100), "test_err"]]))
     s.on([1, 0, []], on_heartbeat_v1)
     s.io_loop.call_later(timeout, s.io_loop.stop)
 
