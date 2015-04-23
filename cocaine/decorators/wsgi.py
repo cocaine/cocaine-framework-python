@@ -22,9 +22,9 @@
 
 import functools
 
-from .http_dec import tornado_http
-
 from tornado.wsgi import WSGIContainer
+
+from .http_dec import tornado_http
 
 
 def start_response(func, status, response_headers, exc_info=None):

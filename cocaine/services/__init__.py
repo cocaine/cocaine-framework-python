@@ -21,9 +21,9 @@
 
 # It's provided for backward compatibility with 0.11.x
 
-from ..detail.service import Service
-from ..detail.service import SyncService
 from ..detail.service import EmptyResponse
 from ..detail.service import Locator
+from ..detail.service import Service
+from ..detail.service import SyncService
 
 __all__ = ["Service", "SyncService", "Locator", "EmptyResponse"]

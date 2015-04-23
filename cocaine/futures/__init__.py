@@ -21,8 +21,8 @@
 
 import threading
 
-from tornado.ioloop import IOLoop
 from tornado.concurrent import Future
+from tornado.ioloop import IOLoop
 
 
 __all__ = ["ConcurrentWorker", "threaded"]

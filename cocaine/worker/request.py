@@ -21,11 +21,11 @@
 
 import datetime
 
-from ..detail.asyncqueue import AsyncQueue
-from ..decorators import coroutine
-from ..exceptions import ChokeEvent
-
 from tornado import gen
+
+from ..decorators import coroutine
+from ..detail.asyncqueue import AsyncQueue
+from ..exceptions import ChokeEvent
 
 
 class RequestError(Exception):

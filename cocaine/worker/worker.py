@@ -26,16 +26,17 @@ import sys
 from tornado.ioloop import IOLoop
 from tornado.iostream import IOStream
 
+from ._wrappers import default
+from .disowntimer import DisownTimer
+from .message import Message
+from .message import RPC
+from .request import RequestStream
+from .response import ResponseStream
+
 from ..common import CocaineErrno
 from ..decorators import coroutine
 from ..detail.io import Timer
 from ..detail.util import msgpack_unpacker
-from .disowntimer import DisownTimer
-from .message import RPC
-from .message import Message
-from ._wrappers import default
-from .response import ResponseStream
-from .request import RequestStream
 
 DEFAULT_HEARTBEAT_TIMEOUT = 20
 DEFAULT_DISOWN_TIMEOUT = 5

@@ -22,9 +22,9 @@
 import sys
 from functools import partial
 
-from tornado.ioloop import IOLoop
-
 import msgpack
+
+from tornado.ioloop import IOLoop
 
 
 if sys.version_info[0] == 2:

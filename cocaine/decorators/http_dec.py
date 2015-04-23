@@ -29,12 +29,12 @@ except ImportError:  # pragma: no cover
 
 from tornado import escape
 from tornado.httputil import (
-    parse_body_arguments,
     HTTPHeaders,
-    HTTPServerRequest)
+    HTTPServerRequest,
+    parse_body_arguments)
 
-from ..worker._wrappers import proxy_factory
 from ..detail.util import msgpack_unpackb
+from ..worker._wrappers import proxy_factory
 
 
 __all__ = ["http", "tornado_http"]

@@ -24,8 +24,8 @@ import logging
 import sys
 import threading
 
-from .service import Service
 from .api import API
+from .service import Service
 
 
 VERBOSITY_LEVELS = {

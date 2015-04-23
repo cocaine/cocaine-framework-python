@@ -21,8 +21,8 @@
 
 import traceback
 
-from ..detail.util import msgpack_packb
 from ..common import CocaineErrno
+from ..detail.util import msgpack_packb
 
 
 class ResponseStream(object):

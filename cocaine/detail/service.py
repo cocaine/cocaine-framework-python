@@ -34,18 +34,18 @@ from tornado.tcpclient import TCPClient
 
 
 from .api import API
-from .asyncqueue import AsyncQueue
 from .asyncqueue import AsyncLock
+from .asyncqueue import AsyncQueue
+from .util import create_new_io_loop
+from .util import msgpack_packb, msgpack_unpacker
+
 from ..common import CocaineErrno
 from ..decorators import coroutine
-from .util import msgpack_packb, msgpack_unpacker
-from .util import create_new_io_loop
-
 # cocaine defined exceptions
 from ..exceptions import ChokeEvent
 from ..exceptions import DisconnectionError
-from ..exceptions import InvalidMessageType
 from ..exceptions import InvalidApiVersion
+from ..exceptions import InvalidMessageType
 from ..exceptions import ServiceError
 
 

@@ -19,8 +19,8 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from cocaine.detail.logger import Logger
 from cocaine.detail.logger import CocaineHandler
+from cocaine.detail.logger import Logger
 
 
 __all__ = ["Logger", "CocaineHandler"]
