@@ -1,3 +1,11 @@
+cocaine-framework-python (0.12.0.1-rc17) unstable; urgency=low
+
+  * [Service] Get rid of WeakValueDict. Clean sessions by hand
+  * [Service] Service is now collected with its connection
+  * [Service] Extra-field tolerant unpacking
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 13 May 2015 16:54:01 +0300
+
 cocaine-framework-python (0.12.0.1-rc16) unstable; urgency=low
 
   * [Service] Support a list of endpoints
