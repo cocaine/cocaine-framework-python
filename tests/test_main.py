@@ -30,7 +30,8 @@ from cocaine.detail.service import Rx, Tx
 from cocaine.detail.service import BaseService
 from cocaine.detail.service import ServiceError, ChokeEvent, InvalidMessageType, ProtocolError
 from cocaine.detail.service import primitive_protocol, streaming_protocol, null_protocol
-from cocaine.exceptions import ConnectionError, DisconnectionError
+from cocaine.exceptions import ConnectionError
+# from cocaine.exceptions import DisconnectionError
 from cocaine.worker.request import Stream, RequestError
 
 from cocaine.services import Locator
@@ -108,19 +109,19 @@ def test_node_service():
     app_list = io.run_sync(channel.rx.get)
     assert isinstance(app_list, list), "invalid app_list type `%s` %s " % (type(app_list), app_list)
 
-
-@tools.raises(DisconnectionError)
-def test_node_service_disconnection():
-    io = IOLoop.current()
-    node = Service("node", endpoints=[["localhost", 10053]], io_loop=io)
-    channel = io.run_sync(node.list)
-    node.disconnect()
-    # proper answer
-    io.run_sync(channel.rx.get)
-    # empty response
-    io.run_sync(channel.rx.get)
-    # disconnection error
-    io.run_sync(channel.rx.get)
+# This test is not valid now
+# @tools.raises(DisconnectionError)
+# def test_node_service_disconnection():
+#     io = IOLoop.current()
+#     node = Service("node", endpoints=[["localhost", 10053]], io_loop=io)
+#     channel = io.run_sync(node.list)
+#     node.disconnect()
+#     # proper answer
+#     io.run_sync(channel.rx.get)
+#     # empty response
+#     io.run_sync(channel.rx.get)
+#     # disconnection error
+#     io.run_sync(channel.rx.get)
 
 
 def test_node_service_bad_on_read():

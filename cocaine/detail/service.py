@@ -168,6 +168,9 @@ class Rx(object):
     def error(self, err):
         self._queue.put_nowait(err)
 
+    def closed(self):
+        return self._done
+
 
 class Tx(object):
     def __init__(self, tx_tree, pipe, session_id):
@@ -234,7 +237,7 @@ class BaseService(object):
                        'id': id(self)}
         self.log = logging.LoggerAdapter(log, self._extra)
 
-        self.sessions = weakref.WeakValueDictionary()
+        self.sessions = dict()
         self.counter = itertools.count(1)
         self.api = {}
 
@@ -307,6 +310,8 @@ class BaseService(object):
                 continue
 
             rx.push(message_type, payload)
+            if rx.closed():
+                del self.sessions[session]
 
     @coroutine
     def _invoke(self, method_name, *args, **kwargs):
