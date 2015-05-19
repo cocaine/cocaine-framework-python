@@ -171,6 +171,17 @@ class Rx(object):
     def closed(self):
         return self._done
 
+    def __repr__(self):
+        return "<%s at %s %s>" % (
+            type(self).__name__, hex(id(self)), self._format())
+
+    def __str__(self):
+        return "<%s %s>" % (type(self).__name__, self._format())
+
+    def _format(self):
+        return "name: %s, queue: %s, done: %s" % (
+            self.servicename, self._queue, self._done)
+
 
 class Tx(object):
     def __init__(self, tx_tree, pipe, session_id):
@@ -207,11 +218,32 @@ class Tx(object):
     def done(self):
         self._done = True
 
+    def __repr__(self):
+        return "<%s at %s %s>" % (
+            type(self).__name__, hex(id(self)), self._format())
+
+    def __str__(self):
+        return "<%s %s>" % (type(self).__name__, self._format())
+
+    def _format(self):
+        return "session_id: %d, pipe: %s, done: %s" % (
+            self.session_id, self.pipe, self._done)
+
 
 class Channel(object):
     def __init__(self, rx, tx):
         self.rx = rx
         self.tx = tx
+
+    def __repr__(self):
+        return "<%s at %s %s>" % (
+            type(self).__name__, hex(id(self)), self._format())
+
+    def __str__(self):
+        return "<%s %s>" % (type(self).__name__, self._format())
+
+    def _format(self):
+        return "tx: %s, rx: %s" % (self.tx, self.rx)
 
 
 def weak_wrapper(weak_service, method_name, *args, **kwargs):
