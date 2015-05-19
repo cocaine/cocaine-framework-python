@@ -67,23 +67,39 @@ class Logger(Service):
                                      endpoints=endpoints,
                                      io_loop=io_loop)
         self.api = API.Logger
+
         try:
-            setattr(self, "target", "app/%s" % sys.argv[sys.argv.index("--app") + 1])
+            self._target = "app/%s" % sys.argv[sys.argv.index("--app") + 1]
         except ValueError:
-            setattr(self, "target", "app/%s" % "standalone")
+            self._target = "app/%s" % "standalone"
 
-        def wrapper(level):
-            target = self.target
+        try:
+            # assume we are under cocaine
+            _uuid = sys.argv[sys.argv.index("--uuid") + 1]
+        except ValueError:
+            _uuid = None
 
-            def on_emit(message, attrs=None):
-                if attrs is None:
-                    return self.emit(level, target, message)
-                else:
-                    return self.emit(level, target, message, attrs)
+        def wrapper(level, uuid):
+            target = self._target
+
+            if uuid is None:
+                def on_emit(message, attrs=None):
+                    if not isinstance(attrs, dict):
+                        return self.emit(level, target, message)
+                    else:
+                        return self.emit(level, target, message, attrs.items())
+            else:
+                def on_emit(message, attrs=None):
+                    if not isinstance(attrs, dict):
+                        return self.emit(level, target, message, [["uuid", uuid]])
+                    else:
+                        # ToDo: implement safe replace?
+                        attrs["uuid"] = uuid
+                        return self.emit(level, target, message, attrs.items())
             return on_emit
 
         for level_name, level in VERBOSITY_LEVELS.items():
-            setattr(self, level_name, wrapper(level))
+            setattr(self, level_name, wrapper(level, _uuid))
 
 
 class CocaineHandler(logging.Handler):
