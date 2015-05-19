@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.0.1-rc18) unstable; urgency=low
+
+  * [Logging] Send uuid if it's available
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 19 May 2015 16:58:12 +0300
+
 cocaine-framework-python (0.12.0.1-rc17) unstable; urgency=low
 
   * [Service] Get rid of WeakValueDict. Clean sessions by hand
