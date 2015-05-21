@@ -36,9 +36,14 @@ def read(request, response):
 @http
 def http_read(request, response):
     yield request.read()
-    with response:
+    try:
         channel = yield storage.read(NAMESPACE, KEY)
         res = yield channel.rx.get()
+    except Exception as err:
+        response.write_head(502, {})
+        response.write(str(err))
+    else:
+        response.write_head(200, {})
         response.write(res)
 
 
