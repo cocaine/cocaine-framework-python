@@ -11,12 +11,15 @@ Vcs-Git: git://github.com/cocaine/cocaine-framework-python.git
 Vcs-Browser: https://github.com/cocaine/cocaine-framework-python
 XS-Python-Version: >= 2.6
 
-Package: cocaine-framework-python
+Package: cocaine-v12-framework-python
 Architecture: any
 Depends: ${misc:Depends}, ${python:Depends}, 
  python-msgpack | msgpack-python, 
  python-tornado (>= 4.1),
  python-toro,
 XB-Python-Version: >= 2.6
+Replaces: cocaine-framework-python
+Provides: cocaine-framework-python
+Conflicts: cocaine-framework-python
 Description: Cocaine - Python Framework
  A simple framework to ease the developing of Cocaine apps.
