@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 #    Copyright (c) 2014 Anton Tyurin <noxiouz@yandex.ru>
 #    This file is part of Cocaine.
 #
@@ -16,12 +17,17 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+from cocaine.logger import Logger
 from cocaine.worker import Worker
 
+log = Logger()
 
 def echo(request, response):
+    log.info("start the request")
     inc = yield request.read()
+    log.info("write a chunk")
     response.write(str(inc))
+    log.info("close the request")
     response.close()
 
 
