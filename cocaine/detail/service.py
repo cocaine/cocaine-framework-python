@@ -198,7 +198,7 @@ class Tx(object):
         if self.pipe is None:
             raise StreamClosedError()
 
-        log.debug("_invoke has been called %s %s", str(args), str(kwargs))
+        log.debug("_invoke has been called %.300s %.300s", str(args), str(kwargs))
         for method_id, (method, tx_tree) in self.tx_tree.items():  # py3 has no iteritems
             if method == method_name:
                 log.debug("method `%s` has been found in API map", method_name)
@@ -354,7 +354,7 @@ class BaseService(object):
             if method == method_name:
                 self.log.debug("method `%s` has been found in API map", method_name)
                 counter = next(self.counter)  # py3 counter has no .next() method
-                self.log.debug('sending message: %s', [counter, method_id, args])
+                self.log.debug('sending message: %.300s', [counter, method_id, args])
                 yield self.pipe.write(msgpack_packb([counter, method_id, args]))
                 self.log.debug("RX TREE %s", rx_tree)
                 self.log.debug("TX TREE %s", tx_tree)
