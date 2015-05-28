@@ -153,7 +153,7 @@ class Rx(object):
 
     def push(self, msg_type, payload):
         dispatch = self.rx_tree.get(msg_type)
-        log.debug("dispatch %s %s", dispatch, payload)
+        log.debug("dispatch %s %.300s", dispatch, payload)
         if dispatch is None:
             raise InvalidMessageType(self.servicename, CocaineErrno.INVALIDMESSAGETYPE,
                                      "unexpected message type %s" % msg_type)
