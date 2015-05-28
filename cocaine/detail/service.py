@@ -325,13 +325,13 @@ class BaseService(object):
         self.disconnect()
 
     def on_read(self, read_bytes):
-        self.log.debug("read %s", read_bytes)
+        self.log.debug("read %.300s", read_bytes)
         self.buffer.feed(read_bytes)
         for msg in self.buffer:
-            self.log.debug("unpacked: %s", msg)
+            self.log.debug("unpacked: %.300s", msg)
             try:
                 session, message_type, payload = msg[:3]  # skip extra fields
-                self.log.debug("%s, %d, %s", session, message_type, payload)
+                self.log.debug("%s, %d, %.300s", session, message_type, payload)
             except Exception as err:
                 self.log.error("malformed message: `%s` %s", err, str(msg))
                 continue
