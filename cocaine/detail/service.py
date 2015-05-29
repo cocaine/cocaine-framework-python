@@ -347,7 +347,7 @@ class BaseService(object):
 
     @coroutine
     def _invoke(self, method_name, *args, **kwargs):
-        self.log.debug("_invoke has been called %s %s", str(args), str(kwargs))
+        self.log.debug("_invoke has been called %.300s %.300s", str(args), str(kwargs))
         yield self.connect()
         self.log.debug("%s", self.api)
         for method_id, (method, tx_tree, rx_tree) in self.api.items():  # py3 has no iteritems
