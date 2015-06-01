@@ -36,6 +36,7 @@ from tornado.tcpclient import TCPClient
 from .api import API
 from .asyncqueue import AsyncLock
 from .asyncqueue import AsyncQueue
+from .defaults import Defaults
 from .util import create_new_io_loop
 from .util import msgpack_packb, msgpack_unpacker
 
@@ -52,22 +53,8 @@ from ..exceptions import ServiceError
 log = logging.getLogger("cocaine")
 log.setLevel(logging.CRITICAL)
 
-LOCATOR_DEFAULT_HOST = '127.0.0.1'
-LOCATOR_DEFAULT_PORT = 10053
-LOCATOR_DEFAULT_ENDPOINT = ((LOCATOR_DEFAULT_HOST, LOCATOR_DEFAULT_PORT),)
-
+LOCATOR_DEFAULT_ENDPOINT = Defaults.locators
 SYNC_CONNECTION_TIMEOUT = 5
-
-if '--locator' in sys.argv:
-    try:
-        index = sys.argv.index('--locator') + 1
-        host, _, port = sys.argv[index].rpartition(':')
-        if host:
-            LOCATOR_DEFAULT_HOST = host
-        if port.isdigit():
-            LOCATOR_DEFAULT_PORT = int(port)
-    except Exception:
-        pass
 
 
 class EmptyResponse(object):
