@@ -23,7 +23,6 @@ import datetime
 import functools
 import itertools
 import logging
-import sys
 import weakref
 
 
@@ -50,7 +49,7 @@ from ..exceptions import InvalidMessageType
 from ..exceptions import ServiceError
 
 
-log = logging.getLogger("cocaine")
+log = logging.getLogger("cocaine.service")
 log.setLevel(logging.CRITICAL)
 
 LOCATOR_DEFAULT_ENDPOINT = Defaults.locators

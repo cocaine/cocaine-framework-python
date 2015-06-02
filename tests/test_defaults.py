@@ -41,13 +41,14 @@ def test_defaults_v1():
     opts = defaults.DefaultOptions(argv)
     assert opts.protocol == 1, opts.protocol
     assert opts.uuid == "uuid", opts.uuid
+    assert opts.app == defaults.DEFAULT_APPNAME, opts.app
     assert opts.endpoint == "/var/run/cocaine/sock", opts.endpoint
     assert opts.locators == [("host1", 10053), ("127.0.0.1", 10054)], opts.locators
 
 
 def test_defaults_v0():
     argv = ["--locator", "host1:10053",
-            "--uuid", "uuid",
+            "--uuid", "uuid", "--app", "APP",
             "--endpoint", "/var/run/cocaine/sock"]
 
     opts = defaults.DefaultOptions(argv)
@@ -55,3 +56,4 @@ def test_defaults_v0():
     assert opts.uuid == "uuid", opts.uuid
     assert opts.endpoint == "/var/run/cocaine/sock", opts.endpoint
     assert opts.locators == [("host1", 10053)], opts.locators
+    assert opts.app == "APP", opts.app

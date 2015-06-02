@@ -21,7 +21,6 @@
 
 import logging
 import socket
-import sys
 
 from tornado.ioloop import IOLoop
 from tornado.iostream import IOStream
@@ -35,22 +34,27 @@ from .response import ResponseStream
 
 from ..common import CocaineErrno
 from ..decorators import coroutine
+from ..detail.defaults import Defaults
 from ..detail.io import Timer
 from ..detail.util import msgpack_unpacker
 
 DEFAULT_HEARTBEAT_TIMEOUT = 20
 DEFAULT_DISOWN_TIMEOUT = 5
 
-log = logging.getLogger("cocaine")
+log = logging.getLogger("cocaine.worker")
 
 
-class Worker(object):
-
+class BasicWorker(object):
     def __init__(self, disown_timeout=DEFAULT_DISOWN_TIMEOUT,
                  heartbeat_timeout=DEFAULT_HEARTBEAT_TIMEOUT,
                  io_loop=None, **kwargs):
+
         if heartbeat_timeout < disown_timeout:
-            raise ValueError("heartbeat timeout must be greater then disown")
+            raise ValueError("heartbeat timeout must be greater than disown")
+
+        self.appname = kwargs.get("app") or Defaults.app
+        self.uuid = kwargs.get("uuid") or Defaults.uuid
+        self.endpoint = kwargs.get("endpoint") or Defaults.endpoint
 
         self.io_loop = io_loop or IOLoop.current()
         self.pipe = None
@@ -75,14 +79,6 @@ class Worker(object):
             # RPC.ERROR: self._dispatch_error,
             RPC.CHOKE: self._dispatch_choke
         }
-
-        # TBD move into opts
-        try:
-            self.appname = kwargs.get("app") or sys.argv[sys.argv.index("--app") + 1]
-            self.uuid = kwargs.get("uuid") or sys.argv[sys.argv.index("--uuid") + 1]
-            self.endpoint = kwargs.get("endpoint") or sys.argv[sys.argv.index("--endpoint") + 1]
-        except (ValueError, IndexError) as err:
-            raise ValueError("wrong commandline args %s" % err)
 
         # storehouse for sessions
         self.sessions = {}
@@ -112,9 +108,11 @@ class Worker(object):
                 return
 
             log.debug("sending handshake")
-            self._send_handshake()
+            self.send_handshake()
             log.debug("sending heartbeat")
-            self._send_heartbeat()
+            self.do_heartbeat()
+            # start heartbeat timer
+            self.heartbeat_timer.start()
             log.debug("start threaded_disown_timer")
             self.threaded_disown_timer.start()
 
@@ -129,8 +127,6 @@ class Worker(object):
 
         # schedule connection establishment
         self.async_connect()
-        # start heartbeat timer
-        self.heartbeat_timer.start()
 
         self.io_loop.start()
 
@@ -153,7 +149,7 @@ class Worker(object):
     # Events
     # healthmonitoring events
     def on_heartbeat_timer(self):
-        self._send_heartbeat()
+        self.do_heartbeat()
 
     def on_disown(self):
         try:
@@ -163,22 +159,16 @@ class Worker(object):
 
     # General dispatch method
     def on_message(self, data):
-        log.debug("on_message %s", data)
+        log.debug("on_message %.300s", data)
         self.buffer.feed(data)
         for i in self.buffer:
-            log.debug("unpacked %s", i)
+            log.debug("unpacked %.300s", i)
             try:
                 message = Message.initialize(i)
                 callback = self._dispatcher.get(message.id)
                 callback(message)
             except Exception as err:
-                log.warn("error %s occured while handling %s", err, i)
-
-    def terminate(self, code, reason):
-        log.error("terminated")
-        self.pipe.write(Message(RPC.TERMINATE, 1,
-                                code, reason).pack())
-        self._stop()
+                log.warn("error %s occured while handling %.300s", err, i)
 
     def _dispatch_heartbeat(self, _):
         log.debug("heartbeat has been received. Stop disown timer")
@@ -233,12 +223,43 @@ class Worker(object):
         self.on_disown()
 
     # Private:
-    def _send_handshake(self):
-        self.pipe.write(Message(RPC.HANDSHAKE, 1, self.uuid).pack())
+    def send_handshake(self):
+        raise NotImplementedError
 
-    def _send_heartbeat(self):
+    def send_heartbeat(self):
+        raise NotImplementedError
+
+    def send_choke(self, session):
+        raise NotImplementedError
+
+    def send_chunk(self, session, data):
+        raise NotImplementedError
+
+    def send_error(self, session, code, msg):
+        raise NotImplementedError
+
+    def send_terminate(self, code, reason):
+        raise NotImplementedError
+
+    def terminate(self, code, reason):
+        self.send_terminate(code, reason)
+        self._stop()
+
+    def do_heartbeat(self):
         self.disown_timer.start()
         log.debug("heartbeat has been sent. Start disown timer")
+        self.send_heartbeat()
+
+    def _stop(self):
+        self.threaded_disown_timer.stop()
+        self.io_loop.stop()
+
+
+class WorkerV0(BasicWorker):
+    def send_handshake(self):
+        self.pipe.write(Message(RPC.HANDSHAKE, 1, self.uuid).pack())
+
+    def send_heartbeat(self):
         self.pipe.write(self._heartbeat_msg)
 
     def send_choke(self, session):
@@ -250,6 +271,6 @@ class Worker(object):
     def send_error(self, session, code, msg):
         self.pipe.write(Message(RPC.ERROR, session, code, msg).pack())
 
-    def _stop(self):
-        self.threaded_disown_timer.stop()
-        self.io_loop.stop()
+    def send_terminate(self, code, reason):
+        log.error("terminated")
+        self.pipe.write(Message(RPC.TERMINATE, 1, code, reason).pack())

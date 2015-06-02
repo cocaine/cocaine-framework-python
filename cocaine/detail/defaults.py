@@ -20,8 +20,9 @@
 
 import sys
 
-LOCATOR_DEFAULT_HOST = '127.0.0.1'
+LOCATOR_DEFAULT_HOST = "127.0.0.1"
 LOCATOR_DEFAULT_PORT = 10053
+DEFAULT_APPNAME = "app/standalone"
 
 
 def parse_locators_v1(inp):
@@ -33,6 +34,14 @@ def parse_locators_v0(inp):
     return [(host, int(port))]
 
 
+class GetOptError(ValueError):
+    pass
+
+
+class MalformedArgs(IndexError):
+    pass
+
+
 class DefaultOptions(object):
     def __init__(self, argv=None):
         self.argv = argv or sys.argv
@@ -40,16 +49,23 @@ class DefaultOptions(object):
         self._endpoint = None
         self._uuid = None
         self._locators = None
+        self._appname = None
 
     def get_opt(self, name):
-        return self.argv[self.argv.index(name) + 1]
+        try:
+            return self.argv[self.argv.index(name) + 1]
+        except ValueError:
+            # no such option
+            raise GetOptError("no such argument %s" % name)
+        except IndexError:
+            raise MalformedArgs("argument %s must have a value" % name)
 
     @property
     def protocol(self):
         if not self._protocol:
             try:
                 self._protocol = int(self.get_opt("--protocol"))
-            except (ValueError, IndexError):
+            except GetOptError:
                 self._protocol = 0
         return self._protocol
 
@@ -68,7 +84,7 @@ class DefaultOptions(object):
                     self._locators = parse_locators_v0(value)
                 elif self.protocol == 1:
                     self._locators = parse_locators_v1(value)
-            except (ValueError, IndexError):
+            except GetOptError:
                 # we are not under cocaine
                 self._locators = ((LOCATOR_DEFAULT_HOST, LOCATOR_DEFAULT_PORT), )
         return self._locators
@@ -78,6 +94,15 @@ class DefaultOptions(object):
         if not self._endpoint:
             self._endpoint = self.get_opt("--endpoint")
         return self._endpoint
+
+    @property
+    def app(self):
+        if not self._appname:
+            try:
+                self._appname = self.get_opt("--app")
+            except GetOptError:
+                self._appname = DEFAULT_APPNAME
+        return self._appname
 
 
 Defaults = DefaultOptions()
