@@ -10,6 +10,7 @@ notifications:
   slack: cocaine:qDewv6ZVDt0TciQeNdE47GqG
 branches:
   only:
-    - v0.11
     - master
+    - v0.11
+    - v0.12
 after_success: coveralls

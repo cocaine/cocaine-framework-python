@@ -71,13 +71,13 @@ class RuntimeMock(tcpserver.TCPServer):
         os.remove(self.endpoint)
 
 
-def main(path, timeout=10):
+def main_v0(path, timeout=10):
     loop = ioloop.IOLoop()
     loop.make_current()
     s = RuntimeMock(path)
 
     @gen.coroutine
-    def on_heartbeat(w):
+    def on_heartbeat_v0(w):
         if sys.version_info[0] == 2:
             packer = msgpack.Packer()
         else:
@@ -112,9 +112,54 @@ def main(path, timeout=10):
         yield w.write(packer.pack([s.counter, 3, ["notclosed"]]))
         yield w.write(packer.pack([s.counter, 4, ["A"]]))
         yield w.write(packer.pack([s.counter, 6, []]))
-    s.on([1, 1, []], on_heartbeat)
+    s.on([1, 1, []], on_heartbeat_v0)
     s.io_loop.call_later(timeout, s.io_loop.stop)
 
 
+def main_v1(path, timeout=10):
+    loop = ioloop.IOLoop()
+    loop.make_current()
+    s = RuntimeMock(path)
+
+    @gen.coroutine
+    def on_heartbeat_v1(w):
+        if sys.version_info[0] == 2:
+            packer = msgpack.Packer()
+        else:
+            packer = msgpack.Packer(use_bin_type=True)
+        if s.counter > 6:
+            yield w.write(packer.pack([1, 2, [2, "terminate"]]))
+            s.io_loop.add_callback(s.stop)
+            return
+        req = [METHOD, URI, HTTP_VERSION, HEADERS, BODY]
+        yield w.write(packer.pack([1, 0, []]))
+        s.counter += 1
+        yield w.write(packer.pack([s.counter, 0, ["ping"]]))
+        yield w.write(packer.pack([s.counter, 0, ["pong"]]))
+        yield w.write(packer.pack([s.counter, 2, []]))
+        s.counter += 1
+        yield w.write(packer.pack([s.counter, 0, ["bad_event"]]))
+        s.counter += 1
+        yield w.write(packer.pack([s.counter, 0, ["http"]]))
+        yield w.write(packer.pack([s.counter, 0, [packer.pack(req)]]))
+        yield w.write(packer.pack([s.counter, 2, []]))
+        s.counter += 1
+        yield w.write(packer.pack([s.counter, 0, ["http_test"]]))
+        yield w.write(packer.pack([s.counter, 0, [packer.pack(req)]]))
+        yield w.write(packer.pack([s.counter, 2, []]))
+        s.counter += 1
+        yield w.write(packer.pack([s.counter + 100, 2, ["bad_ping"]]))
+        yield w.write(packer.pack([s.counter, 104, ["bad_ping"]]))
+        s.counter += 1
+        yield w.write(packer.pack([s.counter, 0, ["bad_ping"]]))
+        yield w.write(packer.pack([s.counter, 0, ["A"]]))
+        yield w.write(packer.pack([s.counter, 2, []]))
+        s.counter += 1
+        yield w.write(packer.pack([s.counter, 0, ["notclosed"]]))
+        yield w.write(packer.pack([s.counter, 0, ["A"]]))
+        yield w.write(packer.pack([s.counter, 2, []]))
+    s.on([1, 0, []], on_heartbeat_v1)
+    s.io_loop.call_later(timeout, s.io_loop.stop)
+
 if __name__ == '__main__':
-    main("enp")
+    main_v0("enp")

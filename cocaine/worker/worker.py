@@ -211,25 +211,25 @@ class BasicWorker(object):
         self.on_disown()
 
     def feed_message(self, message):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def send_handshake(self):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def send_heartbeat(self):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def send_choke(self, session):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def send_chunk(self, session, data):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def send_error(self, session, code, msg):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def send_terminate(self, code, reason):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def terminate(self, code, reason):
         self.send_terminate(code, reason)
