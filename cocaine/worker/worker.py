@@ -29,6 +29,8 @@ from ._wrappers import default
 from .disowntimer import DisownTimer
 from .message import Message
 from .message import RPC
+from .message import RPCv1
+from .message import packv1
 from .request import RequestStream
 from .response import ResponseStream
 
@@ -47,21 +49,20 @@ log = logging.getLogger("cocaine.worker")
 class BasicWorker(object):
     def __init__(self, disown_timeout=DEFAULT_DISOWN_TIMEOUT,
                  heartbeat_timeout=DEFAULT_HEARTBEAT_TIMEOUT,
-                 io_loop=None, **kwargs):
+                 io_loop=None, app=None, uuid=None, endpoint=None):
 
         if heartbeat_timeout < disown_timeout:
             raise ValueError("heartbeat timeout must be greater than disown")
 
-        self.appname = kwargs.get("app") or Defaults.app
-        self.uuid = kwargs.get("uuid") or Defaults.uuid
-        self.endpoint = kwargs.get("endpoint") or Defaults.endpoint
+        self.appname = app or Defaults.app
+        self.uuid = uuid or Defaults.uuid
+        self.endpoint = endpoint or Defaults.endpoint
 
         self.io_loop = io_loop or IOLoop.current()
         self.pipe = None
         self.buffer = msgpack_unpacker()
 
-        self.disown_timer = Timer(self.on_disown,
-                                  disown_timeout, self.io_loop)
+        self.disown_timer = Timer(self.on_disown, disown_timeout, self.io_loop)
 
         # it's a fallback mechanism to track
         # that we are disowned even when the main thread is blocked
@@ -71,21 +72,10 @@ class BasicWorker(object):
         self.heartbeat_timer = Timer(self.on_heartbeat_timer,
                                      heartbeat_timeout, self.io_loop)
 
-        self._dispatcher = {
-            RPC.HEARTBEAT: self._dispatch_heartbeat,
-            RPC.TERMINATE: self._dispatch_terminate,
-            RPC.INVOKE: self._dispatch_invoke,
-            RPC.CHUNK: self._dispatch_chunk,
-            # RPC.ERROR: self._dispatch_error,
-            RPC.CHOKE: self._dispatch_choke
-        }
-
         # storehouse for sessions
         self.sessions = {}
         # handlers for events
         self._events = {}
-        # protocol
-        self.pr = None
 
         # avoid unnecessary dublicate packing of message
         self._heartbeat_msg = Message(RPC.HEARTBEAT, 1).pack()
@@ -164,9 +154,7 @@ class BasicWorker(object):
         for i in self.buffer:
             log.debug("unpacked %.300s", i)
             try:
-                message = Message.initialize(i)
-                callback = self._dispatcher.get(message.id)
-                callback(message)
+                self.feed_message(i)
             except Exception as err:
                 log.warn("error %s occured while handling %.300s", err, i)
 
@@ -222,7 +210,9 @@ class BasicWorker(object):
         log.error("connection has been lost")
         self.on_disown()
 
-    # Private:
+    def feed_message(self, message):
+        raise NotImplementedError
+
     def send_handshake(self):
         raise NotImplementedError
 
@@ -256,6 +246,18 @@ class BasicWorker(object):
 
 
 class WorkerV0(BasicWorker):
+    def __init__(self, *args, **kwargs):
+        super(WorkerV0, self).__init__(*args, **kwargs)
+
+        self._dispatcher = {
+            RPC.HEARTBEAT: self._dispatch_heartbeat,
+            RPC.TERMINATE: self._dispatch_terminate,
+            RPC.INVOKE: self._dispatch_invoke,
+            RPC.CHUNK: self._dispatch_chunk,
+            # RPC.ERROR: self._dispatch_error,
+            RPC.CHOKE: self._dispatch_choke
+        }
+
     def send_handshake(self):
         self.pipe.write(Message(RPC.HANDSHAKE, 1, self.uuid).pack())
 
@@ -274,3 +276,50 @@ class WorkerV0(BasicWorker):
     def send_terminate(self, code, reason):
         log.error("terminated")
         self.pipe.write(Message(RPC.TERMINATE, 1, code, reason).pack())
+
+    def feed_message(self, msg):
+        message = Message.initialize(msg)
+        callback = self._dispatcher.get(message.id)
+        callback(message)
+
+
+class WorkerV1(BasicWorker):
+    def __init__(self, *args, **kwargs):
+        super(WorkerV1, self).__init__(*args, **kwargs)
+        self.max_session = 0
+
+    def send_handshake(self):
+        self.pipe.write(packv1(1, RPCv1.HANDSHAKE, self.uuid))
+
+    def send_heartbeat(self):
+        self.pipe.write(packv1(1, RPCv1.HEARTBEAT))
+
+    def send_choke(self, session):
+        self.pipe.write(packv1(session, RPCv1.CLOSE))
+
+    def send_chunk(self, session, data):
+        self.pipe.write(packv1(session, RPCv1.WRITE, data))
+
+    def send_error(self, session, code, msg):
+        self.pipe.write(packv1(session, RPCv1.ERROR, code, msg))
+
+    def feed_message(self, msg):
+        session, type_id, payload = msg[:3]
+        if session == 1:
+            self._dispatch_heartbeat(payload)
+            return
+
+        if self.max_session < session:
+            # it must be Invoke
+            if type_id != RPCv1.INVOKE:
+                log.error("new session %d must start from invoke %d %s",
+                          session, type_id, str(payload))
+                return
+            self.max_session = session
+            self._dispatch_invoke(Message(RPC.INVOKE, session, *payload))
+            return
+
+        if type_id == RPCv1.WRITE:
+            self._dispatch_chunk(Message(RPC.CHUNK, session, *payload))
+        elif type_id == RPCv1.CLOSE:
+            self._dispatch_choke(Message(RPC.CHOKE, session, *payload))
