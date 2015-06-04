@@ -128,7 +128,7 @@ def main_v1(path, timeout=10):
         else:
             packer = msgpack.Packer(use_bin_type=True)
         if s.counter > 6:
-            yield w.write(packer.pack([1, 2, [2, "terminate"]]))
+            yield w.write(packer.pack([1, 1, [2, "terminate"]]))
             s.io_loop.add_callback(s.stop)
             return
         req = [METHOD, URI, HTTP_VERSION, HEADERS, BODY]
@@ -158,8 +158,12 @@ def main_v1(path, timeout=10):
         yield w.write(packer.pack([s.counter, 0, ["notclosed"]]))
         yield w.write(packer.pack([s.counter, 0, ["A"]]))
         yield w.write(packer.pack([s.counter, 2, []]))
+        s.counter += 1
+        yield w.write(packer.pack([s.counter, 0, ["err_res"]]))
+        yield w.write(packer.pack([s.counter, 1, [100, "test_err"]]))
     s.on([1, 0, []], on_heartbeat_v1)
     s.io_loop.call_later(timeout, s.io_loop.stop)
+
 
 if __name__ == '__main__':
     main_v0("enp")

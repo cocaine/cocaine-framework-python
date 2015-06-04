@@ -194,18 +194,25 @@ class BasicWorker(object):
     def _dispatch_chunk(self, msg):
         log.debug("chunk has been received %d", msg.session)
         try:
-            _session = self.sessions[msg.session]
-            _session.push(msg.data)
+            session = self.sessions[msg.session]
+            session.push(msg.data)
         except KeyError as err:
             log.warn("no session %s", err)
 
     def _dispatch_choke(self, msg):
         log.debug("choke has been received %d", msg.session)
-        _session = self.sessions.pop(msg.session, None)
-        if _session is not None:
-            _session.close()
+        session = self.sessions.pop(msg.session, None)
+        if session is not None:
+            session.close()
 
-    # On disconnection callback
+    def _dispatch_error(self, msg):
+        log.debug("dispatch error message %d: %d, %s",
+                  msg.session, msg.errno, msg.reason)
+        session = self.sessions.pop(msg.session, None)
+        if session is not None:
+            session.error(msg.errno, msg.reason)
+            session.close()
+
     def on_failure(self, *args):
         log.error("connection has been lost")
         self.on_disown()
@@ -303,10 +310,16 @@ class WorkerV1(BasicWorker):
     def send_error(self, session, code, msg):
         self.pipe.write(packv1(session, RPCv1.ERROR, code, msg))
 
+    def send_terminate(self, code, reason):
+        self.pipe.write(packv1(1, RPCv1.TERMINATE, code, reason))
+
     def feed_message(self, msg):
         session, type_id, payload = msg[:3]
         if session == 1:
-            self._dispatch_heartbeat(payload)
+            if type_id == RPCv1.HEARTBEAT:
+                self._dispatch_heartbeat(None)
+            elif type_id == RPCv1.TERMINATE:
+                self._dispatch_terminate(Message(RPC.TERMINATE, session, *payload))
             return
 
         if self.max_session < session:
@@ -323,3 +336,5 @@ class WorkerV1(BasicWorker):
             self._dispatch_chunk(Message(RPC.CHUNK, session, *payload))
         elif type_id == RPCv1.CLOSE:
             self._dispatch_choke(Message(RPC.CHOKE, session, *payload))
+        elif type_id == RPCv1.ERROR:
+            self._dispatch_error(Message(RPC.ERROR, session, *payload))

@@ -27,6 +27,7 @@ from nose import tools
 from runtime import main_v0, main_v1, HEADERS, BODY, HTTP_VERSION
 from cocaine.worker import Worker
 from cocaine.worker.worker import WorkerV1
+from cocaine.worker.request import RequestError
 
 from cocaine.decorators import wsgi
 from cocaine.decorators import http
@@ -62,7 +63,6 @@ def test_worker_v0():
                 def w(status, headers):
                     wsgi_res["status"] = status
                     wsgi_res["headers"] = headers
-                    print(wsgi_res)
                     return func(status, headers)
                 return w
             result = func(environ, g(start_response))
@@ -141,6 +141,7 @@ def test_worker_v1():
     wsgi_res = {"body": list(),
                 "status": None,
                 "headers": None}
+    err_res = list()
 
     http_res = {}
 
@@ -150,7 +151,6 @@ def test_worker_v1():
                 def w(status, headers):
                     wsgi_res["status"] = status
                     wsgi_res["headers"] = headers
-                    print(wsgi_res)
                     return func(status, headers)
                 return w
             result = func(environ, g(start_response))
@@ -191,6 +191,12 @@ def test_worker_v1():
         response.write("OK")
         response.close()
 
+    def error_handler(request, response):
+        try:
+            yield request.read()
+        except Exception as err:
+            err_res.append(err)
+
     kwargs = dict(app="testapp",
                   endpoint=socket_path,
                   uuid="randomuuid",
@@ -203,6 +209,7 @@ def test_worker_v1():
            "bad_ping": bad_ping,
            "notclosed": notclosed,
            "http_test": http_test,
+           "err_res": error_handler,
            "http": wsgi(wsgi_app)})
 
     assert res[:4] == [1, 2, 'pong', 3], res[:4]
@@ -220,6 +227,11 @@ def test_worker_v1():
     else:
         assert req.request == {'dsdsds': b'', 'arg': '1'}, req.request
     assert req.files == {}, req.files
+
+    assert len(err_res) == 1, err_res
+    assert isinstance(err_res[0], RequestError)
+    assert err_res[0].code == 100
+    assert err_res[0].reason == "test_err"
 
 
 def test_worker_unable_to_connect():

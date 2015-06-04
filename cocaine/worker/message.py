@@ -39,6 +39,7 @@ class RPCv1(object):
     WRITE = 0
     ERROR = 1
     CLOSE = 2
+    TERMINATE = 1
 
 
 PROTOCOL = {
