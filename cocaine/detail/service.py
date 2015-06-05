@@ -129,7 +129,7 @@ class Rx(object):
             raise ChokeEvent()
 
         # to pull variuos service errors
-        if timeout == 0:
+        if timeout <= 0 or timeout is None:
             item = yield self._queue.get()
         else:
             deadline = datetime.timedelta(seconds=timeout)
@@ -390,10 +390,11 @@ class Locator(BaseService):
 
 class Service(BaseService):
     def __init__(self, name, endpoints=LOCATOR_DEFAULT_ENDPOINT,
-                 seed=None, version=0, locator=None, io_loop=None):
+                 seed=None, version=0, locator=None, io_loop=None, timeout=0):
         super(Service, self).__init__(name=name, endpoints=LOCATOR_DEFAULT_ENDPOINT, io_loop=io_loop)
         self.locator_endpoints = endpoints
         self.locator = locator
+        self.timeout = timeout  # time for the resolve operation
         # Dispatch tree
         self.api = {}
         # Service API version
@@ -417,7 +418,7 @@ class Service(BaseService):
                 channel = yield locator.resolve(self.name)
             # Set up self.endpoints for BaseService class
             # It's used in super(Service).connect()
-            self.endpoints, version, self.api = yield channel.rx.get()
+            self.endpoints, version, self.api = yield channel.rx.get(timeout=self.timeout)
         finally:
             if self.locator is None:
                 # disconnect locator as we created it
