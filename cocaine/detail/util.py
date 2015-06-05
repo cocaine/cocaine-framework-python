@@ -39,6 +39,14 @@ else:  # pragma: no cover
     msgpack_unpacker = partial(msgpack.Unpacker, encoding="utf8")
 
 
+if sys.version_info[0] == 2:
+    def valid_chunk(chunk):
+        return isinstance(chunk, (str, unicode, bytes))
+else:
+    def valid_chunk(chunk):
+        return isinstance(chunk, (str, bytes))
+
+
 def create_new_io_loop():
     """Returns new IOLoop and doesn't set it current.
     It's definetely usefull for Sync services to not to stop

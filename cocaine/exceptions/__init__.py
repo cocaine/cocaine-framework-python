@@ -29,6 +29,11 @@ class CocaineError(Exception):
     pass
 
 
+class InvalidChunk(CocaineError):
+    def __str__(self):
+        return "chunk must be string or bytes"
+
+
 class ServiceError(CocaineError):
     def __init__(self, servicename, reason, code):
         self.servicename = servicename

@@ -33,6 +33,7 @@ from tornado.httputil import (
     HTTPServerRequest,
     parse_body_arguments)
 
+from ..detail.util import msgpack_packb
 from ..detail.util import msgpack_unpackb
 from ..worker._wrappers import proxy_factory
 
@@ -101,7 +102,7 @@ class _HTTPResponse(object):
     def write_head(self, code, headers):
         if isinstance(headers, dict):
             headers = headers.items()
-        self._stream.write((code, headers))
+        self._stream.write(msgpack_packb((code, headers)))
 
     def close(self):
         self._stream.close()

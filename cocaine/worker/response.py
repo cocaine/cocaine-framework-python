@@ -22,7 +22,8 @@
 import traceback
 
 from ..common import CocaineErrno
-from ..detail.util import msgpack_packb
+from ..detail.util import valid_chunk
+from ..exceptions import InvalidChunk
 
 
 class ResponseStream(object):
@@ -42,7 +43,9 @@ class ResponseStream(object):
             self.close()
 
     def write(self, chunk):
-        chunk = msgpack_packb(chunk)
+        if not valid_chunk(chunk):
+            raise InvalidChunk()
+
         if self._m_state is not None:
             self.worker.send_chunk(self.session, chunk)
             return
