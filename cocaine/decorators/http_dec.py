@@ -20,8 +20,6 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import sys
-
 
 try:
     import Cookie  # py2
@@ -47,12 +45,8 @@ from ..worker._wrappers import proxy_factory
 __all__ = ["http", "tornado_http"]
 
 
-if sys.version_info[0] == 2:
-    def dict_list_to_single(inp):
-        return dict((k, v[0]) for k, v in inp.iteritems() if len(v) > 0)
-else:
-    def dict_list_to_single(inp):
-        return dict((k, v[0]) for k, v in inp.items() if len(v) > 0)
+def dict_list_to_single(inp):
+    return dict((k, v[0]) for k, v in inp.items() if len(v) > 0)
 
 
 def http_parse_cookies(headers):
