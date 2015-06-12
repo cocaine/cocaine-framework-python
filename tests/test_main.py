@@ -26,11 +26,14 @@ from tornado.ioloop import IOLoop
 import toro
 
 from cocaine.detail.service import InvalidApiVersion
-from cocaine.detail.service import Rx, Tx
-from cocaine.detail.service import BaseService
-from cocaine.detail.service import ServiceError, ChokeEvent, InvalidMessageType, ProtocolError
-from cocaine.detail.service import primitive_protocol, streaming_protocol, null_protocol
+from cocaine.detail.baseservice import Rx, Tx
+from cocaine.detail.baseservice import BaseService
+from cocaine.detail.channel import primitive_protocol, streaming_protocol, null_protocol
+from cocaine.detail.channel import ProtocolError
+from cocaine.exceptions import ChokeEvent
 from cocaine.exceptions import ConnectionError
+from cocaine.exceptions import InvalidMessageType
+from cocaine.exceptions import ServiceError
 # from cocaine.exceptions import DisconnectionError
 from cocaine.worker.request import Stream, RequestError
 

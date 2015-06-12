@@ -1,6 +1,5 @@
 #
 #    Copyright (c) 2012+ Anton Tyurin <noxiouz@yandex.ru>
-#    Copyright (c) 2013+ Evgeny Safronov <division494@gmail.com>
 #    Copyright (c) 2011-2014 Other contributors as noted in the AUTHORS file.
 #
 #    This file is part of Cocaine.
@@ -19,11 +18,15 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-# It's provided for backward compatibility with 0.11.x
+from .api import API
+from .baseservice import BaseService
+from .defaults import Defaults
 
-from ..detail.channel import EmptyResponse
-from ..detail.locator import Locator
-from ..detail.service import Service
-from ..detail.service import SyncService
+LOCATOR_DEFAULT_ENDPOINT = Defaults.locators
 
-__all__ = ["Service", "SyncService", "Locator", "EmptyResponse"]
+
+class Locator(BaseService):
+    def __init__(self, endpoints=LOCATOR_DEFAULT_ENDPOINT, io_loop=None):
+        super(Locator, self).__init__(name="locator",
+                                      endpoints=endpoints, io_loop=io_loop)
+        self.api = API.Locator
