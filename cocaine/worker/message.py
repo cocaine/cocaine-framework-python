@@ -21,7 +21,7 @@
 from cocaine.detail.util import msgpack_packb
 
 
-class RPC:
+class RPC(object):
     PROTOCOL_LIST = (
         HANDSHAKE,
         HEARTBEAT,
@@ -30,6 +30,16 @@ class RPC:
         CHUNK,
         ERROR,
         CHOKE) = range(7)
+
+
+class RPCv1(object):
+    HANDSHAKE = 0
+    HEARTBEAT = 0
+    INVOKE = 0
+    WRITE = 0
+    ERROR = 1
+    CLOSE = 2
+    TERMINATE = 1
 
 
 PROTOCOL = {
@@ -69,6 +79,10 @@ PROTOCOL = {
         'tuple_type': ()
     }
 }
+
+
+def packv1(msg_id, session, *args):
+    return msgpack_packb([msg_id, session, args])
 
 
 def _make_packable(m_id, m_session, args):

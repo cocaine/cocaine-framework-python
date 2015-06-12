@@ -19,6 +19,12 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .worker import Worker
+from ..detail import defaults
+
+if defaults.Defaults.protocol == 0:
+    from .worker import WorkerV0 as Worker
+else:
+    from .worker import WorkerV1 as Worker
+
 
 __all__ = ["Worker"]
