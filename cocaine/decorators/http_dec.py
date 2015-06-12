@@ -25,7 +25,7 @@ import sys
 
 try:
     import Cookie  # py2
-except ImportError:
+except ImportError:  # pragma: no cover
     import http.cookies as Cookie  # py3
 
 try:
@@ -131,15 +131,6 @@ class _HTTPResponse(object):
         return self._stream.closed
 
 
-def http_request_decorator(obj):
-    def dec(func):
-        def wrapper(chunk):
-            return func(_HTTPRequest(chunk))
-        return wrapper
-    obj.push = dec(obj.push)
-    return obj
-
-
 # Note: there's inconsistency between
 # native-proxy and torando-proxy in version.
 # version is sent by native as "1.1",
@@ -151,29 +142,31 @@ def format_http_version(version):
         return "HTTP/%s" % version
 
 
-def _tornado_request_wrapper(data):
+def tornado_request_handler(data):
     unpacked_data = msgpack_unpackb(data)
     method, uri, version, headers, body = unpacked_data
     version = format_http_version(version)
     return HTTPServerRequest(method, uri, version, HTTPHeaders(headers), body)
 
 
-def tornado_request_decorator(obj):
-    def dec(func):
-        def wrapper(chunk):
-            return func(_tornado_request_wrapper(chunk))
-        return wrapper
-    obj.push = dec(obj.push)
-    return obj
+def construct_request_decorator(handler):
+    def request_decorator(obj):
+        def dec(func):
+            def wrapper(chunk):
+                return func(handler(chunk))
+            return wrapper
+        obj.push = dec(obj.push)
+        return obj
+    return request_decorator
 
 
 def tornado_http(func):
     return proxy_factory(func,
                          response_handler=_HTTPResponse,
-                         request_handler=tornado_request_decorator)
+                         request_handler=construct_request_decorator(tornado_request_handler))
 
 
 def http(func):
     return proxy_factory(func,
                          response_handler=_HTTPResponse,
-                         request_handler=http_request_decorator)
+                         request_handler=construct_request_decorator(_HTTPRequest))
