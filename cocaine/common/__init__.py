@@ -20,7 +20,7 @@
 #
 
 
-class CocaineErrno:
+class CocaineErrno(object):
     # no handler for requested event
     ENOHANDLER = 200
     # syntax error or import error

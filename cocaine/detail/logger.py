@@ -21,10 +21,11 @@
 
 import functools
 import logging
-import sys
 import threading
 
 from .api import API
+from .defaults import Defaults
+from .defaults import GetOptError
 from .service import Service
 
 
@@ -49,8 +50,27 @@ def thread_once(class_init):
     return wrapper
 
 
+def on_emit_constructor(self, level, uuid):
+    target = self._target
+
+    if uuid is None:
+        def on_emit(message, attrs=None):
+            if not isinstance(attrs, dict):
+                return self.emit(level, target, message)
+            else:
+                return self.emit(level, target, message, attrs.items())
+    else:
+        def on_emit(message, attrs=None):
+            if not isinstance(attrs, dict):
+                return self.emit(level, target, message, [["uuid", uuid]])
+            else:
+                # ToDo: implement safe replace?
+                attrs["uuid"] = uuid
+                return self.emit(level, target, message, attrs.items())
+    return on_emit
+
+
 # ToDo:
-# * Possiblly it's better to cache instances according to *args, **kwargs
 # * Add fallback implementation
 # * Loglevels mapping
 class Logger(Service):
@@ -67,39 +87,15 @@ class Logger(Service):
                                      endpoints=endpoints,
                                      io_loop=io_loop)
         self.api = API.Logger
+        self._target = Defaults.app
 
         try:
-            self._target = "app/%s" % sys.argv[sys.argv.index("--app") + 1]
-        except ValueError:
-            self._target = "app/%s" % "standalone"
-
-        try:
-            # assume we are under cocaine
-            _uuid = sys.argv[sys.argv.index("--uuid") + 1]
-        except ValueError:
+            _uuid = Defaults.uuid
+        except GetOptError:
             _uuid = None
 
-        def wrapper(level, uuid):
-            target = self._target
-
-            if uuid is None:
-                def on_emit(message, attrs=None):
-                    if not isinstance(attrs, dict):
-                        return self.emit(level, target, message)
-                    else:
-                        return self.emit(level, target, message, attrs.items())
-            else:
-                def on_emit(message, attrs=None):
-                    if not isinstance(attrs, dict):
-                        return self.emit(level, target, message, [["uuid", uuid]])
-                    else:
-                        # ToDo: implement safe replace?
-                        attrs["uuid"] = uuid
-                        return self.emit(level, target, message, attrs.items())
-            return on_emit
-
         for level_name, level in VERBOSITY_LEVELS.items():
-            setattr(self, level_name, wrapper(level, _uuid))
+            setattr(self, level_name, on_emit_constructor(self, level, _uuid))
 
 
 class CocaineHandler(logging.Handler):

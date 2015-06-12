@@ -26,10 +26,10 @@ from tornado.ioloop import IOLoop
 import toro
 
 from cocaine.detail.service import InvalidApiVersion
-from cocaine.detail.baseservice import Rx, Tx
 from cocaine.detail.baseservice import BaseService
 from cocaine.detail.channel import primitive_protocol, streaming_protocol, null_protocol
 from cocaine.detail.channel import ProtocolError
+from cocaine.detail.channel import Channel, Rx, Tx
 from cocaine.exceptions import ChokeEvent
 from cocaine.exceptions import ConnectionError
 from cocaine.exceptions import InvalidMessageType
@@ -142,6 +142,9 @@ class TestRx(object):
                2: ['close', {}]}
     io = IOLoop.current()
 
+    def test_print(self):
+        log.info(Rx(self.rx_tree))
+
     @tools.raises(ServiceError)
     def test_rx_error_branch(self):
         rx = Rx(self.rx_tree)
@@ -186,6 +189,9 @@ class TestTx(object):
     class PipeMock(object):
         def write(self, *args):
             pass
+
+    def test_print(self):
+        log.info(Tx(self.tx_tree, self.PipeMock(), 1))
 
     @tools.raises(AttributeError)
     def test_tx(self):

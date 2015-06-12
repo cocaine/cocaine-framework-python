@@ -20,14 +20,20 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import sys
+
+
+try:
+    import Cookie  # py2
+except ImportError:
+    import http.cookies as Cookie  # py3
+
 try:
     import urlparse
-    import Cookie as cookies
 except ImportError:  # pragma: no cover
     from urllib import parse as urlparse
-    from http import cookies
 
-from tornado import escape
+from tornado.escape import native_str
 from tornado.httputil import (
     HTTPHeaders,
     HTTPServerRequest,
@@ -41,33 +47,43 @@ from ..worker._wrappers import proxy_factory
 __all__ = ["http", "tornado_http"]
 
 
+if sys.version_info[0] == 2:
+    def dict_list_to_single(inp):
+        return dict((k, v[0]) for k, v in inp.iteritems() if len(v) > 0)
+else:
+    def dict_list_to_single(inp):
+        return dict((k, v[0]) for k, v in inp.items() if len(v) > 0)
+
+
+def http_parse_cookies(headers):
+    if 'Cookie' not in headers:
+        return {}
+
+    try:
+        cookies = Cookie.SimpleCookie()
+        cookies.load(native_str(headers["Cookie"]))
+        return dict((key, name.value) for key, name in cookies.items())
+    except Exception:
+        return {}
+
+
 class _HTTPRequest(object):
     def __init__(self, data):
-        unpacked_data = msgpack_unpackb(data)
-        method, url, version, headers, self._body = unpacked_data
-        self._meta = dict()
-        self._headers = dict(headers)
-        self._meta['method'] = method
-        self._meta['version'] = version
-        self._meta['host'] = self._headers.get('Host') or self._headers.get('host', '')
-        self._meta['remote_addr'] = self._headers.get('X-Real-IP') or self._headers.get('X-Forwarded-For', '')
-        self._meta['query_string'] = urlparse.urlparse(url).query
-        self._meta['cookies'] = dict()
-        if 'Cookie' in self._headers:
-            try:
-                parsed_cookies = cookies.BaseCookie()
-                parsed_cookies.load(escape.native_str(self._headers['Cookie']))
-                self._meta['parsed_cookies'] = dict((key, name.value) for key, name in parsed_cookies.items())
-            except Exception:
-                pass
-
-        tmp = urlparse.parse_qs(urlparse.urlparse(url).query)
-        self._request = dict((k, v[0]) for k, v in tmp.items() if len(v) > 0)
-        self._files = None
-        args, files = dict(), dict()
-        parse_body_arguments(self._headers.get("Content-Type", ""), self._body, args, files)
-        self._request.update(dict((k, v[0]) for k, v in args.items() if len(v) > 0))
-        self._files = files
+        method, url, version, headers, self._body = msgpack_unpackb(data)
+        self._headers = HTTPHeaders(headers)
+        self._meta = {
+            'method': method,
+            'version': version,
+            'host': self._headers.get('Host', ''),
+            'remote_addr': self._headers.get('X-Real-IP') or self._headers.get('X-Forwarded-For', ''),
+            'query_string': urlparse.urlparse(url).query,
+            'cookies': dict(),
+            'parsed_cookies': http_parse_cookies(self._headers),
+        }
+        args = urlparse.parse_qs(urlparse.urlparse(url).query)
+        self._files = dict()
+        parse_body_arguments(self._headers.get("Content-Type", ""), self._body, args, self._files)
+        self._request = dict_list_to_single(args)
 
     @property
     def headers(self):

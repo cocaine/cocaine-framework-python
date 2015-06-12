@@ -79,7 +79,19 @@ def detect_protocol_type(rx_tree):
     return null_protocol
 
 
-class Rx(object):
+class PrettyPrintable(object):
+    def __repr__(self):
+        return "<%s at %s %s>" % (
+            type(self).__name__, hex(id(self)), self._format())
+
+    def __str__(self):
+        return "<%s %s>" % (type(self).__name__, self._format())
+
+    def _format(self):
+        raise NotImplementedError
+
+
+class Rx(PrettyPrintable):
     def __init__(self, rx_tree, io_loop=None, servicename=None):
         # If it's not the main thread
         # and a current IOloop doesn't exist here,
@@ -139,19 +151,12 @@ class Rx(object):
     def closed(self):
         return self._done
 
-    def __repr__(self):
-        return "<%s at %s %s>" % (
-            type(self).__name__, hex(id(self)), self._format())
-
-    def __str__(self):
-        return "<%s %s>" % (type(self).__name__, self._format())
-
     def _format(self):
         return "name: %s, queue: %s, done: %s" % (
             self.servicename, self._queue, self._done)
 
 
-class Tx(object):
+class Tx(PrettyPrintable):
     def __init__(self, tx_tree, pipe, session_id):
         self.tx_tree = tx_tree
         self.session_id = session_id
@@ -186,29 +191,15 @@ class Tx(object):
     def done(self):
         self._done = True
 
-    def __repr__(self):
-        return "<%s at %s %s>" % (
-            type(self).__name__, hex(id(self)), self._format())
-
-    def __str__(self):
-        return "<%s %s>" % (type(self).__name__, self._format())
-
     def _format(self):
         return "session_id: %d, pipe: %s, done: %s" % (
             self.session_id, self.pipe, self._done)
 
 
-class Channel(object):
+class Channel(PrettyPrintable):
     def __init__(self, rx, tx):
         self.rx = rx
         self.tx = tx
-
-    def __repr__(self):
-        return "<%s at %s %s>" % (
-            type(self).__name__, hex(id(self)), self._format())
-
-    def __str__(self):
-        return "<%s %s>" % (type(self).__name__, self._format())
 
     def _format(self):
         return "tx: %s, rx: %s" % (self.tx, self.rx)

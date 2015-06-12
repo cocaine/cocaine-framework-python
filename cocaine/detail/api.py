@@ -20,7 +20,7 @@
 #
 
 
-class API:
+class API(object):
     Locator = {0: ['resolve', {}, {0: ['value', {}], 1: ['error', {}]}],
                1: ['connect', {}, {0: ['write', None], 1: ['error', {}], 2: ['close', {}]}],
                2: ['refresh', {}, {0: ['value', {}], 1: ['error', {}]}],
