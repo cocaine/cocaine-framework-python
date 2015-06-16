@@ -25,7 +25,6 @@ import socket
 from tornado.ioloop import IOLoop
 from tornado.iostream import IOStream
 
-from ._wrappers import default
 from .disowntimer import DisownTimer
 from .message import Message
 from .message import RPC
@@ -122,19 +121,8 @@ class BasicWorker(object):
 
     def on(self, event_name, event_handler):
         log.info("registering handler for event %s", event_name)
-        try:
-            # Try to construct handler.
-            closure = event_handler()
-        except Exception:
-            # If this callable object is not our wrapper - may raise Exception
-            closure = default(event_handler)()
-            if hasattr(closure, "_wrapped"):
-                event_handler = default(event_handler)
-        else:
-            if not hasattr(closure, "_wrapped"):
-                event_handler = default(event_handler)
+        self._events[event_name] = coroutine(event_handler)
         log.info("handler for event %s has been attached", event_name)
-        self._events[event_name] = event_handler
 
     # Events
     # healthmonitoring events
@@ -172,24 +160,24 @@ class BasicWorker(object):
         request = RequestStream(self.io_loop)
         response = ResponseStream(msg.session, self, msg.event)
         try:
-            event_closure = self._events.get(msg.event)
-            if event_closure is not None:
-                event_handler = event_closure()
-                event_handler.invoke(request, response, self.io_loop)
+            event_handler = self._events.get(msg.event)
+            if event_handler is not None:
                 self.sessions[msg.session] = request
+                future = event_handler(request, response)
             else:
-                log.warn("there is no handler for event %s", msg.event)
-                response.error(CocaineErrno.ENOHANDLER,
-                               "there is no handler for event %s" % msg.event)
-        except (ImportError, SyntaxError) as err:
-            response.error(CocaineErrno.EBADSOURCE,
-                           "source is broken %s" % str(err))
-            self.terminate(CocaineErrno.EBADSOURCE,
-                           "source is broken")
+                future = self.fallback_handler(msg.event, request, response)
+
+            def trap(f):
+                try:
+                    f.result()
+                    if not response.closed:
+                        response.close()
+                except Exception as err:
+                    response.error(CocaineErrno.EUNCAUGHTEXCEPTION, str(err))
+            self.io_loop.add_future(future, trap)
         except Exception as err:
             log.error("failed to invoke %s %s", err, type(err))
-            response.error(CocaineErrno.EINVFAILED,
-                           "failed to invoke %s" % err)
+            response.error(CocaineErrno.EINVFAILED, "failed to invoke %s" % err)
 
     def _dispatch_chunk(self, msg):
         log.debug("chunk has been received %d", msg.session)
@@ -250,6 +238,10 @@ class BasicWorker(object):
     def _stop(self):
         self.threaded_disown_timer.stop()
         self.io_loop.stop()
+
+    @coroutine
+    def fallback_handler(self, event, _, response):
+        response.error(CocaineErrno.ENOHANDLER, "there is no handler for event %s" % event)
 
 
 class WorkerV0(BasicWorker):

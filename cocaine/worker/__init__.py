@@ -22,9 +22,9 @@
 from ..detail import defaults
 
 if defaults.Defaults.protocol == 0:
-    from .worker import WorkerV0 as Worker
+    from .worker import WorkerV0 as Worker  # pragma: no cover
 else:
-    from .worker import WorkerV1 as Worker
+    from .worker import WorkerV1 as Worker  # pragma: no cover
 
 
 __all__ = ["Worker"]

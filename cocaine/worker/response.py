@@ -49,6 +49,7 @@ class ResponseStream(object):
         if self._m_state is not None:
             self.worker.send_chunk(self.session, chunk)
             return
+
         traceback.print_stack()  # pragma: no cover
 
     def close(self):

@@ -20,6 +20,8 @@
 
 from cocaine.detail import defaults
 
+from nose import tools
+
 
 def test_parse_locators_v1():
     locators = "host1:10053,127.0.0.1:10054,ff:fdf::fdfd:10054"
@@ -57,3 +59,10 @@ def test_defaults_v0():
     assert opts.endpoint == "/var/run/cocaine/sock", opts.endpoint
     assert opts.locators == [("host1", 10053)], opts.locators
     assert opts.app == "APP", opts.app
+
+
+@tools.raises(defaults.MalformedArgs)
+def test_malfomed_args():
+    argv = ["--locator"]
+    opts = defaults.DefaultOptions(argv)
+    opts.locators

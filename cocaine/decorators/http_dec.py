@@ -32,6 +32,7 @@ except ImportError:  # pragma: no cover
     from urllib import parse as urlparse
 
 from tornado.escape import native_str
+from tornado import gen
 from tornado.httputil import (
     HTTPHeaders,
     HTTPServerRequest,
@@ -39,7 +40,6 @@ from tornado.httputil import (
 
 from ..detail.util import msgpack_packb
 from ..detail.util import msgpack_unpackb
-from ..worker._wrappers import proxy_factory
 
 
 __all__ = ["http", "tornado_http"]
@@ -143,24 +143,44 @@ def tornado_request_handler(data):
     return HTTPServerRequest(method, uri, version, HTTPHeaders(headers), body)
 
 
-def construct_request_decorator(handler):
-    def request_decorator(obj):
-        def dec(func):
-            def wrapper(chunk):
-                return func(handler(chunk))
-            return wrapper
-        obj.push = dec(obj.push)
-        return obj
-    return request_decorator
+class PatchedWebRequest(object):
+    def __init__(self, request):
+        self.request = request
+        self.first = True
+
+    @gen.coroutine
+    def read(self):
+        data = yield self.request.read()
+        if self.first:
+            self.first = False
+            raise gen.Return(self.handle(data))
+        raise gen.Return(data)
+
+    def handle(self, data):
+        raise NotImplementedError  # pragma: no cover
+
+
+class HTTPPatchedRequest(PatchedWebRequest):
+    def handle(self, data):
+        return _HTTPRequest(data)
+
+
+class TornadoPatchedRequest(PatchedWebRequest):
+    def handle(self, data):
+        return tornado_request_handler(data)
 
 
 def tornado_http(func):
-    return proxy_factory(func,
-                         response_handler=_HTTPResponse,
-                         request_handler=construct_request_decorator(tornado_request_handler))
+    func = gen.coroutine(func)
+
+    def wrapper(request, response):
+        yield func(TornadoPatchedRequest(request), _HTTPResponse(response))
+    return wrapper
 
 
 def http(func):
-    return proxy_factory(func,
-                         response_handler=_HTTPResponse,
-                         request_handler=construct_request_decorator(_HTTPRequest))
+    func = gen.coroutine(func)
+
+    def wrapper(request, response):
+        yield func(HTTPPatchedRequest(request), _HTTPResponse(response))
+    return wrapper
