@@ -31,8 +31,8 @@ try:
 except ImportError:  # pragma: no cover
     from urllib import parse as urlparse
 
-from tornado.escape import native_str
 from tornado import gen
+from tornado.escape import native_str
 from tornado.httputil import (
     HTTPHeaders,
     HTTPServerRequest,
