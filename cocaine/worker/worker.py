@@ -194,8 +194,8 @@ class BasicWorker(object):
             session.close()
 
     def _dispatch_error(self, msg):
-        log.debug("dispatch error message %d: %d, %s",
-                  msg.session, msg.errno, msg.reason)
+        log.debug("dispatch error message %d: %d, %d, %s",
+                  msg.session, msg.errno[0], msg.errno[1], msg.reason)
         session = self.sessions.pop(msg.session, None)
         if session is not None:
             session.error(msg.errno, msg.reason)
@@ -220,7 +220,7 @@ class BasicWorker(object):
     def send_chunk(self, session, data):
         raise NotImplementedError  # pragma: no cover
 
-    def send_error(self, session, code, msg):
+    def send_error(self, session, category, code, msg):
         raise NotImplementedError  # pragma: no cover
 
     def send_terminate(self, code, reason):
@@ -269,8 +269,8 @@ class WorkerV0(BasicWorker):
     def send_chunk(self, session, data):
         self.pipe.write(Message(RPC.CHUNK, session, data).pack())
 
-    def send_error(self, session, code, msg):
-        self.pipe.write(Message(RPC.ERROR, session, code, msg).pack())
+    def send_error(self, session, category, code, msg):
+        self.pipe.write(Message(RPC.ERROR, session, (category, code), msg).pack())
 
     def send_terminate(self, code, reason):
         log.error("terminated")
@@ -299,8 +299,8 @@ class WorkerV1(BasicWorker):
     def send_chunk(self, session, data):
         self.pipe.write(packv1(session, RPCv1.WRITE, data))
 
-    def send_error(self, session, code, msg):
-        self.pipe.write(packv1(session, RPCv1.ERROR, code, msg))
+    def send_error(self, session, category, code, msg):
+        self.pipe.write(packv1(session, RPCv1.ERROR, (category, code), msg))
 
     def send_terminate(self, code, reason):
         self.pipe.write(packv1(1, RPCv1.TERMINATE, code, reason))

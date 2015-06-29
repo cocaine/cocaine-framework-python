@@ -29,7 +29,7 @@ from cocaine.detail.service import InvalidApiVersion
 from cocaine.detail.baseservice import BaseService
 from cocaine.detail.channel import primitive_protocol, streaming_protocol, null_protocol
 from cocaine.detail.channel import ProtocolError
-from cocaine.detail.channel import Channel, Rx, Tx
+from cocaine.detail.channel import Rx, Tx
 from cocaine.exceptions import ChokeEvent
 from cocaine.exceptions import ConnectionError
 from cocaine.exceptions import InvalidMessageType
@@ -148,7 +148,7 @@ class TestRx(object):
     @tools.raises(ServiceError)
     def test_rx_error_branch(self):
         rx = Rx(self.rx_tree)
-        rx.push(1, [-199, "dummy_error"])
+        rx.push(1, [(-199, 42), "dummy_error"])
         self.io.run_sync(rx.get)
 
     @tools.raises(ChokeEvent)
@@ -161,7 +161,7 @@ class TestRx(object):
     @tools.raises(ChokeEvent)
     def test_rx_done_empty_queue(self):
         rx = Rx(self.rx_tree)
-        rx.push(1, [-199, "DUMMY"])
+        rx.push(1, [(-199, 32), "DUMMY"])
         try:
             self.io.run_sync(rx.get)
         except Exception:
@@ -238,7 +238,7 @@ def test_connection_error():
 def test_stream():
     io = IOLoop.current()
     stream = Stream(io_loop=io)
-    stream.error(100, "TESTERROR")
+    stream.error((0, 100), "TESTERROR")
     io.run_sync(stream.get)
 
 
@@ -257,7 +257,7 @@ def test_primitive_protocol():
     primitive_sequence_payload = ["A", "B", "C"]
     primitive = primitive_protocol("value", primitive_sequence_payload)
     assert primitive == primitive_sequence_payload, primitive
-    primitive_error = primitive_protocol("error", ["A", 100])
+    primitive_error = primitive_protocol("error", [(100, 100), "errormsg"])
     assert isinstance(primitive_error, ProtocolError), primitive_error
 
 
@@ -268,5 +268,5 @@ def test_streaming_protocol():
     streaming_sequence_payload = ["A", "B", "C"]
     streaming = streaming_protocol("write", streaming_sequence_payload)
     assert streaming == streaming_sequence_payload, streaming
-    streaming_error = streaming_protocol("error", ["A", 100])
+    streaming_error = streaming_protocol("error", [(100, 100)])  # error msg is optional
     assert isinstance(streaming_error, ProtocolError), streaming_error

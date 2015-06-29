@@ -35,3 +35,7 @@ class CocaineErrno(object):
     INVALIDMESSAGETYPE = 240
     # uncaught exception
     EUNCAUGHTEXCEPTION = 100
+
+
+class ErrorCategory(object):
+    CFRAMEWORKCATEGORY = 42

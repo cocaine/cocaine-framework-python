@@ -30,7 +30,7 @@ from ..exceptions import ChokeEvent
 
 class RequestError(Exception):
     def __init__(self, code, reason):
-        self.code = code
+        self.category, self.code = code
         self.reason = reason
 
 

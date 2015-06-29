@@ -43,10 +43,10 @@ class EmptyResponse(CocaineError):
 
 
 class ProtocolError(CocaineError):
-    __slots__ = ("code", "reason")
+    __slots__ = ("category", "code", "reason")
 
-    def __init__(self, code, reason):
-        self.code = code
+    def __init__(self, code, reason=""):
+        self.category, self.code = code
         self.reason = reason
 
 
