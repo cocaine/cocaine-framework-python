@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.1.0) unstable; urgency=low
+
+  * [Protocol] Support error categories
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Mon, 29 Jun 2015 17:29:43 +0300
+
 cocaine-framework-python (0.12.0.1-rc21) unstable; urgency=low
 
   * [Worker] Support new Node protocol
