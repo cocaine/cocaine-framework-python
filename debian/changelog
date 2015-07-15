@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.1.1) unstable; urgency=low
+
+  * [Bugfix] Recursion when CocaineHandler is used for root logger
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Thu, 16 Jul 2015 00:48:45 +0300
+
 cocaine-framework-python (0.12.1.0) unstable; urgency=low
 
   * [Protocol] Support error categories
