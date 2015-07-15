@@ -32,11 +32,10 @@ from .asyncqueue import AsyncLock
 from .channel import Channel
 from .channel import Rx
 from .channel import Tx
+from .log import servicelog
 from .util import msgpack_packb, msgpack_unpacker
 from ..decorators import coroutine
 from ..exceptions import DisconnectionError
-
-log = logging.getLogger("cocaine.baseservice")
 
 
 def weak_wrapper(weak_service, method_name, *args, **kwargs):
@@ -60,7 +59,7 @@ class BaseService(object):
 
         self._extra = {'service': self.name,
                        'id': id(self)}
-        self.log = logging.LoggerAdapter(log, self._extra)
+        self.log = logging.LoggerAdapter(servicelog, self._extra)
 
         self.sessions = dict()
         self.counter = itertools.count(1)

@@ -1,6 +1,5 @@
 #
 #    Copyright (c) 2012+ Anton Tyurin <noxiouz@yandex.ru>
-#    Copyright (c) 2013+ Evgeny Safronov <division494@gmail.com>
 #    Copyright (c) 2011-2014 Other contributors as noted in the AUTHORS file.
 #
 #    This file is part of Cocaine.
@@ -21,31 +20,11 @@
 
 import logging
 
-from tornado.ioloop import IOLoop
+# to avoid recursion when CocaineHandler is used
+# ToDo: Logger must not be based on Service code
+# to support Zipkin
+cocainelog = logging.getLogger("cocaine")
+cocainelog.propagate = False
 
-from cocaine.logger import Logger
-from cocaine.logger import CocaineHandler
-
-
-def test_logger():
-    io = IOLoop.current()
-    verbosity_level = 0
-    l = Logger()
-    l2 = Logger()
-    assert id(l) == id(l2)
-
-    verbosity_level = io.run_sync(io.run_sync(l.verbosity).rx.get)
-    l.emit(verbosity_level, "nosetest", "test_message", {"attr1": 1, "attr2": 2})
-    l.debug("DEBUG_MSG", {"A": 1, "B": 2})
-    l.info("INFO_MSG", {"A": 1, "B": 2})
-    l.warning("WARNING_MSG", {"A": 1, "B": 2})
-    l.error("ERROR_MSG", {"A": 1, "B": 2})
-    l.debug("GGGGG")
-
-
-def test_handler():
-    l = logging.getLogger("")
-    lh = CocaineHandler()
-    l.setLevel(logging.DEBUG)
-    l.addHandler(lh)
-    l.info("logged via logging handler")
+servicelog = logging.getLogger("cocaine.baseservice")
+workerlog = logging.getLogger("cocaine.worker")

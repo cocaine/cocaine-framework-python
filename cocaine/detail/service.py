@@ -19,9 +19,6 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import logging
-
-
 from .baseservice import BaseService
 from .defaults import Defaults
 from .locator import Locator
@@ -31,9 +28,6 @@ from ..decorators import coroutine
 # cocaine defined exceptions
 from ..exceptions import InvalidApiVersion
 
-
-log = logging.getLogger("cocaine.service")
-log.setLevel(logging.CRITICAL)
 
 LOCATOR_DEFAULT_ENDPOINT = Defaults.locators
 SYNC_CONNECTION_TIMEOUT = 5

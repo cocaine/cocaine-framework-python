@@ -19,7 +19,6 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import logging
 import socket
 
 from tornado.ioloop import IOLoop
@@ -37,12 +36,11 @@ from ..common import CocaineErrno
 from ..decorators import coroutine
 from ..detail.defaults import Defaults
 from ..detail.io import Timer
+from ..detail.log import workerlog
 from ..detail.util import msgpack_unpacker
 
 DEFAULT_HEARTBEAT_TIMEOUT = 20
 DEFAULT_DISOWN_TIMEOUT = 5
-
-log = logging.getLogger("cocaine.worker")
 
 
 class BasicWorker(object):
@@ -84,25 +82,25 @@ class BasicWorker(object):
         @coroutine
         def on_connect():
             sock = socket.socket(socket.AF_UNIX)
-            log.debug("connecting to %s", self.endpoint)
+            workerlog.debug("connecting to %s", self.endpoint)
             try:
                 io_stream = IOStream(sock, io_loop=self.io_loop)
                 self.pipe = yield io_stream.connect(self.endpoint, callback=None)
-                log.debug("connected to %s %s", self.endpoint, self.pipe)
+                workerlog.debug("connected to %s %s", self.endpoint, self.pipe)
                 self.pipe.read_until_close(callback=self.on_failure,
                                            streaming_callback=self.on_message)
             except Exception as err:
-                log.error("unable to connect to '%s' %s", self.endpoint, err)
+                workerlog.error("unable to connect to '%s' %s", self.endpoint, err)
                 self.on_failure()
                 return
 
-            log.debug("sending handshake")
+            workerlog.debug("sending handshake")
             self.send_handshake()
-            log.debug("sending heartbeat")
+            workerlog.debug("sending heartbeat")
             self.do_heartbeat()
             # start heartbeat timer
             self.heartbeat_timer.start()
-            log.debug("start threaded_disown_timer")
+            workerlog.debug("start threaded_disown_timer")
             self.threaded_disown_timer.start()
 
         self.io_loop.add_future(on_connect(), lambda x: None)
@@ -120,9 +118,9 @@ class BasicWorker(object):
         self.io_loop.start()
 
     def on(self, event_name, event_handler):
-        log.info("registering handler for event %s", event_name)
+        workerlog.info("registering handler for event %s", event_name)
         self._events[event_name] = coroutine(event_handler)
-        log.info("handler for event %s has been attached", event_name)
+        workerlog.info("handler for event %s has been attached", event_name)
 
     # Events
     # healthmonitoring events
@@ -131,32 +129,32 @@ class BasicWorker(object):
 
     def on_disown(self):
         try:
-            log.error("disowned")
+            workerlog.error("disowned")
         finally:
             self._stop()
 
     # General dispatch method
     def on_message(self, data):
-        log.debug("on_message %.300s", data)
+        workerlog.debug("on_message %.300s", data)
         self.buffer.feed(data)
         for i in self.buffer:
-            log.debug("unpacked %.300s", i)
+            workerlog.debug("unpacked %.300s", i)
             try:
                 self.feed_message(i)
             except Exception as err:
-                log.warn("error %s occured while handling %.300s", err, i)
+                workerlog.warn("error %s occured while handling %.300s", err, i)
 
     def _dispatch_heartbeat(self, _):
-        log.debug("heartbeat has been received. Stop disown timer")
+        workerlog.debug("heartbeat has been received. Stop disown timer")
         self.threaded_disown_timer.notify()
         self.disown_timer.stop()
 
     def _dispatch_terminate(self, msg):
-        log.debug("terminate has been received %s %s", msg.errno, msg.reason)
+        workerlog.debug("terminate has been received %s %s", msg.errno, msg.reason)
         self.terminate(msg.errno, msg.reason)
 
     def _dispatch_invoke(self, msg):
-        log.debug("invoke has been received %s", msg)
+        workerlog.debug("invoke has been received %s", msg)
         request = RequestStream(self.io_loop)
         response = ResponseStream(msg.session, self, msg.event)
         try:
@@ -176,33 +174,33 @@ class BasicWorker(object):
                     response.error(CocaineErrno.EUNCAUGHTEXCEPTION, str(err))
             self.io_loop.add_future(future, trap)
         except Exception as err:
-            log.error("failed to invoke %s %s", err, type(err))
+            workerlog.error("failed to invoke %s %s", err, type(err))
             response.error(CocaineErrno.EINVFAILED, "failed to invoke %s" % err)
 
     def _dispatch_chunk(self, msg):
-        log.debug("chunk has been received %d", msg.session)
+        workerlog.debug("chunk has been received %d", msg.session)
         try:
             session = self.sessions[msg.session]
             session.push(msg.data)
         except KeyError as err:
-            log.warn("no session %s", err)
+            workerlog.warn("no session %s", err)
 
     def _dispatch_choke(self, msg):
-        log.debug("choke has been received %d", msg.session)
+        workerlog.debug("choke has been received %d", msg.session)
         session = self.sessions.pop(msg.session, None)
         if session is not None:
             session.close()
 
     def _dispatch_error(self, msg):
-        log.debug("dispatch error message %d: %d, %d, %s",
-                  msg.session, msg.errno[0], msg.errno[1], msg.reason)
+        workerlog.debug("dispatch error message %d: %d, %d, %s",
+                        msg.session, msg.errno[0], msg.errno[1], msg.reason)
         session = self.sessions.pop(msg.session, None)
         if session is not None:
             session.error(msg.errno, msg.reason)
             session.close()
 
     def on_failure(self, *args):
-        log.error("connection has been lost")
+        workerlog.error("connection has been lost")
         self.on_disown()
 
     def feed_message(self, message):
@@ -232,7 +230,7 @@ class BasicWorker(object):
 
     def do_heartbeat(self):
         self.disown_timer.start()
-        log.debug("heartbeat has been sent. Start disown timer")
+        workerlog.debug("heartbeat has been sent. Start disown timer")
         self.send_heartbeat()
 
     def _stop(self):
@@ -273,7 +271,7 @@ class WorkerV0(BasicWorker):
         self.pipe.write(Message(RPC.ERROR, session, (category, code), msg).pack())
 
     def send_terminate(self, code, reason):
-        log.error("terminated")
+        workerlog.error("terminated")
         self.pipe.write(Message(RPC.TERMINATE, 1, code, reason).pack())
 
     def feed_message(self, msg):
@@ -317,8 +315,8 @@ class WorkerV1(BasicWorker):
         if self.max_session < session:
             # it must be Invoke
             if type_id != RPCv1.INVOKE:
-                log.error("new session %d must start from invoke %d %s",
-                          session, type_id, str(payload))
+                workerlog.error("new session %d must start from invoke %d %s",
+                                session, type_id, str(payload))
                 return
             self.max_session = session
             self._dispatch_invoke(Message(RPC.INVOKE, session, *payload))
