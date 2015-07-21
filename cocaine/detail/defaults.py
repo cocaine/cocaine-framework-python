@@ -26,7 +26,7 @@ DEFAULT_APPNAME = "app/standalone"
 
 
 def parse_locators_v1(inp):
-    return [(host, int(port)) for host, _, port in (s.rpartition(":") for s in inp.split(","))]
+    return [(host.strip("[]"), int(port)) for host, _, port in (s.rpartition(":") for s in inp.split(","))]
 
 
 def parse_locators_v0(inp):

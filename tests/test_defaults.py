@@ -24,7 +24,7 @@ from nose import tools
 
 
 def test_parse_locators_v1():
-    locators = "host1:10053,127.0.0.1:10054,ff:fdf::fdfd:10054"
+    locators = "host1:10053,127.0.0.1:10054,[ff:fdf::fdfd]:10054"
     parsed = defaults.parse_locators_v1(locators)
     assert parsed == [("host1", 10053), ("127.0.0.1", 10054), ("ff:fdf::fdfd", 10054)], parsed
 
