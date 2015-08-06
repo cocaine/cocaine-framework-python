@@ -33,6 +33,7 @@ from .channel import Channel
 from .channel import Rx
 from .channel import Tx
 from .log import servicelog
+from .trace import pack_trace
 from .util import msgpack_packb, msgpack_unpacker
 from ..decorators import coroutine
 from ..exceptions import DisconnectionError
@@ -140,6 +141,7 @@ class BaseService(object):
     @coroutine
     def _invoke(self, method_name, *args, **kwargs):
         self.log.debug("_invoke has been called %.300s %.300s", str(args), str(kwargs))
+        trace = kwargs.get("trace")
         yield self.connect()
         self.log.debug("%s", self.api)
         for method_id, (method, tx_tree, rx_tree) in self.api.items():  # py3 has no iteritems
@@ -147,7 +149,10 @@ class BaseService(object):
                 self.log.debug("method `%s` has been found in API map", method_name)
                 counter = next(self.counter)  # py3 counter has no .next() method
                 self.log.debug('sending message: %.300s', [counter, method_id, args])
-                self.pipe.write(msgpack_packb([counter, method_id, args]))
+                if trace is None:
+                    self.pipe.write(msgpack_packb([counter, method_id, args]))
+                else:
+                    self.pipe.write(msgpack_packb([counter, method_id, args, pack_trace(trace)]))
                 self.log.debug("RX TREE %s", rx_tree)
                 self.log.debug("TX TREE %s", tx_tree)
 

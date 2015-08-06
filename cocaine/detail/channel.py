@@ -27,6 +27,7 @@ from tornado.iostream import StreamClosedError
 
 
 from .asyncqueue import AsyncQueue
+from .trace import pack_trace
 from .util import msgpack_packb
 from ..common import CocaineErrno
 from ..decorators import coroutine
@@ -165,6 +166,7 @@ class Tx(PrettyPrintable):
 
     @coroutine
     def _invoke(self, method_name, *args, **kwargs):
+        trace = kwargs.get("trace")
         if self._done:
             raise ChokeEvent()
 
@@ -175,7 +177,10 @@ class Tx(PrettyPrintable):
         for method_id, (method, tx_tree) in self.tx_tree.items():  # py3 has no iteritems
             if method == method_name:
                 log.debug("method `%s` has been found in API map", method_name)
-                self.pipe.write(msgpack_packb([self.session_id, method_id, args]))
+                if trace is None:
+                    self.pipe.write(msgpack_packb([self.session_id, method_id, args]))
+                else:
+                    self.pipe.write(msgpack_packb([self.session_id, method_id, args, pack_trace(trace)]))
                 if tx_tree == {}:  # last transition
                     self.done()
                 elif tx_tree is not None:  # not a recursive transition
