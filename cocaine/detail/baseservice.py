@@ -147,7 +147,7 @@ class BaseService(object):
                 self.log.debug("method `%s` has been found in API map", method_name)
                 counter = next(self.counter)  # py3 counter has no .next() method
                 self.log.debug('sending message: %.300s', [counter, method_id, args])
-                yield self.pipe.write(msgpack_packb([counter, method_id, args]))
+                self.pipe.write(msgpack_packb([counter, method_id, args]))
                 self.log.debug("RX TREE %s", rx_tree)
                 self.log.debug("TX TREE %s", tx_tree)
 
