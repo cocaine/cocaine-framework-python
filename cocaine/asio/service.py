@@ -397,8 +397,10 @@ class Service(AbstractService):
     """
     _locator_cache = {}
 
-    def __init__(self, name, blockingConnect=True, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT):
+    def __init__(self, name, blockingConnect=True, host=None, port=None):
         super(Service, self).__init__(name)
+        host = host or LOCATOR_DEFAULT_HOST
+        port = port or LOCATOR_DEFAULT_PORT
         self.host = None
         self.port = None
 
@@ -409,7 +411,7 @@ class Service(AbstractService):
             self.connect(host, port, blocking=True)
 
     @strategy.coroutine
-    def connect(self, host=LOCATOR_DEFAULT_HOST, port=LOCATOR_DEFAULT_PORT, timeout=None, blocking=False):
+    def connect(self, host=None, port=None, timeout=None, blocking=False):
         """Connect to the service through locator and initialize its API.
 
         Before service is connected to its endpoint there is no any API (cause it's provided by locator). Any usage of
@@ -419,6 +421,8 @@ class Service(AbstractService):
                   If you don't want to create connection to the locator each time you create service, you can use
                   `connectThroughLocator` method, which is specially designed for that cases.
         """
+        host = host or self.host or LOCATOR_DEFAULT_HOST
+        port = port or self.port or LOCATOR_DEFAULT_PORT
         # Store endpoint here as Locator doesn't hold this info.
         self.host = host
         self.port = port
