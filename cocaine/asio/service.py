@@ -421,23 +421,22 @@ class Service(AbstractService):
                   If you don't want to create connection to the locator each time you create service, you can use
                   `connectThroughLocator` method, which is specially designed for that cases.
         """
-        host = host or self.host or LOCATOR_DEFAULT_HOST
-        port = port or self.port or LOCATOR_DEFAULT_PORT
         # Store endpoint here as Locator doesn't hold this info.
-        self.host = host
-        self.port = port
+        self.host = host or self.host or LOCATOR_DEFAULT_HOST
+        self.port = port or self.port or LOCATOR_DEFAULT_PORT
+
         # Is it good?
         self.locator_timeout = timeout
 
-        if (host, port) not in self._locator_cache:
+        if (self.host, self.port) not in self._locator_cache:
             locator = Locator()
-            self._locator_cache[(host, port)] = locator
+            self._locator_cache[(self.host, self.port)] = locator
         else:
-            locator = self._locator_cache[(host, port)]
+            locator = self._locator_cache[(self.host, self.port)]
 
         try:
             if not locator.isConnected():
-                yield locator.connect(host, port, timeout, blocking=blocking)
+                yield locator.connect(self.host, self.port, timeout, blocking=blocking)
             yield self.connectThroughLocator(locator, timeout, blocking=blocking)
         finally:
             pass
