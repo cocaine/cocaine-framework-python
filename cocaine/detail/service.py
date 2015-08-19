@@ -20,6 +20,7 @@
 #
 
 from .baseservice import BaseService
+from .baseservice import TraceAdapter
 from .defaults import Defaults
 from .locator import Locator
 from .util import create_new_io_loop
@@ -47,13 +48,15 @@ class Service(BaseService):
         self.seed = seed
 
     @coroutine
-    def connect(self):
-        self.log.debug("checking if service connected")
+    def connect(self, traceid=None):
+        log = TraceAdapter(self.log, {"traceid": traceid}) if traceid else self.log
+
+        log.debug("checking if service connected")
         if self._connected:
             self.log.debug("already connected")
             return
 
-        self.log.debug("resolving ...")
+        log.info("resolving ...")
         # create locator here if it was not passed to us
         locator = self.locator or Locator(endpoints=self.locator_endpoints, io_loop=self.io_loop)
         try:
@@ -69,12 +72,13 @@ class Service(BaseService):
                 # disconnect locator as we created it
                 locator.disconnect()
 
-        self.log.debug("successfully resolved %s %s", self.endpoints, self.api)
+        log.info("successfully resolved %s", self.endpoints)
+        log.debug("api: %s", self.api)
 
         # Version compatibility should be checked here.
         if not (self.version == 0 or version == self.version):
             raise InvalidApiVersion(self.name, version, self.version)
-        yield super(Service, self).connect()
+        yield super(Service, self).connect(traceid)
 
 
 class SyncService(object):

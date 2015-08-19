@@ -41,6 +41,11 @@ from ..decorators import coroutine
 from ..exceptions import DisconnectionError
 
 
+class TraceAdapter(logging.LoggerAdapter):
+    def process(self, msg, kwargs):
+        return '%s\t%s' % (self.extra["traceid"], msg), kwargs
+
+
 def weak_wrapper(weak_service, method_name, *args, **kwargs):
     service = weak_service()
     if service is None:
@@ -77,26 +82,32 @@ class BaseService(object):
         self.buffer = msgpack_unpacker()
 
     @coroutine
-    def connect(self):
+    def connect(self, traceid=None):
         if self._connected:
             return
 
+        log = TraceAdapter(self.log, {"traceid": traceid}) if traceid else self.log
+
+        log.info("acquiring the connection lock")
         with (yield self._lock.acquire()):
             if self._connected:
                 return
 
+            start_time = time.time()
+
             for host, port in self.endpoints:
                 try:
-                    self.log.info("trying %s:%d to establish connection %s", host, port, self.name)
+                    log.info("trying %s:%d to establish connection %s", host, port, self.name)
                     self.pipe = yield TCPClient(io_loop=self.io_loop).connect(host, port)
                     self.pipe.set_nodelay(True)
                     self.pipe.read_until_close(callback=functools.partial(weak_wrapper, weakref.ref(self), "on_close"),
                                                streaming_callback=functools.partial(weak_wrapper, weakref.ref(self), "on_read"))
                 except Exception as err:
-                    self.log.error("connection error %s", err)
+                    log.error("connection error %s", err)
                 else:
                     self.address = (host, port)
-                    self.log.debug("connection has been established successfully")
+                    connection_time = (time.time() - start_time) * 1000
+                    log.info("connection has been established successfully %.3fms" % connection_time)
                     return
 
             raise Exception("unable to establish connection")
@@ -145,7 +156,10 @@ class BaseService(object):
     def _invoke(self, method_name, *args, **kwargs):
         self.log.debug("_invoke has been called %.300s %.300s", str(args), str(kwargs))
         trace = kwargs.get("trace")
-        yield self.connect()
+        if trace:
+            yield self.connect(hex(trace.traceid)[2:])
+        else:
+            yield self.connect()
         self.log.debug("%s", self.api)
         for method_id, (method, tx_tree, rx_tree) in self.api.items():  # py3 has no iteritems
             if method == method_name:

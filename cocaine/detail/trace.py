@@ -18,8 +18,8 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from collections import namedtuple
 import struct
+from collections import namedtuple
 
 Trace = namedtuple('Trace', ['traceid', 'spanid', 'parentid'])
 

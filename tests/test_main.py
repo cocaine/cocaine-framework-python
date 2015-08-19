@@ -43,7 +43,7 @@ from cocaine.services import Service
 import msgpack
 from nose import tools
 
-log = logging.getLogger("cocaine")
+log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
 
@@ -86,7 +86,7 @@ def test_on_close():
 def test_service_double_connect():
     io = IOLoop.current()
     node = Service("node", endpoints=[["localhost", 10053]], io_loop=io)
-    io.run_sync(node.connect)
+    io.run_sync(lambda: node.connect("TRACEID"))
     io.run_sync(node.connect)
 
 
