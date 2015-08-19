@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.2.1) unstable; urgency=low
+
+  * [Service] Generate almost unique id
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 19 Aug 2015 13:47:47 +0300
+
 cocaine-framework-python (0.12.2.0) unstable; urgency=low
 
   * [Tracing] Send trace if it presents
