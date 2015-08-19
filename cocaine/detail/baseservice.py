@@ -19,8 +19,10 @@
 #
 
 import functools
+import hashlib
 import itertools
 import logging
+import time
 import weakref
 
 from tornado.gen import Return
@@ -57,9 +59,10 @@ class BaseService(object):
         # Looks as [["host", port2], ["host2", port2]]
         self.endpoints = endpoints
         self.name = name
+        self.id = hashlib.md5("%d:%f" % (id(self), time.time())).hexdigest()[:15]
 
         self._extra = {'service': self.name,
-                       'id': id(self)}
+                       'id': self.id}
         self.log = logging.LoggerAdapter(servicelog, self._extra)
 
         self.sessions = dict()
@@ -176,3 +179,10 @@ class BaseService(object):
         # we have to close owned connection
         # otherwise it would be a fd-leak
         self.disconnect()
+
+    def __str__(self):
+        return "name: %s id: %s" % (self.name, self.id)
+
+    def __repr__(self):
+        return "<%s %s %s at %s>" % (
+            type(self).__name__, self.name, self.id, hex(id(self)))
