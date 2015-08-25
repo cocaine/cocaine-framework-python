@@ -19,7 +19,9 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import hashlib
 import sys
+import time
 from functools import partial
 
 import msgpack
@@ -42,9 +44,16 @@ else:  # pragma: no cover
 if sys.version_info[0] == 2:
     def valid_chunk(chunk):
         return isinstance(chunk, (str, unicode, bytes))
+
+    def generate_service_id(self):
+        return hashlib.md5("%d:%f" % (id(self), time.time())).hexdigest()[:15]
 else:
     def valid_chunk(chunk):
         return isinstance(chunk, (str, bytes))
+
+    def generate_service_id(self):
+        hashed = "%d:%f" % (id(self), time.time())
+        return hashlib.md5(hashed.encode("utf-8")).hexdigest()[:15]
 
 
 def create_new_io_loop():

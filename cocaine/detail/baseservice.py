@@ -19,7 +19,6 @@
 #
 
 import functools
-import hashlib
 import itertools
 import logging
 import time
@@ -36,7 +35,7 @@ from .channel import Rx
 from .channel import Tx
 from .log import servicelog
 from .trace import pack_trace
-from .util import msgpack_packb, msgpack_unpacker
+from .util import generate_service_id, msgpack_packb, msgpack_unpacker
 from ..decorators import coroutine
 from ..exceptions import DisconnectionError
 
@@ -64,11 +63,9 @@ class BaseService(object):
         # Looks as [["host", port2], ["host2", port2]]
         self.endpoints = endpoints
         self.name = name
-        self.id = hashlib.md5("%d:%f" % (id(self), time.time())).hexdigest()[:15]
+        self.id = generate_service_id(self)
 
-        self._extra = {'service': self.name,
-                       'id': self.id}
-        self.log = logging.LoggerAdapter(servicelog, self._extra)
+        self.log = servicelog
 
         self.sessions = dict()
         self.counter = itertools.count(1)
