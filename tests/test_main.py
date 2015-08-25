@@ -22,6 +22,7 @@
 import logging
 import socket
 
+from tornado import gen
 from tornado.ioloop import IOLoop
 import toro
 
@@ -34,7 +35,6 @@ from cocaine.exceptions import ChokeEvent
 from cocaine.exceptions import ConnectionError
 from cocaine.exceptions import InvalidMessageType
 from cocaine.exceptions import ServiceError
-# from cocaine.exceptions import DisconnectionError
 from cocaine.worker.request import Stream, RequestError
 
 from cocaine.services import Locator
@@ -66,8 +66,8 @@ def test_locator():
 
 def test_service_with_seed():
     io = IOLoop.current()
-    n1 = Service("node", seed="TEST_SEED")
-    channel = io.run_sync(n1.list)
+    n1 = Service("storage", seed="TEST_SEED")
+    channel = io.run_sync(lambda: n1.find('app', ['apps']))
     app_list = io.run_sync(channel.rx.get)
     assert isinstance(app_list, list)
 
@@ -85,9 +85,9 @@ def test_on_close():
 
 def test_service_double_connect():
     io = IOLoop.current()
-    node = Service("node", endpoints=[["localhost", 10053]], io_loop=io)
-    io.run_sync(lambda: node.connect("TRACEID"))
-    io.run_sync(node.connect)
+    storage = Service("storage", endpoints=[["localhost", 10053]], io_loop=io)
+    io.run_sync(lambda: storage.connect("TRACEID"))
+    io.run_sync(storage.connect)
 
 
 @tools.raises(Exception)
@@ -101,30 +101,22 @@ def test_service_connection_failure():
 @tools.raises(InvalidApiVersion)
 def test_service_invalid_api_version():
     io = IOLoop.current()
-    node = Service("node", endpoints=[["localhost", 10053]], version=100, io_loop=io)
-    io.run_sync(node.connect)
+    storage = Service("storage", endpoints=[["localhost", 10053]], version=100, io_loop=io)
+    io.run_sync(storage.connect)
 
 
-def test_node_service():
+def test_storage_service():
     io = IOLoop.current()
-    node = Service("node", endpoints=[["localhost", 10053]], io_loop=io)
-    channel = io.run_sync(node.list)
-    app_list = io.run_sync(channel.rx.get)
-    assert isinstance(app_list, list), "invalid app_list type `%s` %s " % (type(app_list), app_list)
 
-# This test is not valid now
-# @tools.raises(DisconnectionError)
-# def test_node_service_disconnection():
-#     io = IOLoop.current()
-#     node = Service("node", endpoints=[["localhost", 10053]], io_loop=io)
-#     channel = io.run_sync(node.list)
-#     node.disconnect()
-#     # proper answer
-#     io.run_sync(channel.rx.get)
-#     # empty response
-#     io.run_sync(channel.rx.get)
-#     # disconnection error
-#     io.run_sync(channel.rx.get)
+    @gen.coroutine
+    def main():
+        storage = Service("storage", endpoints=[["localhost", 10053]], io_loop=io)
+        channel = yield storage.find('app', ['apps'])
+        res = yield channel.rx.get()
+        raise gen.Return(res)
+
+    app_list = io.run_sync(main, timeout=10)
+    assert isinstance(app_list, list), "invalid app_list type `%s` %s " % (type(app_list), app_list)
 
 
 def test_node_service_bad_on_read():
@@ -208,14 +200,13 @@ class TestTx(object):
 
 
 def test_current_ioloop():
-    from tornado import gen
     from tornado.ioloop import IOLoop
 
     @gen.coroutine
     def f():
         io = IOLoop.current()
-        node = Service("node", endpoints=[["localhost", 10053]], io_loop=io)
-        channel = yield node.list()
+        storage = Service("storage", endpoints=[["localhost", 10053]], io_loop=io)
+        channel = yield storage.find('app', ['apps'])
         app_list = yield channel.rx.get()
         assert isinstance(app_list, list)
         raise gen.Return("OK")
