@@ -53,7 +53,7 @@ class Service(BaseService):
 
         log.debug("checking if service connected")
         if self._connected:
-            self.log.debug("already connected")
+            log.debug("already connected")
             return
 
         log.info("resolving ...")

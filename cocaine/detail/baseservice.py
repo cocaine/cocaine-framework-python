@@ -79,6 +79,11 @@ class BaseService(object):
         # wrap into separate class
         self.pipe = None
         self.address = None
+        # on_close can be schedulled at any time,
+        # even after we've already reconnected. So to prevent
+        # from closing wrong connection, each new pipe has its epoch,
+        # as id for on_close
+        self.pipe_epoch = 0
         self.buffer = msgpack_unpacker()
 
     @coroutine
@@ -98,9 +103,11 @@ class BaseService(object):
             for host, port in self.endpoints:
                 try:
                     log.info("trying %s:%d to establish connection %s", host, port, self.name)
+                    self.pipe_epoch += 1
+                    pipe_epoch = self.pipe_epoch
                     self.pipe = yield TCPClient(io_loop=self.io_loop).connect(host, port)
                     self.pipe.set_nodelay(True)
-                    self.pipe.read_until_close(callback=functools.partial(weak_wrapper, weakref.ref(self), "on_close"),
+                    self.pipe.read_until_close(callback=functools.partial(weak_wrapper, weakref.ref(self), "on_close", pipe_epoch),
                                                streaming_callback=functools.partial(weak_wrapper, weakref.ref(self), "on_read"))
                 except Exception as err:
                     log.error("connection error %s", err)
@@ -127,9 +134,11 @@ class BaseService(object):
             _, rx = sessions.popitem()
             rx.error(DisconnectionError(self.name))
 
-    def on_close(self, *args):
+    def on_close(self, pipe_epoch, *args):
         self.log.debug("pipe has been closed %s %s", args, self.name)
-        self.disconnect()
+        if self.pipe_epoch == pipe_epoch:
+            self.log.debug("the epoch matches. Call disconnect")
+            self.disconnect()
 
     def on_read(self, read_bytes):
         self.log.debug("read %.300s", read_bytes)
@@ -182,7 +191,7 @@ class BaseService(object):
 
     @property
     def _connected(self):
-        return self.pipe is not None
+        return self.pipe is not None and not self.pipe.closed()
 
     def __getattr__(self, name):
         def on_getattr(*args, **kwargs):

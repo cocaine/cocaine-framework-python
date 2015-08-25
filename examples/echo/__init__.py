@@ -23,11 +23,11 @@ from cocaine.worker import Worker
 log = Logger()
 
 def echo(request, response):
-    log.info("start the request")
+    log.error("start the request")
     inc = yield request.read()
-    log.info("write a chunk")
+    log.error("write a chunk")
     response.write(str(inc))
-    log.info("close the request")
+    log.error("close the request")
     response.close()
 
 
