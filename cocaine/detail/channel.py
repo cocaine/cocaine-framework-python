@@ -125,7 +125,8 @@ class Rx(PrettyPrintable):
         name, payload = item
         res = protocol(name, payload)
         if isinstance(res, ProtocolError):
-            raise ServiceError(self.servicename, res.reason, res.code)
+            raise ServiceError(self.servicename, res.reason,
+                               res.code, res.category)
         else:
             raise Return(res)
 

@@ -25,6 +25,9 @@ from ..common import CocaineErrno
 __author__ = 'Evgeny Safronov <division494@gmail.com>'
 
 
+DEFAULT_FRAMEWORK_CATEGORY = 999
+
+
 class CocaineError(Exception):
     pass
 
@@ -35,10 +38,11 @@ class InvalidChunk(CocaineError):
 
 
 class ServiceError(CocaineError):
-    def __init__(self, servicename, reason, code):
+    def __init__(self, servicename, reason, code, category=DEFAULT_FRAMEWORK_CATEGORY):
         self.servicename = servicename
         self.code = code
         self.reason = reason
+        self.category = category
         super(ServiceError, self).__init__('error in service "{0}" - {1} [{2}]'.format(servicename, reason, code))
 
 
