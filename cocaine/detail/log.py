@@ -30,3 +30,5 @@ if hasattr(logging, "NullHandler"):
 
 servicelog = logging.getLogger("cocaine.baseservice")
 workerlog = logging.getLogger("cocaine.worker")
+# to log error events from a worker to a crashlog
+workerlog.addHandler(logging.StreamHandler())
