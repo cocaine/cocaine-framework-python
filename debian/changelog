@@ -1,3 +1,10 @@
+cocaine-framework-python (0.12.4.0) unstable; urgency=low
+
+  * [Tornado] Get rid of Toro locks and queues
+  * [Worker] Log error messages to stderr by default
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 08 Sep 2015 22:35:16 +0300
+
 cocaine-framework-python (0.12.3.1) unstable; urgency=low
 
   * [Protocol] Setup category to ServiceError
