@@ -26,10 +26,10 @@ import weakref
 
 from tornado.gen import Return
 from tornado.ioloop import IOLoop
+from tornado.locks import Lock
 from tornado.tcpclient import TCPClient
 
 
-from .asyncqueue import AsyncLock
 from .channel import Channel
 from .channel import Rx
 from .channel import Tx
@@ -71,7 +71,7 @@ class BaseService(object):
         self.counter = itertools.count(1)
         self.api = {}
 
-        self._lock = AsyncLock()
+        self._lock = Lock()
 
         # wrap into separate class
         self.pipe = None

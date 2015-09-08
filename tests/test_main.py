@@ -24,7 +24,6 @@ import socket
 
 from tornado import gen
 from tornado.ioloop import IOLoop
-import toro
 
 from cocaine.detail.service import InvalidApiVersion
 from cocaine.detail.baseservice import BaseService
@@ -233,7 +232,7 @@ def test_stream():
     io.run_sync(stream.get)
 
 
-@tools.raises(toro.Timeout)
+@tools.raises(gen.TimeoutError)
 def test_stream_timeout():
     io = IOLoop.current()
     stream = Stream(io_loop=io)
