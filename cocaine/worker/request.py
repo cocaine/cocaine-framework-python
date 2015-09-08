@@ -22,9 +22,9 @@
 import datetime
 
 from tornado import gen
+from tornado.queues import Queue
 
 from ..decorators import coroutine
-from ..detail.asyncqueue import AsyncQueue
 from ..exceptions import ChokeEvent
 
 
@@ -35,8 +35,8 @@ class RequestError(Exception):
 
 
 class Stream(object):
-    def __init__(self, io_loop):
-        self._queue = AsyncQueue(io_loop=io_loop)
+    def __init__(self, io_loop=None):
+        self._queue = Queue()
         self._done = False
 
     @coroutine
@@ -45,7 +45,7 @@ class Stream(object):
             res = yield self._queue.get()
         else:
             deadline = datetime.timedelta(seconds=timeout)
-            res = yield self._queue.get(deadline=deadline)
+            res = yield self._queue.get(deadline)
 
         if isinstance(res, Exception):
             raise res

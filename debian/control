@@ -2,8 +2,8 @@ Source: cocaine-framework-python
 Section: utils
 Priority: extra
 Maintainer: Anton Tyurin <noxiouz@yandex-team.ru>
-Build-Depends: cdbs, debhelper (>= 7.0.13), 
- python, 
+Build-Depends: cdbs, debhelper (>= 7.0.13),
+ python,
  python-central,
  python-setuptools
 Standards-Version: 3.9.3
@@ -13,10 +13,9 @@ XS-Python-Version: >= 2.6
 
 Package: cocaine-v12-framework-python
 Architecture: any
-Depends: ${misc:Depends}, ${python:Depends}, 
- python-msgpack | msgpack-python, 
- python-tornado (>= 4.1),
- python-toro,
+Depends: ${misc:Depends}, ${python:Depends},
+ python-msgpack | msgpack-python,
+ python-tornado (>= 4.2),
 XB-Python-Version: >= 2.6
 Replaces: cocaine-framework-python
 Provides: cocaine-framework-python

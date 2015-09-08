@@ -1,3 +1,2 @@
 msgpack_python
-tornado>=4.1
-toro>=0.7
+tornado>=4.2

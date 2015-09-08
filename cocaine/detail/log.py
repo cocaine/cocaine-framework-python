@@ -25,6 +25,8 @@ import logging
 # to support Zipkin
 cocainelog = logging.getLogger("cocaine")
 cocainelog.propagate = False
+if hasattr(logging, "NullHandler"):
+    cocainelog.addHandler(logging.NullHandler())
 
 servicelog = logging.getLogger("cocaine.baseservice")
 workerlog = logging.getLogger("cocaine.worker")

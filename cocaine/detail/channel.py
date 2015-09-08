@@ -24,9 +24,9 @@ import logging
 from tornado.gen import Return
 from tornado.ioloop import IOLoop
 from tornado.iostream import StreamClosedError
+from tornado.queues import Queue
 
 
-from .asyncqueue import AsyncQueue
 from .trace import pack_trace
 from .util import msgpack_packb
 from ..common import CocaineErrno
@@ -98,7 +98,7 @@ class Rx(PrettyPrintable):
         # and a current IOloop doesn't exist here,
         # IOLoop.instance becomes self._io_loop
         self._io_loop = io_loop or IOLoop.current()
-        self._queue = AsyncQueue(io_loop=self._io_loop)
+        self._queue = Queue()
         self._done = False
         self.servicename = servicename
         self.rx_tree = rx_tree
