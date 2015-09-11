@@ -27,9 +27,20 @@ from ..detail.util import valid_chunk
 from ..exceptions import InvalidChunk
 
 
+def try_and_close(func):
+    def wrapper(self, *args, **kwargs):
+        if self._closed:
+            return
+        try:
+            func(self, *args, **kwargs)
+        finally:
+            self._closed = True
+    return wrapper
+
+
 class ResponseStream(object):
     def __init__(self, session, worker, event_name=""):
-        self._m_state = 1
+        self._closed = False
         self.worker = worker
         self.session = session
         self.event = event_name
@@ -47,27 +58,21 @@ class ResponseStream(object):
         if not valid_chunk(chunk):
             raise InvalidChunk()
 
-        if self._m_state is not None:
+        if not self._closed:
             self.worker.send_chunk(self.session, chunk)
             return
 
         traceback.print_stack()  # pragma: no cover
 
+    @try_and_close
     def close(self):
-        if self._m_state is not None:
-            try:
-                self.worker.send_choke(self.session)
-            finally:
-                self._m_state = None
-            return
+        print("CLOSEEEEE!!!!!!!!!!!!")
+        self.worker.send_choke(self.session)
 
+    @try_and_close
     def error(self, code, message):
-        if self._m_state is not None:
-            try:
-                self.worker.send_error(self.session, ErrorCategory.CFRAMEWORKCATEGORY, code, message)
-            finally:
-                self.close()
+        self.worker.send_error(self.session, ErrorCategory.CFRAMEWORKCATEGORY, code, message)
 
     @property
     def closed(self):
-        return self._m_state is None
+        return self._closeds
