@@ -242,44 +242,6 @@ class BasicWorker(object):
         response.error(CocaineErrno.ENOHANDLER, "there is no handler for event %s" % event)
 
 
-class WorkerV0(BasicWorker):
-    def __init__(self, *args, **kwargs):
-        super(WorkerV0, self).__init__(*args, **kwargs)
-
-        self._dispatcher = {
-            RPC.HEARTBEAT: self._dispatch_heartbeat,
-            RPC.TERMINATE: self._dispatch_terminate,
-            RPC.INVOKE: self._dispatch_invoke,
-            RPC.CHUNK: self._dispatch_chunk,
-            # RPC.ERROR: self._dispatch_error,
-            RPC.CHOKE: self._dispatch_choke
-        }
-
-    def send_handshake(self):
-        self.pipe.write(Message(RPC.HANDSHAKE, 1, self.uuid).pack())
-
-    def send_heartbeat(self):
-        self.pipe.write(self._heartbeat_msg)
-
-    def send_choke(self, session):
-        self.pipe.write(Message(RPC.CHOKE, session).pack())
-
-    def send_chunk(self, session, data):
-        self.pipe.write(Message(RPC.CHUNK, session, data).pack())
-
-    def send_error(self, session, category, code, msg):
-        self.pipe.write(Message(RPC.ERROR, session, (category, code), msg).pack())
-
-    def send_terminate(self, code, reason):
-        workerlog.error("terminated")
-        self.pipe.write(Message(RPC.TERMINATE, 1, code, reason).pack())
-
-    def feed_message(self, msg):
-        message = Message.initialize(msg)
-        callback = self._dispatcher.get(message.id)
-        callback(message)
-
-
 class WorkerV1(BasicWorker):
     def __init__(self, *args, **kwargs):
         super(WorkerV1, self).__init__(*args, **kwargs)
