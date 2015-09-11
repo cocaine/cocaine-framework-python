@@ -1,3 +1,9 @@
+ocaine-framework-python (0.12.4.1) unstable; urgency=low
+
+  * [Worker] Don't send close after error
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Sat, 12 Sep 2015 02:55:54 +0300
+
 cocaine-framework-python (0.12.4.0) unstable; urgency=low
 
   * [Tornado] Get rid of Toro locks and queues
