@@ -1,4 +1,4 @@
-ocaine-framework-python (0.12.4.1) unstable; urgency=low
+cocaine-framework-python (0.12.4.1) unstable; urgency=low
 
   * [Worker] Don't send close after error
 
