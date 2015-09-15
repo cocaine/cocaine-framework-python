@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.4.2) unstable; urgency=low
+
+  * [Worker] Fix typo
+
+ -- Dmitry Unkovsky <diunko@yandex-team.ru>  Tue, 15 Sep 2015 13:13:13 +0300
+
 cocaine-framework-python (0.12.4.1) unstable; urgency=low
 
   * [Worker] Don't send close after error

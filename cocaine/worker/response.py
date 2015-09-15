@@ -75,4 +75,4 @@ class ResponseStream(object):
 
     @property
     def closed(self):
-        return self._closeds
+        return self._closed
