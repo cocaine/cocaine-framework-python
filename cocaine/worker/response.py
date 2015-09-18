@@ -66,7 +66,6 @@ class ResponseStream(object):
 
     @try_and_close
     def close(self):
-        print("CLOSEEEEE!!!!!!!!!!!!")
         self.worker.send_choke(self.session)
 
     @try_and_close
