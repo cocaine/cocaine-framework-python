@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.4.4) unstable; urgency=low
+
+  * [Code] Remove print statement
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Mon, 28 Sep 2015 16:14:27 +0300
+
 cocaine-framework-python (0.12.4.3) unstable; urgency=low
 
   * [REBUILD] Just to bump cocaine python package
