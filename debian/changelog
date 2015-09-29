@@ -1,3 +1,9 @@
+cocaine-framework-python (0.11.1.13) unstable; urgency=low
+
+  * [Service] Fix bug with recurrent raising of AttributeError
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 29 Sep 2015 15:52:16 +0300
+
 cocaine-framework-python (0.11.1.12) unstable; urgency=low
 
   * Add threaded disown timer
@@ -192,7 +198,7 @@ cocaine-framework-python (0.10.6.7) unstable; urgency=low
 
 cocaine-framework-python (0.10.6.6) unstable; urgency=low
 
-  * Move cocaine-tornado-proxy here 
+  * Move cocaine-tornado-proxy here
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 14 Aug 2013 14:04:00 +0400
 
@@ -205,7 +211,7 @@ cocaine-framework-python (0.10.6.5) unstable; urgency=low
 cocaine-framework-python (0.10.6.4) unstable; urgency=low
 
   * Fix tools
-  * Don't close response stream if event handler didn't close it. 
+  * Don't close response stream if event handler didn't close it.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 07 Aug 2013 18:27:54 +0400
 
@@ -222,7 +228,7 @@ cocaine-framework-python (0.10.6.1) unstable; urgency=low
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 07 Aug 2013 16:05:28 +0400
 
 cocaine-framework-python (0.10.6.0) unstable; urgency=low
-  
+
   * IPV6 support
   * Basic `tornado.concurrent.Future` and python 3.3 `concurrent.futures.Future` support
   * Add timeout for asynchronous operations
@@ -246,9 +252,9 @@ cocaine-framework-python (0.10.5.6) unstable; urgency=low
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Tue, 30 Jul 2013 15:10:24 +0400
 
 cocaine-framework-python (0.10.5.5) unstable; urgency=low
-  
+
   * reduce memory consumption
-  * increase productivity of IO 
+  * increase productivity of IO
   * temporarily deleted manpages
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 12 Jul 2013 18:10:47 +0400
@@ -273,7 +279,7 @@ cocaine-framework-python (0.10.5-2) unstable; urgency=low
 
 cocaine-framework-python (0.10.5-1) unstable; urgency=low
 
-  * Critiacal bug with not collecting services with GC fixed. 
+  * Critiacal bug with not collecting services with GC fixed.
 
  -- Anton Tyurin <noxiouz@yandex-team.ru>  Thu, 27 Jun 2013 16:27:39 +0400
 
