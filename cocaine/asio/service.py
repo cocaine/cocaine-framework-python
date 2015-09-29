@@ -499,7 +499,19 @@ class Service(AbstractService):
         self.disconnect()
         yield self.connect(timeout=timeout, blocking=blocking)
 
+
+class Application(Service):
+    def __init__(self, name, blockingConnect=True, host=None, port=None):
+        super(Application, self).__init__(name, blockingConnect, host, port)
+        if blockingConnect and not hasattr(self, "enqueue"):
+            raise ValueError("%s must be connected to an application service, "
+                             "which has `enqueue` method" % self.__class__.__name__)
+
     def __getattr__(self, item):
+        if not hasattr(self, "enqueue"):
+            raise ValueError("%s must be connected to an application service, "
+                             "which has `enqueue` method" % self.__class__.__name__)
+
         def caller(*args, **kwargs):
             return self.enqueue(item, *args, **kwargs)
         return caller

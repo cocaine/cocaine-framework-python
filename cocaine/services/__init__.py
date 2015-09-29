@@ -18,6 +18,6 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from cocaine.asio.service import Service
+from cocaine.asio.service import Service, Application
 
-__all__ = ["Service"]
+__all__ = ["Service", "Application"]
