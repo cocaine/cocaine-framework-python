@@ -35,7 +35,7 @@ Features
 * Possibility to write cocaine workers
 * Wide support of asynchronous event-driven usage
 * Ready for usage with cloud services
-* Lot of examples included
+* Lots of examples included
 * Provided with `cocaine-tools <https://github.com/cocaine/cocaine-tools>`_ and embedded cocaine proxy
 * PyPy support
 
@@ -47,7 +47,7 @@ Here's some extremely useful Cocaine app written in Python::
     #!/usr/bin/env python
 
     from cocaine.worker import Worker
-    from cocaine.logging import Logger
+    from cocaine.logger import Logger
 
     log = Logger()
 
