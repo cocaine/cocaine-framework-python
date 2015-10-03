@@ -77,33 +77,29 @@ class BasicWorker(object):
         # avoid unnecessary dublicate packing of message
         self._heartbeat_msg = Message(RPC.HEARTBEAT, 1).pack()
 
+    @coroutine
     def async_connect(self):
+        sock = socket.socket(socket.AF_UNIX)
+        workerlog.debug("connecting to %s", self.endpoint)
+        try:
+            io_stream = IOStream(sock, io_loop=self.io_loop)
+            self.pipe = yield io_stream.connect(self.endpoint, callback=None)
+            workerlog.debug("connected to %s %s", self.endpoint, self.pipe)
+            self.pipe.read_until_close(callback=self.on_failure,
+                                       streaming_callback=self.on_message)
+        except Exception as err:
+            workerlog.error("unable to connect to '%s' %s", self.endpoint, err)
+            self.on_failure()
+            return
 
-        @coroutine
-        def on_connect():
-            sock = socket.socket(socket.AF_UNIX)
-            workerlog.debug("connecting to %s", self.endpoint)
-            try:
-                io_stream = IOStream(sock, io_loop=self.io_loop)
-                self.pipe = yield io_stream.connect(self.endpoint, callback=None)
-                workerlog.debug("connected to %s %s", self.endpoint, self.pipe)
-                self.pipe.read_until_close(callback=self.on_failure,
-                                           streaming_callback=self.on_message)
-            except Exception as err:
-                workerlog.error("unable to connect to '%s' %s", self.endpoint, err)
-                self.on_failure()
-                return
-
-            workerlog.debug("sending handshake")
-            self.send_handshake()
-            workerlog.debug("sending heartbeat")
-            self.do_heartbeat()
-            # start heartbeat timer
-            self.heartbeat_timer.start()
-            workerlog.debug("start threaded_disown_timer")
-            self.threaded_disown_timer.start()
-
-        self.io_loop.add_future(on_connect(), lambda x: None)
+        workerlog.debug("sending handshake")
+        self.send_handshake()
+        workerlog.debug("sending heartbeat")
+        self.do_heartbeat()
+        # start heartbeat timer
+        self.heartbeat_timer.start()
+        workerlog.debug("start threaded_disown_timer")
+        self.threaded_disown_timer.start()
 
     def run(self, binds=None):
         if binds is None:
