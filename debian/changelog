@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.4.5) unstable; urgency=low
+
+  * [Logger] Pass proper endpoints
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Mon, 05 Oct 2015 13:59:38 +0300
+
 cocaine-framework-python (0.12.4.4) unstable; urgency=low
 
   * [Code] Remove print statement
