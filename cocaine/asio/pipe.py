@@ -3,7 +3,6 @@ import functools
 import logging
 import os
 import socket
-import fcntl
 import time
 
 from cocaine.asio.ev import Loop
@@ -26,7 +25,6 @@ class Pipe(object):
         self.sock.setblocking(False)
         if self.sock.type == socket.SOL_TCP:
             self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        fcntl.fcntl(self.sock.fileno(), fcntl.F_SETFD, fcntl.FD_CLOEXEC)
 
         self._ioLoop = ioLoop or Loop.instance()
 
