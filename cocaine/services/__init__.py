@@ -22,8 +22,8 @@
 # It's provided for backward compatibility with 0.11.x
 
 from ..detail.channel import EmptyResponse
-from ..detail.locator import Locator
+from ..detail.locator import Locator, LOCATOR_DEFAULT_ENDPOINTS
 from ..detail.service import Service
 from ..detail.service import SyncService
 
-__all__ = ["Service", "SyncService", "Locator", "EmptyResponse"]
+__all__ = ["Service", "SyncService", "Locator", "EmptyResponse", "LOCATOR_DEFAULT_ENDPOINTS"]

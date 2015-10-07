@@ -22,11 +22,11 @@ from .api import API
 from .baseservice import BaseService
 from .defaults import Defaults
 
-LOCATOR_DEFAULT_ENDPOINT = Defaults.locators
+LOCATOR_DEFAULT_ENDPOINTS = Defaults.locators
 
 
 class Locator(BaseService):
-    def __init__(self, endpoints=LOCATOR_DEFAULT_ENDPOINT, io_loop=None):
+    def __init__(self, endpoints=LOCATOR_DEFAULT_ENDPOINTS, io_loop=None):
         super(Locator, self).__init__(name="locator",
                                       endpoints=endpoints, io_loop=io_loop)
         self.api = API.Locator

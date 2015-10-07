@@ -29,7 +29,7 @@ from .defaults import GetOptError
 from .service import Service
 
 
-LOCATOR_DEFAULT_ENDPOINT = Defaults.locators
+LOCATOR_DEFAULT_ENDPOINTS = Defaults.locators
 
 
 VERBOSITY_LEVELS = {
@@ -85,7 +85,7 @@ class Logger(Service):
         return cls._current.instance
 
     @thread_once
-    def __init__(self, endpoints=LOCATOR_DEFAULT_ENDPOINT, io_loop=None):
+    def __init__(self, endpoints=LOCATOR_DEFAULT_ENDPOINTS, io_loop=None):
         super(Logger, self).__init__(name="logging",
                                      endpoints=endpoints,
                                      io_loop=io_loop)
