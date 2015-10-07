@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.4.6) unstable; urgency=low
+
+  * [API] Access to default locator endpoints
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Wed, 07 Oct 2015 17:00:47 +0300
+
 cocaine-framework-python (0.12.4.5) unstable; urgency=low
 
   * [Logger] Pass proper endpoints
