@@ -19,8 +19,8 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import itertools
 import functools
+import itertools
 import logging
 import threading
 
@@ -127,14 +127,14 @@ class Logger(object):
         counter = next(self.counter)
         self.pipe.write(msgpack_packb([counter, EMIT, args]))
 
-
     @coroutine
     def connect(self):
         with (yield self._lock.acquire()):
             if self._connected:
                 return
 
-            for host, port in (yield resolve_logging(self.endpoints, self._name, self.io_loop)):
+            for host, port in (yield resolve_logging(self.endpoints, self._name,
+                               self.io_loop)):
                 try:
                     self.pipe = yield TCPClient(io_loop=self.io_loop).connect(host, port)
                     self.pipe.set_nodelay(True)
@@ -185,7 +185,6 @@ def resolve_logging(endpoints, name="logging", io_loop=None):
                 locator_pipe.close()
 
     raise Exception("unable to resolve logging")
-
 
 
 class CocaineHandler(logging.Handler):
