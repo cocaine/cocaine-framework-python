@@ -19,14 +19,25 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import itertools
 import functools
 import logging
 import threading
 
+from tornado import gen
+
+from tornado.gen import coroutine
+from tornado.ioloop import IOLoop
+from tornado.locks import Lock
+from tornado.tcpclient import TCPClient
+
 from .api import API
 from .defaults import Defaults
 from .defaults import GetOptError
-from .service import Service
+from .util import msgpack_packb, msgpack_unpacker
+
+
+__all__ = ["Logger", "CocaineHandler"]
 
 
 LOCATOR_DEFAULT_ENDPOINTS = Defaults.locators
@@ -41,6 +52,15 @@ VERBOSITY_LEVELS = {
 }
 
 
+# look at Locator and LoggerAPI
+EMIT = 0
+RESOLVE = 0
+VALUE_CODE = 0
+ERROR_CODE = 1
+assert API.Logger[EMIT][0] == "emit"
+assert API.Locator[RESOLVE][0] == "resolve"
+
+
 def thread_once(class_init):
     @functools.wraps(class_init)
     def wrapper(self, *args, **kwargs):
@@ -48,14 +68,12 @@ def thread_once(class_init):
             return
 
         class_init(self, *args, **kwargs)
-
         self._current.initialized = True
     return wrapper
 
 
 def on_emit_constructor(self, level, uuid):
-    target = self._target
-
+    target = self.target
     if uuid is None:
         def on_emit(message, attrs=None):
             if not isinstance(attrs, dict):
@@ -73,10 +91,8 @@ def on_emit_constructor(self, level, uuid):
     return on_emit
 
 
-# ToDo:
-# * Add fallback implementation
-# * Loglevels mapping
-class Logger(Service):
+class Logger(object):
+    _name = "logging"
     _current = threading.local()
 
     def __new__(cls, *args, **kwargs):
@@ -86,11 +102,14 @@ class Logger(Service):
 
     @thread_once
     def __init__(self, endpoints=LOCATOR_DEFAULT_ENDPOINTS, io_loop=None):
-        super(Logger, self).__init__(name="logging",
-                                     endpoints=endpoints,
-                                     io_loop=io_loop)
-        self.api = API.Logger
-        self._target = Defaults.app
+        self.io_loop = io_loop or IOLoop.current()
+        self.endpoints = endpoints
+        self._lock = Lock()
+
+        self.counter = itertools.count(1)
+
+        self.pipe = None
+        self.target = Defaults.app
 
         try:
             _uuid = Defaults.uuid
@@ -99,6 +118,74 @@ class Logger(Service):
 
         for level_name, level in VERBOSITY_LEVELS.items():
             setattr(self, level_name, on_emit_constructor(self, level, _uuid))
+
+    @coroutine
+    def emit(self, *args):
+        if not self._connected:
+            yield self.connect()
+
+        counter = next(self.counter)
+        self.pipe.write(msgpack_packb([counter, EMIT, args]))
+
+
+    @coroutine
+    def connect(self):
+        with (yield self._lock.acquire()):
+            if self._connected:
+                return
+
+            for host, port in (yield resolve_logging(self.endpoints, self._name, self.io_loop)):
+                try:
+                    self.pipe = yield TCPClient(io_loop=self.io_loop).connect(host, port)
+                    self.pipe.set_nodelay(True)
+                    return
+                except IOError:
+                    pass
+
+    @property
+    def _connected(self):
+        return self.pipe is not None and not self.pipe.closed()
+
+    def disconnect(self):
+        if self.pipe is None:
+            return
+
+        self.pipe.close()
+        self.pipe = None
+
+    def __del__(self):
+        # we have to close owned connection
+        # otherwise it would be a fd-leak
+        self.disconnect()
+
+
+@coroutine
+def resolve_logging(endpoints, name="logging", io_loop=None):
+    io_loop = io_loop or IOLoop.current()
+
+    for host, port in endpoints:
+        buff = msgpack_unpacker()
+        locator_pipe = None
+        try:
+            locator_pipe = yield TCPClient(io_loop=io_loop).connect(host, port)
+            locator_pipe.set_nodelay(True)
+            request = msgpack_packb([999999, RESOLVE, [name]])
+            yield locator_pipe.write(request)
+            while True:
+                data = yield locator_pipe.read_bytes(1024, partial=True)
+                buff.feed(data)
+                for msg in buff:
+                    _, code, payload = msg[:3]
+                    if code == VALUE_CODE:
+                        raise gen.Return(payload[0])
+        except (IOError, ValueError):
+            pass
+        finally:
+            if locator_pipe:
+                locator_pipe.close()
+
+    raise Exception("unable to resolve logging")
+
 
 
 class CocaineHandler(logging.Handler):
