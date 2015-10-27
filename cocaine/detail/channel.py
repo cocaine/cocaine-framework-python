@@ -47,6 +47,7 @@ class ProtocolError(CocaineError):
     __slots__ = ("category", "code", "reason")
 
     def __init__(self, code, reason=""):
+        super(ProtocolError, self).__init__()
         self.category, self.code = code
         self.reason = reason
 

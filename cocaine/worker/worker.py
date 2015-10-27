@@ -151,7 +151,7 @@ class BasicWorker(object):
 
     def _dispatch_invoke(self, msg):
         workerlog.debug("invoke has been received %s", msg)
-        request = RequestStream(self.io_loop)
+        request = RequestStream()
         response = ResponseStream(msg.session, self, msg.event)
         try:
             event_handler = self._events.get(msg.event)

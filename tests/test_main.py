@@ -227,7 +227,7 @@ def test_connection_error():
 @tools.raises(RequestError)
 def test_stream():
     io = IOLoop.current()
-    stream = Stream(io_loop=io)
+    stream = Stream()
     stream.error((0, 100), "TESTERROR")
     io.run_sync(stream.get)
 
@@ -235,7 +235,7 @@ def test_stream():
 @tools.raises(gen.TimeoutError)
 def test_stream_timeout():
     io = IOLoop.current()
-    stream = Stream(io_loop=io)
+    stream = Stream()
     io.run_sync(lambda: stream.get(timeout=0.5))
 
 

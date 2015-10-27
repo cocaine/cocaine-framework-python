@@ -24,22 +24,22 @@ import datetime
 from tornado import gen
 from tornado.queues import Queue
 
-from ..decorators import coroutine
 from ..exceptions import ChokeEvent
 
 
 class RequestError(Exception):
     def __init__(self, code, reason):
+        super(RequestError, self).__init__()
         self.category, self.code = code
         self.reason = reason
 
 
 class Stream(object):
-    def __init__(self, io_loop=None):
+    def __init__(self):
         self._queue = Queue()
         self._done = False
 
-    @coroutine
+    @gen.coroutine
     def get(self, timeout=0):
         if timeout == 0:
             res = yield self._queue.get()
