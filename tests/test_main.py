@@ -171,7 +171,7 @@ class TestRx(object):
         io = IOLoop.current()
         rx = Rx(self.rx_tree)
         rx.done()
-        io.run_sync(rx.get)
+        io.run_sync(rx.get, timeout=1)
 
 
 class TestTx(object):
@@ -195,7 +195,7 @@ class TestTx(object):
         io = IOLoop.current()
         tx = Tx(self.tx_tree, self.PipeMock(), 1)
         tx.done()
-        io.run_sync(tx.get)
+        io.run_sync(tx.get, timeout=1)
 
 
 def test_current_ioloop():

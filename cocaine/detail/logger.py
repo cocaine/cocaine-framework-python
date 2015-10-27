@@ -42,18 +42,12 @@ __all__ = ["Logger", "CocaineHandler"]
 
 LOCATOR_DEFAULT_ENDPOINTS = Defaults.locators
 
-
-VERBOSITY_LEVELS = {
-    "debug": 0,
-    "info": 1,
-    "warn": 2,
-    "warning": 2,
-    "error": 3,
-}
-
+(DEBUG_LEVEL, INFO_LEVEL, WARNING_LEVEL, ERROR_LEVEL) = range(4)
 
 # look at Locator and LoggerAPI
 EMIT = 0
+VERBOSITY = 1
+
 RESOLVE = 0
 VALUE_CODE = 0
 ERROR_CODE = 1
@@ -70,25 +64,6 @@ def thread_once(class_init):
         class_init(self, *args, **kwargs)
         self._current.initialized = True
     return wrapper
-
-
-def on_emit_constructor(self, level, uuid):
-    target = self.target
-    if uuid is None:
-        def on_emit(message, attrs=None):
-            if not isinstance(attrs, dict):
-                return self.emit(level, target, message)
-            else:
-                return self.emit(level, target, message, attrs.items())
-    else:
-        def on_emit(message, attrs=None):
-            if not isinstance(attrs, dict):
-                return self.emit(level, target, message, [["uuid", uuid]])
-            else:
-                # ToDo: implement safe replace?
-                attrs["uuid"] = uuid
-                return self.emit(level, target, message, attrs.items())
-    return on_emit
 
 
 class Logger(object):
@@ -110,22 +85,73 @@ class Logger(object):
 
         self.pipe = None
         self.target = Defaults.app
+        self.verbosity = DEBUG_LEVEL
 
         try:
-            _uuid = Defaults.uuid
+            uuid = Defaults.uuid
+            self._defaultattrs = [["uuid", uuid]]
         except GetOptError:
-            _uuid = None
-
-        for level_name, level in VERBOSITY_LEVELS.items():
-            setattr(self, level_name, on_emit_constructor(self, level, _uuid))
+            self._defaultattrs = []
 
     @coroutine
-    def emit(self, *args):
-        if not self._connected:
-            yield self.connect()
+    def emit(self, level, message, attrs=None):
+        try:
+            if not self._connected:
+                yield self.connect()
 
+            if not attrs:
+                if self._defaultattrs:
+                    args = [level, self.target, message, self._defaultattrs]
+                else:
+                    args = [level, self.target, message]
+            else:
+                args = [level, self.target, message, attrs.items() + self._defaultattrs]
+
+            counter = next(self.counter)
+            self.pipe.write(msgpack_packb([counter, EMIT, args]))
+        except Exception:
+            # do not throw error to IOLoop
+            # to prevent side effects
+            pass
+
+    def debug(self, *args):
+        if self.enable_for(DEBUG_LEVEL):
+            self.emit(DEBUG_LEVEL, *args)
+
+    def warn(self, *args):
+        self.warning(self, *args)
+
+    def warning(self, *args):
+        if self.enable_for(WARNING_LEVEL):
+            self.emit(WARNING_LEVEL, *args)
+
+    def info(self, *args):
+        if self.enable_for(INFO_LEVEL):
+            self.emit(INFO_LEVEL, *args)
+
+    def error(self, *args):
+        if self.enable_for(ERROR_LEVEL):
+            self.emit(ERROR_LEVEL, *args)
+
+    def enable_for(self, level):
+        return self.verbosity <= level
+
+    @coroutine
+    def update_verbosity(self):
         counter = next(self.counter)
-        self.pipe.write(msgpack_packb([counter, EMIT, args]))
+        verbosity_request = msgpack_packb([counter, VERBOSITY, []])
+        self.pipe.write(verbosity_request)
+        buff = msgpack_unpacker()
+        while True:
+            data = yield self.pipe.read_bytes(1024, partial=True)
+            buff.feed(data)
+            for msg in buff:
+                _, code, payload = msg[:3]
+                if code == VALUE_CODE:
+                    self.verbosity = payload[0]
+                else:
+                    self.verbosity = DEBUG_LEVEL
+                return
 
     @coroutine
     def connect(self):
@@ -138,6 +164,7 @@ class Logger(object):
                 try:
                     self.pipe = yield TCPClient(io_loop=self.io_loop).connect(host, port)
                     self.pipe.set_nodelay(True)
+                    yield self.update_verbosity()
                     return
                 except IOError:
                     pass
@@ -170,7 +197,7 @@ def resolve_logging(endpoints, name="logging", io_loop=None):
             locator_pipe = yield TCPClient(io_loop=io_loop).connect(host, port)
             locator_pipe.set_nodelay(True)
             request = msgpack_packb([999999, RESOLVE, [name]])
-            yield locator_pipe.write(request)
+            locator_pipe.write(request)
             while True:
                 data = yield locator_pipe.read_bytes(1024, partial=True)
                 buff.feed(data)
@@ -190,17 +217,20 @@ def resolve_logging(endpoints, name="logging", io_loop=None):
 class CocaineHandler(logging.Handler):
     def __init__(self, *args, **kwargs):
         logging.Handler.__init__(self)
-
         self._logger = Logger(*args, **kwargs)
-        self.level_binds = {
-            logging.DEBUG: self._logger.debug,
-            logging.INFO: self._logger.info,
-            logging.WARNING: self._logger.warn,
-            logging.ERROR: self._logger.error
-        }
 
     def emit(self, record):
-        def dummy(*args):  # pragma: no cover
-            pass
-        msg = self.format(record)
-        self.level_binds.get(record.levelno, dummy)(msg)
+        lvl = record.levelno
+        if lvl >= logging.ERROR:
+            # to avoid message formating
+            if self._logger.enable_for(ERROR_LEVEL):
+                self._logger.error(self.format(record))
+        elif lvl >= logging.WARNING:
+            if self._logger.enable_for(WARNING_LEVEL):
+                self._logger.warning(self.format(record))
+        elif lvl >= logging.INFO:
+            if self._logger.enable_for(INFO_LEVEL):
+                self._logger.info(self.format(record))
+        elif lvl >= logging.DEBUG:
+            if self._logger.enable_for(DEBUG_LEVEL):
+                self._logger.debug(self.format(record))

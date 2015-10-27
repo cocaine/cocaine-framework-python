@@ -40,14 +40,15 @@ def test_logger():
         logger.error("ERROR_MSG", {"A": 1, "B": 2})
         logger.debug("GGGGG")
 
-    ioloop.add_timeout(time.time()+3, ioloop.stop)
+        try:
+            l = logging.getLogger("cocaine.testlogger")
+            lh = CocaineHandler()
+            l.setLevel(logging.DEBUG)
+            l.addHandler(lh)
+            l.info("logged via logging %s", "handler")
+        finally:
+            l.removeHandler(lh)
+
+    ioloop.add_timeout(time.time() + 3, ioloop.stop)
     ioloop.add_callback(main)
     ioloop.start()
-
-
-def test_handler():
-    l = logging.getLogger("")
-    lh = CocaineHandler()
-    l.setLevel(logging.DEBUG)
-    l.addHandler(lh)
-    l.info("logged via logging handler")
