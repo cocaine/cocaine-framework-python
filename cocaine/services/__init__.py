@@ -24,6 +24,5 @@
 from ..detail.channel import EmptyResponse
 from ..detail.locator import LOCATOR_DEFAULT_ENDPOINTS, Locator
 from ..detail.service import Service
-from ..detail.service import SyncService
 
-__all__ = ["Service", "SyncService", "Locator", "EmptyResponse", "LOCATOR_DEFAULT_ENDPOINTS"]
+__all__ = ["Service", "Locator", "EmptyResponse", "LOCATOR_DEFAULT_ENDPOINTS"]

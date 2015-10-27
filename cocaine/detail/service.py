@@ -23,7 +23,6 @@ from .baseservice import BaseService
 from .baseservice import TraceAdapter
 from .defaults import Defaults
 from .locator import Locator
-from .util import create_new_io_loop
 
 from ..decorators import coroutine
 # cocaine defined exceptions
@@ -79,22 +78,3 @@ class Service(BaseService):
         if not (self.version == 0 or version == self.version):
             raise InvalidApiVersion(self.name, version, self.version)
         yield super(Service, self).connect(traceid)
-
-
-class SyncService(object):
-    def __init__(self, *args, **kwargs):
-        self._io_loop = kwargs.get("io_loop") or create_new_io_loop()
-        kwargs["io_loop"] = self._io_loop
-        timeout = kwargs.pop("connection_timeout", SYNC_CONNECTION_TIMEOUT)
-        self._service = Service(*args, **kwargs)
-
-        # establish connection
-        self._io_loop.run_sync(self._service.connect, timeout=timeout)
-
-    def __getattr__(self, name):
-        def on_getattr(*args, **kwargs):
-            return self._io_loop.run_sync(lambda: self._service._invoke(name, *args, **kwargs))
-        return on_getattr
-
-    def run_sync(self, future, timeout=None):
-        return self._io_loop.run_sync(lambda: future, timeout=timeout)
