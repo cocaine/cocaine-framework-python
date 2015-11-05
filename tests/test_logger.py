@@ -71,9 +71,10 @@ class LogFormatterTest(unittest.TestCase):
         self.logger._defaultattrs = [("default1", "abc")]
         msg = self.logger.prepare_message_args(100, "format %s %d", "me", 200,
                                                extra={"A": 1, "B": True, 300: [1, 2]})
-        self.assertEqual(msg, [100, self.logger.target,
-                               "format me 200",
-                               [("A", 1), ("B", True), ("300", "[1, 2]"), ('default1', 'abc')]])
+        expected = [100, self.logger.target, "format me 200",
+                    sorted([("A", 1), ("B", True), ("300", "[1, 2]"), ('default1', 'abc')])]
+        msg[3].sort()
+        self.assertEqual(msg, expected)
 
     def test_bad_format_args(self):
         msg = self.logger.prepare_message_args(100, "format %s %d", "me")
