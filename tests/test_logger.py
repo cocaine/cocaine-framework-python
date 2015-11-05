@@ -23,6 +23,7 @@ import logging
 import time
 
 from tornado.ioloop import IOLoop
+from tornado.test.util import unittest
 
 from cocaine.logger import Logger
 from cocaine.logger import CocaineHandler
@@ -34,10 +35,10 @@ def test_logger():
     assert logger is Logger()
 
     def main():
-        logger.debug("debug_msg", extra={"A": 1, "B": 2})
+        logger.debug("debug_msg", extra={"A": 1, "B": 2.0})
         logger.info("info_msg", extra={"A": 1, "B": 2})
-        logger.warning("warning_msg", extra={"A": 1, "B": 2})
-        logger.error("error_msg", extra={"A": 1, "B": 2})
+        logger.warning("warning_msg", extra={"A": 1, "B": 2.4})
+        logger.error("error_msg", extra={"A": 1, "BoolFlag": False})
         logger.debug("debug_mesg")
 
         logger.info("message without attributes")
@@ -59,3 +60,22 @@ def test_logger():
     ioloop.add_timeout(time.time() + 3, ioloop.stop)
     ioloop.add_callback(main)
     ioloop.start()
+
+
+class LogFormatterTest(unittest.TestCase):
+    def setUp(self):
+        self.logger = Logger()
+
+    def test_default_format_with_args(self):
+        self.addCleanup(lambda: setattr(self.logger, "_defaultattrs", []))
+        self.logger._defaultattrs = [("default1", "abc")]
+        msg = self.logger.prepare_message_args(100, "format %s %d", "me", 200,
+                                               extra={"A": 1, "B": True, 300: [1, 2]})
+        self.assertEqual(msg, [100, self.logger.target,
+                               "format me 200",
+                               [("A", 1), ("B", True), ("300", "[1, 2]"), ('default1', 'abc')]])
+
+    def test_bad_format_args(self):
+        msg = self.logger.prepare_message_args(100, "format %s %d", "me")
+        self.assertEqual(len(msg), 3)
+        self.assertTrue(msg[2].startswith("unformatted:"))

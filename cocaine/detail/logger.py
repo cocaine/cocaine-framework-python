@@ -96,9 +96,28 @@ class Logger(object):
 
         try:
             uuid = Defaults.uuid
-            self._defaultattrs = [["uuid", uuid]]
+            self._defaultattrs = [("uuid", uuid)]
         except GetOptError:
             self._defaultattrs = []
+
+    def prepare_message_args(self, level, message, *args, **kwargs):
+        if args:
+            try:
+                message %= args
+            except Exception:
+                message = "unformatted: %s %s" % (message, args)
+                level = ERROR_LEVEL
+
+        if "extra" not in kwargs:
+            if self._defaultattrs:
+                msg = [level, self.target, message, self._defaultattrs]
+            else:
+                msg = [level, self.target, message]
+        else:
+            attrs = [(str(k), (v if isinstance(v, ATTRS_TYPES) else str(v))) for k, v in kwargs["extra"].items()]
+            msg = [level, self.target, message, attrs + self._defaultattrs]
+
+        return msg
 
     @coroutine
     def emit(self, level, message, *args, **kwargs):
@@ -116,24 +135,9 @@ class Logger(object):
             if not self._connected:
                 yield self.connect()
 
-            if args:
-                try:
-                    message %= args
-                except Exception:
-                    message = "unformatted: %s %s" % (message, args)
-                    level = ERROR_LEVEL
-
-            if "extra" not in kwargs:
-                if self._defaultattrs:
-                    args = [level, self.target, message, self._defaultattrs]
-                else:
-                    args = [level, self.target, message]
-            else:
-                attrs = [(str(k), (v if isinstance(v, ATTRS_TYPES) else str(v))) for k, v in kwargs["extra"].items()]
-                args = [level, self.target, message, attrs + self._defaultattrs]
-
+            msg = self.prepare_message_args(level, message, *args, **kwargs)
             counter = next(self.counter)
-            self.pipe.write(msgpack_packb([counter, EMIT, args]))
+            self.pipe.write(msgpack_packb([counter, EMIT, msg]))
         except Exception:
             # do not throw error to IOLoop
             # to prevent side effects
