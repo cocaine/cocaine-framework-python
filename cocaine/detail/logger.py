@@ -22,6 +22,7 @@
 import functools
 import itertools
 import logging
+import sys
 import threading
 
 from tornado import gen
@@ -53,6 +54,12 @@ VALUE_CODE = 0
 ERROR_CODE = 1
 assert API.Logger[EMIT][0] == "emit"
 assert API.Locator[RESOLVE][0] == "resolve"
+
+
+if sys.version_info[0] == 2:
+    ATTRS_TYPES = (str, unicode, int, float, long, bool)
+else:
+    ATTRS_TYPES = (str, int, float, bool)
 
 
 def thread_once(class_init):
@@ -94,18 +101,36 @@ class Logger(object):
             self._defaultattrs = []
 
     @coroutine
-    def emit(self, level, message, attrs=None):
+    def emit(self, level, message, *args, **kwargs):
+        """ Send a message lazy formatted with args.
+        External log attributes can be passed via named attribute `extra`,
+        like in logging from the standart library.
+
+        Note:
+            * Attrs must be dict, otherwise the whole message would be skipped.
+            * The key field in an attr is converted to string.
+            * The value is sent as is if isinstance of (str, unicode, int, float, long, bool),
+              otherwise we convert the value to string.
+        """
         try:
             if not self._connected:
                 yield self.connect()
 
-            if not attrs:
+            if args:
+                try:
+                    message %= args
+                except Exception:
+                    message = "unformatted: %s %s" % (message, args)
+                    level = ERROR_LEVEL
+
+            if "extra" not in kwargs:
                 if self._defaultattrs:
                     args = [level, self.target, message, self._defaultattrs]
                 else:
                     args = [level, self.target, message]
             else:
-                args = [level, self.target, message, attrs.items() + self._defaultattrs]
+                attrs = [(str(k), (v if isinstance(v, ATTRS_TYPES) else str(v))) for k, v in kwargs["extra"].items()]
+                args = [level, self.target, message, attrs + self._defaultattrs]
 
             counter = next(self.counter)
             self.pipe.write(msgpack_packb([counter, EMIT, args]))
@@ -114,24 +139,24 @@ class Logger(object):
             # to prevent side effects
             pass
 
-    def debug(self, *args):
+    def debug(self, message, *args, **kwargs):
         if self.enable_for(DEBUG_LEVEL):
-            self.emit(DEBUG_LEVEL, *args)
+            self.emit(DEBUG_LEVEL, message, *args, **kwargs)
 
-    def warn(self, *args):
-        self.warning(self, *args)
+    def warn(self, message, *args, **kwargs):
+        self.warning(self, message, *args, **kwargs)
 
-    def warning(self, *args):
+    def warning(self, message, *args, **kwargs):
         if self.enable_for(WARNING_LEVEL):
-            self.emit(WARNING_LEVEL, *args)
+            self.emit(WARNING_LEVEL, message, *args, **kwargs)
 
-    def info(self, *args):
+    def info(self, message, *args, **kwargs):
         if self.enable_for(INFO_LEVEL):
-            self.emit(INFO_LEVEL, *args)
+            self.emit(INFO_LEVEL, message, *args, **kwargs)
 
-    def error(self, *args):
+    def error(self, message, *args, **kwargs):
         if self.enable_for(ERROR_LEVEL):
-            self.emit(ERROR_LEVEL, *args)
+            self.emit(ERROR_LEVEL, message, *args, **kwargs)
 
     def enable_for(self, level):
         return self.verbosity <= level
@@ -160,7 +185,7 @@ class Logger(object):
                 return
 
             for host, port in (yield resolve_logging(self.endpoints, self._name,
-                               self.io_loop)):
+                                                     self.io_loop)):
                 try:
                     self.pipe = yield TCPClient(io_loop=self.io_loop).connect(host, port)
                     self.pipe.set_nodelay(True)

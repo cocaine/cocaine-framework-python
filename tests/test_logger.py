@@ -34,11 +34,18 @@ def test_logger():
     assert logger is Logger()
 
     def main():
-        logger.debug("DEBUG_MSG", {"A": 1, "B": 2})
-        logger.info("INFO_MSG", {"A": 1, "B": 2})
-        logger.warning("WARNING_MSG", {"A": 1, "B": 2})
-        logger.error("ERROR_MSG", {"A": 1, "B": 2})
-        logger.debug("GGGGG")
+        logger.debug("debug_msg", extra={"A": 1, "B": 2})
+        logger.info("info_msg", extra={"A": 1, "B": 2})
+        logger.warning("warning_msg", extra={"A": 1, "B": 2})
+        logger.error("error_msg", extra={"A": 1, "B": 2})
+        logger.debug("debug_mesg")
+
+        logger.info("message without attributes")
+        logger.error("message with converted attributes", extra={1: "BAD_ATTR"})
+        logger.error("message with bad extra", extra=("A", "B"))
+        logger.error("message with bad extra", extra={"ATTR": [1, 2, 3]})
+        logger.error("format %s %d", "str", 100, extra={"level": "error"})
+        logger.info("badformat %s %d", "str", extra={"level": "error"})
 
         try:
             l = logging.getLogger("cocaine.testlogger")
