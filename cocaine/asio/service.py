@@ -177,7 +177,7 @@ class AbstractService(object):
                 self._ioLoop = self._pipe._ioLoop
                 self._writableStream = WritableStream(self._ioLoop, self._pipe)
                 self._readableStream = ReadableStream(self._ioLoop, self._pipe)
-                self._ioLoop.bind_on_fd(self._pipe.fileno())
+                self._ioLoop.bind_on_fd(self._pipe)
 
                 def decode_and_dispatch(on_event):
                     def dispatch(unpacker):

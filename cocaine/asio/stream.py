@@ -85,7 +85,7 @@ class ReadableStream(object):
 
             self._callback = callback
             self._on_pipe_closed = on_pipe_closed
-            self._attached = self._loop.register_read_event(self._on_event, self._pipe.fileno())
+            self._attached = self._loop.register_read_event(self._on_event, self._pipe)
 
     def unbind(self):
         with self._lock:
@@ -94,7 +94,7 @@ class ReadableStream(object):
 
             self._callback = None
             if self._attached:
-                self._loop.unregister_read_event(self._pipe.fileno())
+                self._loop.unregister_read_event(self._pipe)
 
     def reconnect(self, pipe):
         with self._lock:
@@ -160,7 +160,7 @@ class WritableStream(object):
         if len(self._buffer) == 0:
             # Be sure that socket is in a proper connected state
             if self._attached:
-                self._loop.unregister_write_event(self._pipe.fileno())
+                self._loop.unregister_write_event(self._pipe)
                 self._attached = False
             return
 
@@ -185,12 +185,12 @@ class WritableStream(object):
             self._process_events()
 
             if not self._attached and self._pipe.isConnected():
-                self._loop.register_write_event(self._on_event, self._pipe.fileno())
+                self._loop.register_write_event(self._on_event, self._pipe)
                 self._attached = True
 
     def reconnect(self, pipe):
         with self._lock:
             self._pipe = pipe
-            self._loop.register_write_event(self._on_event, self._pipe.fileno())
+            self._loop.register_write_event(self._on_event, self._pipe)
             self._attached = True
             self._tx_offset = 0

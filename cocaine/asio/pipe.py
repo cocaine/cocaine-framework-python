@@ -77,7 +77,7 @@ class Pipe(object):
         except socket.error as err:
             if err.errno in (errno.EINPROGRESS, errno.EWOULDBLOCK):
                 callback = functools.partial(self._onConnectedCallback, address)
-                self._ioLoop.add_handler(self.sock.fileno(), callback, self._ioLoop.WRITE)
+                self._ioLoop.add_handler(self.sock, callback, self._ioLoop.WRITE)
                 if timeout:
                     start = time.time()
                     errorback = functools.partial(self._onConnectionTimeout, address)
@@ -94,7 +94,7 @@ class Pipe(object):
             return
         self._state = self.NOT_CONNECTED
         self.address = None
-        self._ioLoop.stop_listening(self.sock.fileno())
+        self._ioLoop.stop_listening(self.sock)
         self.sock.close()
 
     def _onConnectionTimeout(self, address):
@@ -124,7 +124,7 @@ class Pipe(object):
             self._state = self.CONNECTED
             self.address = address
             removeConnectionTimeout()
-            self._ioLoop.stop_listening(self.sock.fileno())
+            self._ioLoop.stop_listening(self.sock)
             df.trigger(None)
         elif err not in (errno.EINPROGRESS, errno.EAGAIN, errno.EALREADY):
             self.close()

@@ -293,7 +293,7 @@ class Chain(object):
         """
         if not functions:
             functions = []
-        self._io_loop = ioLoop or IOLoop.current()
+        self._io_loop = IOLoop.current()
         self.items = []
         for func in functions:
             self.then(func)

@@ -60,7 +60,7 @@ def async_subprocess(command, callbacks=None, cwd=None, io_loop=None):
         return handle
 
     for fh, callback in zip(fhs, callbacks):
-        io_loop.add_handler(fh.fileno(), create_handler(fh, callback), io_loop.READ)
+        io_loop.add_handler(fh, create_handler(fh, callback), io_loop.READ)
     return deferred
 
 

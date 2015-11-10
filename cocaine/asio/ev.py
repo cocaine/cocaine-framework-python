@@ -50,11 +50,15 @@ class Loop(object):
 
     @staticmethod
     def instance():
-        if not hasattr(Loop, "_instance"):
-            with Loop._instance_lock:
-                if not hasattr(Loop, "_instance"):
-                    Loop._instance = Loop()
-        return Loop._instance
+        with Loop._instance_lock:
+            if not hasattr(Loop, "_instance"):
+                Loop._instance = Loop()
+                return Loop._instance
+
+            loop = Loop._instance
+            if loop._ioloop is not ev.IOLoop.current():
+                loop._ioloop = ev.IOLoop.current()
+        return loop
 
     def run(self):
         self._ioloop.start()
@@ -73,44 +77,53 @@ class Loop(object):
     def bind_on_fd(self, fd):
         def dummy(*args):
             pass
-        self._ioloop.add_handler(fd, self.proxy, self._ioloop.READ)
+        fd, obj = self._ioloop.split_fd(fd)
+        self._ioloop.add_handler(obj, self.proxy, self._ioloop.READ)
         self._fd_events[fd] = self._ioloop.READ
         self._callbacks[(fd, self.READ)] = dummy
 
     def _register_event(self, fd, event):
+        fd, obj = self._ioloop.split_fd(fd)
         self._fd_events[fd] |= event
-        self._ioloop.update_handler(fd, self._fd_events[fd])
+        self._ioloop.update_handler(obj, self._fd_events[fd])
 
     def _unregister_event(self, fd, event):
+        fd, obj = self._ioloop.split_fd(fd)
         self._fd_events[fd] ^= event
-        self._ioloop.update_handler(fd, self._fd_events[fd])
+        self._ioloop.update_handler(obj, self._fd_events[fd])
 
     def register_write_event(self, callback, fd):
-        self._register_event(fd, self.WRITE)
+        fd, obj = self._ioloop.split_fd(fd)
+        self._register_event(obj, self.WRITE)
         self._callbacks[(fd, self.WRITE)] = callback
         return True
 
     def unregister_write_event(self, fd):
-        self._unregister_event(fd, self.WRITE)
+        fd, obj = self._ioloop.split_fd(fd)
+        self._unregister_event(obj, self.WRITE)
         return True
 
     def register_read_event(self, callback, fd):
-        self._register_event(fd, self.READ)
+        fd, obj = self._ioloop.split_fd(fd)
+        self._register_event(obj, self.READ)
         self._callbacks[(fd, self.READ)] = callback
         return True
 
     def unregister_read_event(self, fd):
-        self._unregister_event(fd, self.READ)
+        fd, obj = self._ioloop.split_fd(fd)
+        self._unregister_event(obj, self.READ)
         return True
 
     def stop_listening(self, fd):
-        self._ioloop.remove_handler(fd)
+        fd, obj = self._ioloop.split_fd(fd)
+        self._ioloop.remove_handler(obj)
         self._callbacks.pop((fd, self.READ), None)
         self._callbacks.pop((fd, self.WRITE), None)
         self._fd_events.pop(fd, None)
         return True
 
     def proxy(self, fd, event):
+        fd, obj = self._ioloop.split_fd(fd)
         if event & self.WRITE:
             self._callbacks[(fd, self.WRITE)]()
         if event & self.READ:
