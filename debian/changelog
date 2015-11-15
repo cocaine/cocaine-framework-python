@@ -1,3 +1,10 @@
+cocaine-framework-python (0.11.1.15) unstable; urgency=low
+
+  * [Service] Add use_cache flag
+  * [AUX] Pass socket as Object not as fd to eventloop to support tests
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Sun, 15 Nov 2015 14:21:17 +0300
+
 cocaine-framework-python (0.11.1.13) unstable; urgency=low
 
   * [Service] Fix bug with recurrent raising of AttributeError
