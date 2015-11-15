@@ -397,12 +397,13 @@ class Service(AbstractService):
     """
     _locator_cache = {}
 
-    def __init__(self, name, blockingConnect=True, host=None, port=None):
+    def __init__(self, name, blockingConnect=True, host=None, port=None, use_cache=True):
         super(Service, self).__init__(name)
         host = host or LOCATOR_DEFAULT_HOST
         port = port or LOCATOR_DEFAULT_PORT
         self.host = None
         self.port = None
+        self.use_cache = use_cache
 
         if not blockingConnect and any([host != LOCATOR_DEFAULT_HOST, port != LOCATOR_DEFAULT_PORT]):
             raise ValueError('you should not specify locator address in __init__ while performing non-blocking connect')
@@ -428,7 +429,9 @@ class Service(AbstractService):
         # Is it good?
         self.locator_timeout = timeout
 
-        if (self.host, self.port) not in self._locator_cache:
+        if not self.use_cache:
+            locator = Locator()
+        elif (self.host, self.port) not in self._locator_cache:
             locator = Locator()
             self._locator_cache[(self.host, self.port)] = locator
         else:
@@ -439,8 +442,8 @@ class Service(AbstractService):
                 yield locator.connect(self.host, self.port, timeout, blocking=blocking)
             yield self.connectThroughLocator(locator, timeout, blocking=blocking)
         finally:
-            pass
-            # locator.disconnect()
+            if not self.use_cache:
+                locator.disconnect()
 
     @strategy.coroutine
     def connectThroughLocator(self, locator, timeout=None, blocking=False):
