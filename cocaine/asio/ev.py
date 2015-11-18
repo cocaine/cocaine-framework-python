@@ -89,8 +89,10 @@ class Loop(object):
 
     def _unregister_event(self, fd, event):
         fd, obj = self._ioloop.split_fd(fd)
-        self._fd_events[fd] ^= event
-        self._ioloop.update_handler(obj, self._fd_events[fd])
+        # unregister the event only if it presents
+        if self._fd_events.get(fd, 0) & event:
+            self._fd_events[fd] ^= event
+            self._ioloop.update_handler(obj, self._fd_events[fd])
 
     def register_write_event(self, callback, fd):
         fd, obj = self._ioloop.split_fd(fd)
