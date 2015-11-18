@@ -108,7 +108,9 @@ class Pipe(object):
             df.error(ConnectionTimeoutError(address, timeout))
 
     def _onConnectedCallback(self, address, fd, event):
-        assert fd == self.sock.fileno(), 'Incoming fd must be socket fd'
+        # since tornado 4.0 we register event in ioloop by socket
+        # not by fd, so we will receive socket in this callback
+        assert fd is self.sock, 'Incoming fd must be our socket'
         assert (event & self._ioLoop.WRITE) or (event & self._ioLoop.ERROR), 'Event must be either write or error'
 
         def removeConnectionTimeout():
