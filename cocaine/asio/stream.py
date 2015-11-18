@@ -23,7 +23,6 @@ import sys
 import threading
 
 from cocaine.asio.exceptions import IllegalStateError
-from cocaine.utils import weakmethod
 
 
 major = sys.version_info[0]
@@ -102,7 +101,6 @@ class ReadableStream(object):
             self._buffer = msgpack.Unpacker()
             self.bind(self._callback)
 
-    @weakmethod
     def _on_event(self):
         with self._lock:
             if self._pipe is None:
@@ -150,7 +148,6 @@ class WritableStream(object):
         self._tx_offset = 0
         self._lock = threading.Lock()
 
-    @weakmethod
     def _on_event(self):
         with self._lock:
             self._process_events()
