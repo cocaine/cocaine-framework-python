@@ -1,3 +1,9 @@
+cocaine-framework-python (0.11.1.17) unstable; urgency=low
+
+  * [Pipe] Bugfix: fix broken assert condition
+
+ -- Anton Tyurin <noxiouz@yandex-team.ru>  Thu, 19 Nov 2015 00:20:31 +0300
+
 cocaine-framework-python (0.11.1.16) unstable; urgency=low
 
   * [EV] Bugfix: Unregister event only if it presents
