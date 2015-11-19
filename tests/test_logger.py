@@ -38,6 +38,7 @@ def test_logger():
         logger.debug("debug_msg", extra={"A": 1, "B": 2.0})
         logger.info("info_msg", extra={"A": 1, "B": 2})
         logger.warning("warning_msg", extra={"A": 1, "B": 2.4})
+        logger.warn("warn_msg", extra={"A": 1, "B": 2.4})
         logger.error("error_msg", extra={"A": 1, "BoolFlag": False})
         logger.debug("debug_mesg")
 

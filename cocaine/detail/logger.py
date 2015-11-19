@@ -148,7 +148,7 @@ class Logger(object):
             self.emit(DEBUG_LEVEL, message, *args, **kwargs)
 
     def warn(self, message, *args, **kwargs):
-        self.warning(self, message, *args, **kwargs)
+        self.warning(message, *args, **kwargs)
 
     def warning(self, message, *args, **kwargs):
         if self.enable_for(WARNING_LEVEL):
