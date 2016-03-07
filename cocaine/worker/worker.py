@@ -35,7 +35,7 @@ from .response import ResponseStream
 from ..common import CocaineErrno
 from ..decorators import coroutine
 from ..detail.defaults import Defaults
-from ..detail.io import Timer
+from ..detail.iotimer import Timer
 from ..detail.log import workerlog
 from ..detail.util import msgpack_unpacker
 
