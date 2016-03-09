@@ -34,8 +34,32 @@ SYNC_CONNECTION_TIMEOUT = 5
 
 
 class Service(BaseService):
+    r"""Helper to interact with any Cocaine service.
+
+    Creating new object does NOT establish a network connection.
+    Service reestablishes the connection if it is not connected to Cocaine
+    when any of its methods is being calling.
+    """
     def __init__(self, name, endpoints=LOCATOR_DEFAULT_ENDPOINT,
                  seed=None, version=0, locator=None, io_loop=None, timeout=0):
+        r"""Prepares new Service object.
+
+        .. note::
+
+            It never establishes any network connection in this method.
+            The service is not resolved here.
+
+        :param name: the name of the service
+        :type name: str
+
+        :param endpoints: list of suggested locator endpoints ("host", port).
+        :type endpoints: tuple or list
+
+        :param seed: seed is used to pin up a service version in case of resolving via routing group
+        :type seed: int
+
+        :param locator: Locator can be passed for resolving. The locator suppresses `endpoints` options.
+        """
         super(Service, self).__init__(name=name, endpoints=LOCATOR_DEFAULT_ENDPOINT, io_loop=io_loop)
         self.locator_endpoints = endpoints
         self.locator = locator
@@ -48,6 +72,15 @@ class Service(BaseService):
 
     @coroutine
     def connect(self, traceid=None):
+        r"""Connect resolves a service if the service is not connected.
+
+        This method is supposed to be called rarely by a user
+        as the framework keeps a conenction state.
+        But if you need to get rid of connection delay, this method could be called explicitly.
+
+        :param traceid: this value wiil be attached to logs of a connection process.
+        :type traceid: int
+        """
         log = TraceAdapter(self.log, {"traceid": traceid}) if traceid else self.log
 
         log.debug("checking if service connected")

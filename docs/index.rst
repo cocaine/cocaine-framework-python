@@ -17,17 +17,7 @@ This documentation is for cocaine-framework-python.
 * Page on PyPI: https://pypi.python.org/pypi/cocaine
 * Repository: https://github.com/cocaine/cocaine-framework-python
 * Cocaine-tools: https://github.com/cocaine/cocaine-tools
-* Requires at least Python 2.6
-
-
-More documentation
--------------------
-
-.. toctree::
-   :maxdepth: 1
-
-   cocaine
-
+* Requires at least Python 2.7
 
 Features
 -------------------
@@ -35,10 +25,16 @@ Features
 * Possibility to write cocaine workers
 * Wide support of asynchronous event-driven usage
 * Ready for usage with cloud services
-* Lots of examples included
-* Provided with `cocaine-tools <https://github.com/cocaine/cocaine-tools>`_ and embedded cocaine proxy
-* PyPy support
+* PyPy and Python 3.* support
 
+More documentation
+-------------------
+
+.. toctree::
+   :titlesonly:
+
+   workerapi
+   clientapi
 
 Quick example
 -------------------
