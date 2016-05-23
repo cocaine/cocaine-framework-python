@@ -31,7 +31,7 @@ from cocaine.detail.channel import primitive_protocol, streaming_protocol, null_
 from cocaine.detail.channel import ProtocolError
 from cocaine.detail.channel import Rx, Tx
 from cocaine.exceptions import ChokeEvent
-from cocaine.exceptions import ConnectionError
+from cocaine.exceptions import ServiceConnectionError, DisconnectionError
 from cocaine.exceptions import InvalidMessageType
 from cocaine.exceptions import ServiceError
 from cocaine.worker.request import Stream, RequestError
@@ -217,11 +217,11 @@ def test_current_ioloop():
     io_l.start()
 
 
-def test_connection_error():
-    resolve_info = socket.getaddrinfo("localhost", 10053)
-    for item in resolve_info:
-        ConnectionError(item[-1], "Test")
-    ConnectionError("UnixDomainSocket", "Test")
+@tools.raises(ServiceConnectionError)
+def test_service_connection_error():
+    io = IOLoop.current()
+    bs = BaseService("testService", [("127.0.0.1", 30000), ("127.0.0.1", 30001)])
+    io.run_sync(bs.connect)
 
 
 @tools.raises(RequestError)
