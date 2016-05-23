@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.6.0) unstable; urgency=low
+
+  * [Service] Connection error contains info about endpoints/reasons
+
+ -- Anton Tyurin <noxiouz@yandex-team.net>  Mon, 23 May 2016 17:22:50 +0300
+
 cocaine-framework-python (0.12.5.1) unstable; urgency=low
 
   * [Logger] Bugfix: fix warn method
