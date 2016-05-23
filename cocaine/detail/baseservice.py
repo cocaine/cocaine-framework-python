@@ -37,7 +37,7 @@ from .log import servicelog
 from .trace import pack_trace
 from .util import generate_service_id, msgpack_packb, msgpack_unpacker
 from ..decorators import coroutine
-from ..exceptions import DisconnectionError
+from ..exceptions import DisconnectionError, ServiceConnectionError
 
 
 class TraceAdapter(logging.LoggerAdapter):
@@ -97,6 +97,7 @@ class BaseService(object):
 
             start_time = time.time()
 
+            conn_statuses = []
             for host, port in self.endpoints:
                 try:
                     log.info("trying %s:%d to establish connection %s", host, port, self.name)
@@ -108,13 +109,15 @@ class BaseService(object):
                                                streaming_callback=functools.partial(weak_wrapper, weakref.ref(self), "on_read"))
                 except Exception as err:
                     log.error("connection error %s", err)
+                    conn_statuses.append((host, port, err))
                 else:
                     self.address = (host, port)
                     connection_time = (time.time() - start_time) * 1000
                     log.info("connection has been established successfully %.3fms" % connection_time)
                     return
 
-            raise Exception("unable to establish connection")
+            raise ServiceConnectionError("unable to establish connection: " +
+                                         ", ".join(("%s:%d %s" % (host, port, err) for (host, port, err) in conn_statuses)))
 
     def disconnect(self):
         self.log.debug("disconnect has been called %s", self.name)
