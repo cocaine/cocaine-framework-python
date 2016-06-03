@@ -21,6 +21,7 @@
 
 from cocaine.detail.logger import CocaineHandler
 from cocaine.detail.logger import Logger
+from cocaine.detail.logger import LoggerWithExtraInRecord
 
 
-__all__ = ["Logger", "CocaineHandler"]
+__all__ = ["Logger", "LoggerWithExtraInRecord", "CocaineHandler"]

@@ -250,16 +250,25 @@ class CocaineHandler(logging.Handler):
 
     def emit(self, record):
         lvl = record.levelno
+        extra = getattr(record, "extra", {})
         if lvl >= logging.ERROR:
             # to avoid message formating
             if self._logger.enable_for(ERROR_LEVEL):
-                self._logger.error(self.format(record))
+                self._logger.error(self.format(record), extra=extra)
         elif lvl >= logging.WARNING:
             if self._logger.enable_for(WARNING_LEVEL):
-                self._logger.warning(self.format(record))
+                self._logger.warning(self.format(record), extra=extra)
         elif lvl >= logging.INFO:
             if self._logger.enable_for(INFO_LEVEL):
-                self._logger.info(self.format(record))
+                self._logger.info(self.format(record), extra=extra)
         elif lvl >= logging.DEBUG:
             if self._logger.enable_for(DEBUG_LEVEL):
-                self._logger.debug(self.format(record))
+                self._logger.debug(self.format(record), extra=extra)
+
+
+class LoggerWithExtraInRecord(logging.getLoggerClass()):
+    def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None, extra=None):  # noqa
+        rv = super(LoggerWithExtraInRecord, self).makeRecord(name, level, fn, lno, msg, args, exc_info, func, extra)
+        if extra is not None:
+            rv.__dict__["extra"] = extra
+        return rv
