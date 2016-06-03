@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.6.1) unstable; urgency=low
+
+  * [Logging] Allow CocaineHandler to write structured logs
+
+ -- Anton Tyurin <noxiouz@yandex-team.net>  Fri, 03 Jun 2016 13:16:55 +0300
+
 cocaine-framework-python (0.12.6.0) unstable; urgency=low
 
   * [Service] Connection error contains info about endpoints/reasons
