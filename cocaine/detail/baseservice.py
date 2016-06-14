@@ -42,7 +42,8 @@ from ..exceptions import DisconnectionError, ServiceConnectionError
 
 class TraceAdapter(logging.LoggerAdapter):
     def process(self, msg, kwargs):
-        return '%s\t%s' % (self.extra["traceid"], msg), kwargs
+        kwargs.setdefault("extra", {}).update(self.extra)
+        return msg, kwargs
 
 
 def weak_wrapper(weak_service, method_name, *args, **kwargs):
@@ -88,7 +89,7 @@ class BaseService(object):
         if self._connected:
             return
 
-        log = TraceAdapter(self.log, {"traceid": traceid}) if traceid else self.log
+        log = TraceAdapter(self.log, {"trace_id": traceid}) if traceid else self.log
 
         log.info("acquiring the connection lock")
         with (yield self._lock.acquire()):
