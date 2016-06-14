@@ -48,7 +48,7 @@ class Service(BaseService):
 
     @coroutine
     def connect(self, traceid=None):
-        log = TraceAdapter(self.log, {"traceid": traceid}) if traceid else self.log
+        log = TraceAdapter(self.log, {"trace_id": traceid}) if traceid else self.log
 
         log.debug("checking if service connected")
         if self._connected:
