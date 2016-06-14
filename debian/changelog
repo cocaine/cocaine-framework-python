@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.6.2) unstable; urgency=low
+
+  * [Logging] TraceAdapter add trace_id to extra
+
+ -- Anton Tyurin <noxiouz@yandex-team.net>  Tue, 14 Jun 2016 17:25:30 +0300
+
 cocaine-framework-python (0.12.6.1) unstable; urgency=low
 
   * [Logging] Allow CocaineHandler to write structured logs
