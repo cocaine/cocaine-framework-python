@@ -149,6 +149,7 @@ class BaseService(object):
             try:
                 session, message_type, payload = msg[:3]  # skip extra fields
                 self.log.debug("%s, %d, %.300s", session, message_type, payload)
+                headers = msg[3] if len(msg) > 3 else None
             except Exception as err:
                 self.log.error("malformed message: `%s` %s", err, str(msg))
                 continue
@@ -158,7 +159,7 @@ class BaseService(object):
                 self.log.warning("unknown session number: `%d`", session)
                 continue
 
-            rx.push(message_type, payload)
+            rx.push(message_type, payload, headers)
             if rx.closed():
                 del self.sessions[session]
 

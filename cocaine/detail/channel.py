@@ -27,6 +27,7 @@ from tornado.iostream import StreamClosedError
 from tornado.queues import Queue
 
 
+from .headers import CocaineHeaders
 from .trace import pack_trace
 from .util import msgpack_packb
 from ..common import CocaineErrno
@@ -94,7 +95,7 @@ class PrettyPrintable(object):
 
 
 class Rx(PrettyPrintable):
-    def __init__(self, rx_tree, io_loop=None, servicename=None):
+    def __init__(self, rx_tree, io_loop=None, servicename=None, raw_headers=None):
         # If it's not the main thread
         # and a current IOloop doesn't exist here,
         # IOLoop.instance becomes self._io_loop
@@ -104,6 +105,8 @@ class Rx(PrettyPrintable):
         self.servicename = servicename
         self.rx_tree = rx_tree
         self.default_protocol = detect_protocol_type(rx_tree)
+        self._headers = CocaineHeaders()
+        self._current_headers = self._headers.merge(raw_headers)
 
     @coroutine
     def get(self, timeout=0, protocol=None):
@@ -123,7 +126,8 @@ class Rx(PrettyPrintable):
         if protocol is None:
             protocol = self.default_protocol
 
-        name, payload = item
+        name, payload, raw_headers = item
+        self._current_headers = self._headers.merge(raw_headers)
         res = protocol(name, payload)
         if isinstance(res, ProtocolError):
             raise ServiceError(self.servicename, res.reason,
@@ -134,7 +138,7 @@ class Rx(PrettyPrintable):
     def done(self):
         self._done = True
 
-    def push(self, msg_type, payload):
+    def push(self, msg_type, payload, raw_headers):
         dispatch = self.rx_tree.get(msg_type)
         log.debug("dispatch %s %.300s", dispatch, payload)
         if dispatch is None:
@@ -142,7 +146,7 @@ class Rx(PrettyPrintable):
                                      "unexpected message type %s" % msg_type)
         name, rx = dispatch
         log.debug("name `%s` rx `%s`", name, rx)
-        self._queue.put_nowait((name, payload))
+        self._queue.put_nowait((name, payload, raw_headers))
         if rx == {}:  # the last transition
             self.done()
         elif rx is not None:  # not a recursive transition
@@ -157,6 +161,10 @@ class Rx(PrettyPrintable):
     def _format(self):
         return "name: %s, queue: %s, done: %s" % (
             self.servicename, self._queue, self._done)
+
+    @property
+    def headers(self):
+        return self._current_headers
 
 
 class Tx(PrettyPrintable):

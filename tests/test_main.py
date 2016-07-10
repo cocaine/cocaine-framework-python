@@ -139,20 +139,20 @@ class TestRx(object):
     @tools.raises(ServiceError)
     def test_rx_error_branch(self):
         rx = Rx(self.rx_tree)
-        rx.push(1, [(-199, 42), "dummy_error"])
+        rx.push(1, [(-199, 42), "dummy_error"], None)
         self.io.run_sync(rx.get)
 
     @tools.raises(ChokeEvent)
     def test_rx_done(self):
         rx = Rx(self.rx_tree)
-        rx.push(2, [])
+        rx.push(2, [], None)
         self.io.run_sync(lambda: rx.get(timeout=1))
         self.io.run_sync(rx.get)
 
     @tools.raises(ChokeEvent)
     def test_rx_done_empty_queue(self):
         rx = Rx(self.rx_tree)
-        rx.push(1, [(-199, 32), "DUMMY"])
+        rx.push(1, [(-199, 32), "DUMMY"], None)
         try:
             self.io.run_sync(rx.get)
         except Exception:
@@ -163,7 +163,7 @@ class TestRx(object):
     def test_rx_unexpected_msg_type(self):
         io = IOLoop.current()
         rx = Rx(self.rx_tree)
-        rx.push(4, [])
+        rx.push(4, [], None)
         io.run_sync(rx.get)
 
     @tools.raises(ChokeEvent)
