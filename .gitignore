@@ -14,6 +14,7 @@ docs/_build
 manpages/
 *.egg-info/
 *.egg
+.eggs/
 cocaine_toolc
 .tox/
 .coverage

@@ -71,9 +71,13 @@ def test_worker_v1():
             return res
         return wrapper
 
+    ping_headers = {}
+
     def ping(request, response):
+        ping_headers["Invoke_headers"] = request.headers
         res.append(1)
         inc = yield request.read()
+        ping_headers["After_chunk_headers"] = request.headers
         res.append(2)
         res.append(inc)
         with response:
@@ -126,6 +130,9 @@ def test_worker_v1():
            "http": wsgi(wsgi_app)})
 
     assert res[:4] == [1, 2, 'pong', 3], res[:4]
+    assert ping_headers["Invoke_headers"]["trace_id"] == "\x00\x00\x00\x00\x00\x00\x00\x00"
+    assert ping_headers["Invoke_headers"]["PING"] == "A"
+    assert ping_headers["After_chunk_headers"]["PING"] == "B"
     assert wsgi_res["body"] == ["Method POST", "A"], wsgi_res
     assert wsgi_res["status"] == '200 OK', wsgi_res
     assert wsgi_res["headers"] == [('Content-Type', 'text/plain'), ('Content-Length', '11')], wsgi_res["headers"]

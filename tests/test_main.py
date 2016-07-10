@@ -227,15 +227,15 @@ def test_service_connection_error():
 @tools.raises(RequestError)
 def test_stream():
     io = IOLoop.current()
-    stream = Stream()
-    stream.error((0, 100), "TESTERROR")
+    stream = Stream(None)
+    stream.error((0, 100), "TESTERROR", None)
     io.run_sync(stream.get)
 
 
 @tools.raises(gen.TimeoutError)
 def test_stream_timeout():
     io = IOLoop.current()
-    stream = Stream()
+    stream = Stream(None)
     io.run_sync(lambda: stream.get(timeout=0.5))
 
 
