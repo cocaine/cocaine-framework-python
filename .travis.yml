@@ -1,16 +1,32 @@
 language: python
+
 python:
   - "2.7"
+
+sudo: required
+
+services:
+  - docker
+
 before_install:
-  - "ci/travis.sh"
+  - sudo apt-get -qq update
+  - sudo apt-get install zookeeper zookeeperd -y
+  - sudo pip install cocaine cocaine-tools
+  - docker pull noxiouz/cocaine
+  - docker run -d --net=host noxiouz/cocaine && docker ps
+
 install:
   - "pip install tox flake8 python-coveralls"
-script: tox && python setup.py nosetests
+
+script: tox -e flake8,py27,py34,py35 && python setup.py nosetests
+
 notifications:
   slack: cocaine:qDewv6ZVDt0TciQeNdE47GqG
+
 branches:
   only:
     - master
     - v0.11
     - v0.12
+
 after_success: coveralls

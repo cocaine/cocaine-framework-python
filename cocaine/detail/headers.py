@@ -20,9 +20,7 @@
 
 # flake8: noqa
 
-from collections import deque
-
-from tornado.httputil import HTTPHeaders
+import collections
 
 import six
 
@@ -142,7 +140,7 @@ class CocaineHeaders(object):
         self._maxsize = CocaineHeaders.DEFAULT_SIZE
         self._current_size = 0
         self.resized = False
-        self.dynamic_entries = deque()
+        self.dynamic_entries = collections.deque()
 
     def get_by_index(self, index):
         """
@@ -243,10 +241,12 @@ class CocaineHeaders(object):
         self._current_size = cursize
 
     def merge(self, raw_headers):
+        # TODO: PY3: the static table contains only byte strings.
+        # Seems values must be converted to bytestrings too.
         if raw_headers is None or len(raw_headers) == 0:
-            return HTTPHeaders()
+            return Headers()
 
-        headers = HTTPHeaders()
+        headers = Headers()
         for rh in raw_headers:
             if isinstance(rh, six.integer_types):
                 headers.add(*self.get_by_index(rh))
@@ -254,8 +254,87 @@ class CocaineHeaders(object):
                 store, header, value = rh
                 if isinstance(header, six.integer_types):
                     header, _ = self.get_by_index(header)
+                else:
+                    header = six.b(header)
 
                 if store:
                     self.add(header, value)
                 headers.add(header, value)
         return headers
+
+
+class Headers(collections.MutableMapping):
+    def __init__(self, *args, **kwargs):
+        self._dict = {}  # type: typing.Dict[str, str]
+        self._as_list = {}  # type: typing.Dict[str, typing.List[str]]
+        self._last_key = None
+        if (len(args) == 1 and len(kwargs) == 0 and
+                isinstance(args[0], Headers)):
+            # Copy constructor
+            for k, v in args[0].get_all():
+                self.add(k, v)
+        else:
+            # Dict-style initialization
+            self.update(*args, **kwargs)
+
+    def add(self, name, value):
+        # type: (str, str) -> None
+        """Adds a new value for the given key."""
+        self._last_key = name
+        if name in self:
+            self._dict[name] = (self[name] + ',' + value)
+            self._as_list[name].append(value)
+        else:
+            self[name] = value
+
+    def get_list(self, name):
+        """Returns all values for the given header as a list."""
+        return self._as_list.get(name, [])
+
+    def get_all(self):
+        # type: () -> typing.Iterable[typing.Tuple[str, str]]
+        """Returns an iterable of all (name, value) pairs.
+
+        If a header has multiple values, multiple pairs will be
+        returned with the same name.
+        """
+        for name, values in self._as_list.items():
+            for value in values:
+                yield (name, value)
+
+    def __setitem__(self, name, value):
+        self._dict[name] = value
+        self._as_list[name] = [value]
+
+    def __getitem__(self, name):
+        # type: (str) -> str
+        return self._dict[name]
+
+    def __delitem__(self, name):
+        del self._dict[name]
+        del self._as_list[name]
+
+    def __len__(self):
+        return len(self._dict)
+
+    def __iter__(self):
+        return iter(self._dict)
+
+    def copy(self):
+        # defined in dict but not in MutableMapping.
+        return Headers(self)
+
+    # Use our overridden copy method for the copy.copy module.
+    # This makes shallow copies one level deeper, but preserves
+    # the appearance that HTTPHeaders is a single container.
+    __copy__ = copy
+
+    def __str__(self):
+        lines = []
+        for name, value in self.get_all():
+            lines.append("%s: %s\n" % (name, value))
+        return "".join(lines)
+
+    __unicode__ = __str__
+
+    __repr__ = __str__
