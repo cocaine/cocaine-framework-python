@@ -39,6 +39,7 @@ from ..detail.iotimer import Timer
 from ..detail.log import workerlog
 from ..detail.util import msgpack_unpacker
 
+
 DEFAULT_HEARTBEAT_TIMEOUT = 20
 DEFAULT_DISOWN_TIMEOUT = 5
 
@@ -149,51 +150,54 @@ class BasicWorker(object):
         workerlog.debug("terminate has been received %s %s", msg.errno, msg.reason)
         self.terminate(msg.errno, msg.reason)
 
-    def _dispatch_invoke(self, msg):
-        workerlog.debug("invoke has been received %s", msg)
-        request = RequestStream()
-        response = ResponseStream(msg.session, self, msg.event)
+    def _dispatch_invoke(self, msg, headers):
         try:
+            workerlog.debug("invoke has been received %s", msg)
+            request = RequestStream(headers)
+            response = ResponseStream(msg.session, self, msg.event)
             event_handler = self._events.get(msg.event)
-            if event_handler is not None:
-                self.sessions[msg.session] = request
-                future = event_handler(request, response)
-            else:
-                future = self.fallback_handler(msg.event, request, response)
+            self.sessions[msg.session] = request
 
-            def trap(f):
+            @coroutine
+            def start():
+                if event_handler is not None:
+                    future = event_handler(request, response)
+                else:
+                    future = self.fallback_handler(msg.event, request, response)
+
                 try:
-                    f.result()
+                    yield future
                     if not response.closed:
                         response.close()
                 except Exception as err:
                     response.error(CocaineErrno.EUNCAUGHTEXCEPTION, str(err))
-            self.io_loop.add_future(future, trap)
+
+            start()
         except Exception as err:
             workerlog.error("failed to invoke %s %s", err, type(err))
             response.error(CocaineErrno.EINVFAILED, "failed to invoke %s" % err)
 
-    def _dispatch_chunk(self, msg):
+    def _dispatch_chunk(self, msg, headers):
         workerlog.debug("chunk has been received %d", msg.session)
         try:
             session = self.sessions[msg.session]
-            session.push(msg.data)
+            session.push(msg.data, headers)
         except KeyError as err:
             workerlog.warn("no session %s", err)
 
-    def _dispatch_choke(self, msg):
+    def _dispatch_choke(self, msg, headers):
         workerlog.debug("choke has been received %d", msg.session)
         session = self.sessions.pop(msg.session, None)
         if session is not None:
-            session.close()
+            session.close(headers)
 
-    def _dispatch_error(self, msg):
+    def _dispatch_error(self, msg, headers):
         workerlog.debug("dispatch error message %d: %d, %d, %s",
                         msg.session, msg.errno[0], msg.errno[1], msg.reason)
         session = self.sessions.pop(msg.session, None)
         if session is not None:
-            session.error(msg.errno, msg.reason)
-            session.close()
+            session.error(msg.errno, msg.reason, headers)
+            session.close(headers)
 
     def on_failure(self, *args):
         workerlog.error("connection has been lost")
@@ -270,6 +274,7 @@ class WorkerV1(BasicWorker):
                 self._dispatch_terminate(Message(RPC.TERMINATE, session, *payload))
             return
 
+        headers = msg[3] if len(msg) > 3 else None
         if self.max_session < session:
             # it must be Invoke
             if type_id != RPCv1.INVOKE:
@@ -277,12 +282,12 @@ class WorkerV1(BasicWorker):
                                 session, type_id, str(payload))
                 return
             self.max_session = session
-            self._dispatch_invoke(Message(RPC.INVOKE, session, *payload))
+            self._dispatch_invoke(Message(RPC.INVOKE, session, *payload), headers)
             return
 
         if type_id == RPCv1.WRITE:
-            self._dispatch_chunk(Message(RPC.CHUNK, session, *payload))
+            self._dispatch_chunk(Message(RPC.CHUNK, session, *payload), headers)
         elif type_id == RPCv1.CLOSE:
-            self._dispatch_choke(Message(RPC.CHOKE, session, *payload))
+            self._dispatch_choke(Message(RPC.CHOKE, session, *payload), headers)
         elif type_id == RPCv1.ERROR:
-            self._dispatch_error(Message(RPC.ERROR, session, *payload))
+            self._dispatch_error(Message(RPC.ERROR, session, *payload), headers)

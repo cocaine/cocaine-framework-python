@@ -24,6 +24,7 @@ import datetime
 from tornado import gen
 from tornado.queues import Queue
 
+from ..detail.headers import CocaineHeaders
 from ..exceptions import ChokeEvent
 
 
@@ -35,36 +36,45 @@ class RequestError(Exception):
 
 
 class Stream(object):
-    def __init__(self):
+    def __init__(self, raw_headers):
         self._queue = Queue()
-        self._done = False
+        self._header_table = CocaineHeaders()
+        self._current_headers = self._header_table.merge(raw_headers)
 
     @gen.coroutine
     def get(self, timeout=0):
         if timeout == 0:
-            res = yield self._queue.get()
+            res, headers = yield self._queue.get()
         else:
             deadline = datetime.timedelta(seconds=timeout)
-            res = yield self._queue.get(deadline)
+            res, headers = yield self._queue.get(deadline)
 
+        self._current_headers = headers
         if isinstance(res, Exception):
             raise res
         else:
             raise gen.Return(res)
 
-    def push(self, item):
-        self._queue.put_nowait(item)
+    def push(self, item, raw_headers):
+        headers = self._header_table.merge(raw_headers)
+        self._queue.put_nowait((item, headers))
 
-    def done(self):
-        return self._queue.put_nowait(ChokeEvent())
+    def done(self, raw_headers):
+        headers = self._header_table.merge(raw_headers)
+        return self._queue.put_nowait((ChokeEvent(), headers))
 
-    def error(self, errnumber, reason):
-        return self._queue.put_nowait(RequestError(errnumber, reason))
+    def error(self, errnumber, reason, raw_headers):
+        headers = self._header_table.merge(raw_headers)
+        return self._queue.put_nowait((RequestError(errnumber, reason), headers))
+
+    @property
+    def headers(self):
+        return self._current_headers
 
 
 class RequestStream(Stream):
     def read(self, **kwargs):
         return self.get(**kwargs)
 
-    def close(self):
-        return self.done()
+    def close(self, headers):
+        return self.done(headers)

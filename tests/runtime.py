@@ -135,8 +135,8 @@ def main_v1(path, timeout=10):
         req = [METHOD, URI, HTTP_VERSION, HEADERS, BODY]
         yield w.write(packer.pack([1, 0, []]))
         s.counter += 1
-        yield w.write(packer.pack([s.counter, 0, ["ping"]]))
-        yield w.write(packer.pack([s.counter, 0, ["pong"]]))
+        yield w.write(packer.pack([s.counter, 0, ["ping"], (80, [True, "PING", "A"])]))
+        yield w.write(packer.pack([s.counter, 0, ["pong"], ([False, 83, "B"],)]))
         yield w.write(packer.pack([s.counter, 2, []]))
         s.counter += 1
         yield w.write(packer.pack([s.counter, 0, ["bad_event"]]))
