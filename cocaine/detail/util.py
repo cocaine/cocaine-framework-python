@@ -30,13 +30,13 @@ import msgpack
 if sys.version_info[0] == 2:
     msgpack_packb = msgpack.packb
     msgpack_unpackb = msgpack.unpackb
-    msgpack_unpacker = msgpack.Unpacker
+    msgpack_unpacker = partial(msgpack.Unpacker, use_list=True)
 else:  # pragma: no cover
     # py3: msgpack by default unpacks strings as bytes.
     # Make it to unpack as strings for compatibility.
     msgpack_packb = msgpack.packb
     msgpack_unpackb = partial(msgpack.unpackb, encoding="utf8")
-    msgpack_unpacker = partial(msgpack.Unpacker, encoding="utf8")
+    msgpack_unpacker = partial(msgpack.Unpacker, encoding="utf8", use_list=True)
 
 
 if sys.version_info[0] == 2:
