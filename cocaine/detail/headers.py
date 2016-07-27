@@ -282,7 +282,7 @@ class Headers(collections.MutableMapping):
         """Adds a new value for the given key."""
         self._last_key = name
         if name in self:
-            self._dict[name] = (self[name] + ',' + value)
+            self._dict[name] = value
             self._as_list[name].append(value)
         else:
             self[name] = value
