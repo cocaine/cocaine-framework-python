@@ -21,11 +21,18 @@
 
 import functools
 import itertools
+import json
 import logging
 import sys
 import threading
 
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
+
 from tornado import gen
+from tornado import queues
 
 from tornado.gen import coroutine
 from tornado.ioloop import IOLoop
@@ -35,11 +42,10 @@ from tornado.tcpclient import TCPClient
 from .api import API
 from .defaults import Defaults
 from .defaults import GetOptError
-from .util import msgpack_packb, msgpack_unpacker
+from .util import msgpack_pack, msgpack_packb, msgpack_unpacker
 
 
 __all__ = ["Logger", "CocaineHandler"]
-
 
 LOCATOR_DEFAULT_ENDPOINTS = Defaults.locators
 
@@ -73,6 +79,11 @@ def thread_once(class_init):
     return wrapper
 
 
+fallback_logger = logging.getLogger("fallback")
+fallback_logger.propagate = False
+fallback_logger.setLevel(logging.DEBUG)
+
+
 class Logger(object):
     _name = "logging"
     _current = threading.local()
@@ -93,7 +104,16 @@ class Logger(object):
         self.pipe = None
         self.target = Defaults.app
         self.verbosity = DEBUG_LEVEL
+        self.queue = queues.Queue(10000)
 
+        # level could be reset from update_verbosity in the future
+        if not fallback_logger.handlers:
+            sh = logging.StreamHandler()
+            sh.setFormatter(logging.Formatter(fmt="[%(asctime)s.%(msecs)d] %(levelname)s fallback %(message)s", datefmt="%z %d/%b/%Y:%H:%M:%S"))
+            sh.setLevel(logging.DEBUG)
+            fallback_logger.addHandler(sh)
+
+        self._send()
         try:
             uuid = Defaults.uuid
             self._defaultattrs = [("uuid", uuid)]
@@ -119,8 +139,17 @@ class Logger(object):
 
         return msg
 
-    @coroutine
     def emit(self, level, message, *args, **kwargs):
+        msg = self.prepare_message_args(level, message, *args, **kwargs)
+        # if the queue is full log new messages to the fallback Logger
+        # to make most recent errors be printed at least to stderr
+        try:
+            self.queue.put_nowait(msg)
+        except queues.QueueFull:
+            self._log_to_fallback(msg)
+
+    @coroutine
+    def _send(self):
         """ Send a message lazy formatted with args.
         External log attributes can be passed via named attribute `extra`,
         like in logging from the standart library.
@@ -131,17 +160,45 @@ class Logger(object):
             * The value is sent as is if isinstance of (str, unicode, int, float, long, bool),
               otherwise we convert the value to string.
         """
-        try:
-            if not self._connected:
-                yield self.connect()
+        buff = StringIO()
+        while True:
+            msgs = list()
+            try:
+                msg = yield self.queue.get()
+                try:
+                    while True:
+                        msgs.append(msg)
+                        counter = next(self.counter)
+                        msgpack_pack([counter, EMIT, msg], buff)
+                        msg = self.queue.get_nowait()
+                except queues.QueueEmpty:
+                    pass
 
-            msg = self.prepare_message_args(level, message, *args, **kwargs)
-            counter = next(self.counter)
-            self.pipe.write(msgpack_packb([counter, EMIT, msg]))
-        except Exception:
-            # do not throw error to IOLoop
-            # to prevent side effects
-            pass
+                if not self._connected:
+                    yield self.connect()
+
+                try:
+                    yield self.pipe.write(buff.getvalue())
+                except Exception:
+                    # we will reconnect on the next iteration
+                    pass
+                # clean the buffer or we will end up without memory
+                buff.truncate(0)
+            except Exception:
+                for message in msgs:
+                    self._log_to_fallback(message)
+
+    def _log_to_fallback(self, message):
+        level, target, text, attrs = message
+        if level >= ERROR_LEVEL:
+            actual_level = logging.ERROR
+        elif level >= WARNING_LEVEL:
+            actual_level = logging.WARNING
+        elif level >= INFO_LEVEL:
+            actual_level = logging.INFO
+        else:
+            actual_level = logging.DEBUG
+        fallback_logger.log(actual_level, "%s %s %s", target, text, json.dumps(attrs))
 
     def debug(self, message, *args, **kwargs):
         if self.enable_for(DEBUG_LEVEL):
