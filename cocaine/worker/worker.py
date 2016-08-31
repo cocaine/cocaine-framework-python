@@ -152,9 +152,10 @@ class BasicWorker(object):
 
     def _dispatch_invoke(self, msg, headers):
         try:
+            # ResponseStream must not throw any exception
+            response = ResponseStream(msg.session, self, msg.event)
             workerlog.debug("invoke has been received %s", msg)
             request = RequestStream(headers)
-            response = ResponseStream(msg.session, self, msg.event)
             event_handler = self._events.get(msg.event)
             self.sessions[msg.session] = request
 
