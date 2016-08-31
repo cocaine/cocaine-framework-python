@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.7.0-beta3) unstable; urgency=low
+
+  * [Worker] Close the ResponseStream in case of headers error
+
+ -- Anton Tyurin <noxiouz@yandex-team.net>  Wed, 31 Aug 2016 18:26:29 +0300
+
 cocaine-framework-python (0.12.7.0-beta2) unstable; urgency=low
 
   * [logger] Logger has fallback mechanism
