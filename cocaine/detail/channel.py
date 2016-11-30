@@ -27,8 +27,7 @@ from tornado.iostream import StreamClosedError
 from tornado.queues import Queue
 
 
-from .headers import CocaineHeaders
-from .trace import pack_trace
+from .headers import CocaineHeaders, pack_value
 from .util import msgpack_packb
 from ..common import CocaineErrno
 from ..decorators import coroutine
@@ -82,6 +81,28 @@ def detect_protocol_type(rx_tree):
     return null_protocol
 
 
+def manage_headers(headers, table):
+    result = []
+    for k, v in headers.items():
+        match = table.search(k, v)
+        if match is None:
+            # No match at all, add header into the table
+            v = pack_value(k, v)
+            table.add(k, v)
+            result.append((True, k, v))
+        else:
+            idx, _, value = match
+            if value is None:
+                # Partial match by name.
+                v = pack_value(k, v)
+                table.add(k, v)
+                result.append((True, idx, v))
+            else:
+                # Full match.
+                result.append(idx)
+    return result
+
+
 class PrettyPrintable(object):
     def __repr__(self):
         return "<%s at %s %s>" % (
@@ -95,7 +116,10 @@ class PrettyPrintable(object):
 
 
 class Rx(PrettyPrintable):
-    def __init__(self, rx_tree, io_loop=None, servicename=None, raw_headers=None):
+    def __init__(self, rx_tree, header_table=None, io_loop=None, servicename=None, raw_headers=None):
+        if header_table is None:
+            header_table = CocaineHeaders()
+
         # If it's not the main thread
         # and a current IOloop doesn't exist here,
         # IOLoop.instance becomes self._io_loop
@@ -105,7 +129,7 @@ class Rx(PrettyPrintable):
         self.servicename = servicename
         self.rx_tree = rx_tree
         self.default_protocol = detect_protocol_type(rx_tree)
-        self._headers = CocaineHeaders()
+        self._headers = header_table
         self._current_headers = self._headers.merge(raw_headers)
 
     @coroutine
@@ -168,15 +192,21 @@ class Rx(PrettyPrintable):
 
 
 class Tx(PrettyPrintable):
-    def __init__(self, tx_tree, pipe, session_id):
+    def __init__(self, tx_tree, pipe, session_id, header_table):
         self.tx_tree = tx_tree
         self.session_id = session_id
         self.pipe = pipe
         self._done = False
+        self._header_table = header_table
 
     @coroutine
     def _invoke(self, method_name, *args, **kwargs):
-        trace = kwargs.get("trace")
+        trace = kwargs.pop("trace", None)
+        if trace is not None:
+            kwargs['trace_id'] = trace.traceid
+            kwargs['span_id'] = trace.spanid
+            kwargs['parent_id'] = trace.parent_id
+
         if self._done:
             raise ChokeEvent()
 
@@ -187,10 +217,10 @@ class Tx(PrettyPrintable):
         for method_id, (method, tx_tree) in self.tx_tree.items():  # py3 has no iteritems
             if method == method_name:
                 log.debug("method `%s` has been found in API map", method_name)
-                if trace is None:
-                    self.pipe.write(msgpack_packb([self.session_id, method_id, args]))
-                else:
-                    self.pipe.write(msgpack_packb([self.session_id, method_id, args, pack_trace(trace)]))
+                headers = manage_headers(kwargs, self._header_table)
+
+                self.pipe.write(msgpack_packb([self.session_id, method_id, args, headers]))
+
                 if tx_tree == {}:  # last transition
                     self.done()
                 elif tx_tree is not None:  # not a recursive transition
