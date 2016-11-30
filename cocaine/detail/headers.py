@@ -21,8 +21,8 @@
 # flake8: noqa
 
 import collections
-
 import six
+import struct
 
 # It is almost a plain copy from:
 # https://github.com/python-hyper/hpack/blob/master/hpack/table.py
@@ -261,6 +261,20 @@ class CocaineHeaders(object):
                     self.add(header, value)
                 headers.add(header, value)
         return headers
+
+_PACK_TRAITS = {
+    'trace_id': 'Q',
+    'span_id': 'Q',
+    'parend_id': 'Q',
+}
+
+
+def pack_value(name, value):
+    fmt = _PACK_TRAITS.get(name)
+    if fmt is None:
+        return value
+    else:
+        return struct.pack(fmt, value)
 
 
 class Headers(collections.MutableMapping):

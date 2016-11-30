@@ -29,12 +29,12 @@ from tornado.ioloop import IOLoop
 from tornado.locks import Lock
 from tornado.tcpclient import TCPClient
 
-
 from .channel import Channel
 from .channel import Rx
 from .channel import Tx
+from .channel import manage_headers
+from .headers import CocaineHeaders
 from .log import servicelog
-from .trace import pack_trace
 from .util import generate_service_id, msgpack_packb, msgpack_unpacker
 from ..decorators import coroutine
 from ..exceptions import DisconnectionError, ServiceConnectionError
@@ -83,6 +83,11 @@ class BaseService(object):
         # as id for on_close
         self.pipe_epoch = 0
         self.buffer = msgpack_unpacker()
+
+        self._header_table = {
+            'tx': CocaineHeaders(),
+            'rx': CocaineHeaders(),
+        }
 
     @coroutine
     def connect(self, traceid=None):
@@ -166,26 +171,36 @@ class BaseService(object):
     @coroutine
     def _invoke(self, method_name, *args, **kwargs):
         self.log.debug("_invoke has been called %.300s %.300s", str(args), str(kwargs))
-        trace = kwargs.get("trace")
-        if trace:
+
+        # Pop the Trace object, because it's not real header.
+        trace = kwargs.pop("trace", None)
+        if trace is not None:
+            kwargs['trace_id'] = trace.traceid
+            kwargs['span_id'] = trace.spanid
+            kwargs['parent_id'] = trace.parent_id
             yield self.connect(hex(trace.traceid)[2:])
         else:
             yield self.connect()
+
         self.log.debug("%s", self.api)
         for method_id, (method, tx_tree, rx_tree) in self.api.items():  # py3 has no iteritems
             if method == method_name:
                 self.log.debug("method `%s` has been found in API map", method_name)
                 counter = next(self.counter)  # py3 counter has no .next() method
-                self.log.debug('sending message: %.300s', [counter, method_id, args])
-                if trace is None:
-                    self.pipe.write(msgpack_packb([counter, method_id, args]))
-                else:
-                    self.pipe.write(msgpack_packb([counter, method_id, args, pack_trace(trace)]))
+                self.log.debug('sending message: %.300s', [counter, method_id, args, kwargs])
+
+                # Manage headers using header table.
+                headers = manage_headers(kwargs, self._header_table['tx'])
+
+                self.pipe.write(msgpack_packb([counter, method_id, args, headers]))
                 self.log.debug("RX TREE %s", rx_tree)
                 self.log.debug("TX TREE %s", tx_tree)
 
-                rx = Rx(rx_tree, io_loop=self.io_loop, servicename=self.name)
-                tx = Tx(tx_tree, self.pipe, counter)
+                rx = Rx(rx_tree,
+                        io_loop=self.io_loop,
+                        servicename=self.name,
+                        header_table=self._header_table['rx'])
+                tx = Tx(tx_tree, self.pipe, counter, self._header_table['tx'])
                 self.sessions[counter] = rx
                 channel = Channel(rx=rx, tx=tx)
                 raise Return(channel)
