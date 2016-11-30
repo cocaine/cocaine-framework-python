@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.7.0-beta4) UNRELEASED; urgency=low
+
+  * [Headers] HPACK support for a connection.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 30 Nov 2016 18:53:00 +0300
+
 cocaine-framework-python (0.12.7.0-beta3) unstable; urgency=low
 
   * [Worker] Close the ResponseStream in case of headers error
