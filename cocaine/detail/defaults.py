@@ -17,13 +17,21 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-
+import os
 import sys
 
 # ToDo: should I resolve hostname?
+from collections import namedtuple
+
 LOCATOR_DEFAULT_HOST = "127.0.0.1"
 LOCATOR_DEFAULT_PORT = 10053
 DEFAULT_APPNAME = "app/standalone"
+
+TOKEN_TYPE_KEY = 'COCAINE_APP_TOKEN_TYPE'
+TOKEN_BODY_KEY = 'COCAINE_APP_TOKEN_BODY'
+
+
+_Token = namedtuple('Token', ['ty', 'body'])
 
 
 def parse_locators_v1(inp):
@@ -51,6 +59,7 @@ class DefaultOptions(object):
         self._uuid = None
         self._locators = None
         self._appname = None
+        self._token = None
 
     def get_opt(self, name):
         try:
@@ -104,6 +113,21 @@ class DefaultOptions(object):
             except GetOptError:
                 self._appname = DEFAULT_APPNAME
         return self._appname
+
+    def token(self):
+        """
+        Returns authorization token provided by Cocaine.
+
+        The real meaning of the token is determined by its type. For example OAUTH2 token will
+        have "bearer" type.
+
+        :return: A tuple of token type and body.
+        """
+        if self._token is None:
+            token_type = os.getenv(TOKEN_TYPE_KEY, '')
+            token_body = os.getenv(TOKEN_BODY_KEY, '')
+            self._token = _Token(token_type, token_body)
+        return self._token
 
 
 Defaults = DefaultOptions()
