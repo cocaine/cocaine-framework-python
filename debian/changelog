@@ -1,6 +1,7 @@
-cocaine-framework-python (0.12.7.0-beta4) UNRELEASED; urgency=low
+cocaine-framework-python (0.12.11.0-alpha1) unstable; urgency=low
 
   * [Headers] HPACK support for a connection.
+  * [Worker] Extract and exchange auth token.
 
  -- Evgeny Safronov <division494@gmail.com>  Wed, 30 Nov 2016 18:53:00 +0300
 
