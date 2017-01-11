@@ -18,9 +18,10 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-
+import logging
 import socket
 
+from tornado import gen
 from tornado.ioloop import IOLoop
 from tornado.iostream import IOStream
 
@@ -38,10 +39,68 @@ from ..detail.defaults import Defaults
 from ..detail.iotimer import Timer
 from ..detail.log import workerlog
 from ..detail.util import msgpack_unpacker
+from ..services import Service
 
 
 DEFAULT_HEARTBEAT_TIMEOUT = 20
 DEFAULT_DISOWN_TIMEOUT = 5
+
+
+log = logging.getLogger('cocaine')
+
+
+class TokenManager(object):
+    """
+    Represents authorization token manager interface which is responsible for fetching and
+    updating auth tokens.
+
+    Authorization systems are too different to create tiny abstraction to unite them. Some of them
+    supports token refreshing, some does not. Instead of creating such abstraction layer we
+    explicitly ask Cocaine Runtime which type of auth plugin is currently installed to select the
+    proper way for token handling.
+    """
+    def token(self):
+        raise NotImplementedError
+
+
+class NullTokenManager(TokenManager):
+    def token(self):
+        return ''
+
+
+class TicketVendingMachineTokenManager(TokenManager):
+    def __init__(self, ticket, interval, loop):
+        self._ticket = ticket
+        self._service = Service('tvm')
+        self._interval = interval
+
+        loop.spawn_callback(self._refresh)
+
+    def token(self):
+        return self._ticket
+
+    @coroutine
+    def _refresh(self):
+        while True:
+            now = gen.sleep(self._interval)
+
+            try:
+                channel = yield self._service.ticket('ticket', {
+                    'ticket': self._ticket,
+                })
+                self._ticket = yield channel.rx.get()
+            except Exception as err:
+                log.error('failed to refresh TVM ticket: %s', err)
+            else:
+                log.info('refreshed TVM ticket')
+            yield now
+
+
+def make_token_manager(token, loop):
+    if token.ty == 'TVM':
+        return TicketVendingMachineTokenManager(token.body, 10.0, loop)
+    else:
+        return NullTokenManager()
 
 
 class BasicWorker(object):
@@ -57,6 +116,8 @@ class BasicWorker(object):
         self.endpoint = endpoint or Defaults.endpoint
 
         self.io_loop = io_loop or IOLoop.current()
+        self._token_manager = make_token_manager(Defaults.token(), self.io_loop)
+
         self.pipe = None
         self.buffer = msgpack_unpacker()
 
@@ -101,6 +162,10 @@ class BasicWorker(object):
         self.heartbeat_timer.start()
         workerlog.debug("start threaded_disown_timer")
         self.threaded_disown_timer.start()
+
+    @property
+    def token(self):
+        return self._token_manager.token()
 
     def run(self, binds=None):
         if binds is None:
