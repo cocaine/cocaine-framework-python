@@ -265,7 +265,7 @@ class CocaineHeaders(object):
 _PACK_TRAITS = {
     'trace_id': 'Q',
     'span_id': 'Q',
-    'parend_id': 'Q',
+    'parent_id': 'Q',
 }
 
 
