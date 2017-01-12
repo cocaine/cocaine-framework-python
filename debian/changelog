@@ -1,3 +1,10 @@
+cocaine-framework-python (0.12.11.0-alpha2) unstable; urgency=low
+
+  * [Service] Service should no longer throw AttributeError during
+    encoding trace objects.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 12 Jan 2017 13:25:48 +0300
+
 cocaine-framework-python (0.12.11.0-alpha1) unstable; urgency=low
 
   * [Headers] HPACK support for a connection.
