@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.11.0-alpha3) unstable; urgency=low
+
+  * [Headers] Fixed typo when packing parent_id.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 12 Jan 2017 14:06:25 +0300
+
 cocaine-framework-python (0.12.11.0-alpha2) unstable; urgency=low
 
   * [Service] Service should no longer throw AttributeError during
