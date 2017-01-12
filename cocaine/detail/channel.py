@@ -205,7 +205,7 @@ class Tx(PrettyPrintable):
         if trace is not None:
             kwargs['trace_id'] = trace.traceid
             kwargs['span_id'] = trace.spanid
-            kwargs['parent_id'] = trace.parent_id
+            kwargs['parent_id'] = trace.parentid
 
         if self._done:
             raise ChokeEvent()

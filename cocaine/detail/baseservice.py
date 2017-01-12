@@ -177,7 +177,7 @@ class BaseService(object):
         if trace is not None:
             kwargs['trace_id'] = trace.traceid
             kwargs['span_id'] = trace.spanid
-            kwargs['parent_id'] = trace.parent_id
+            kwargs['parent_id'] = trace.parentid
             yield self.connect(hex(trace.traceid)[2:])
         else:
             yield self.connect()
