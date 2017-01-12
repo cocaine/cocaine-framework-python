@@ -31,6 +31,8 @@ try:
 except ImportError:  # pragma: no cover
     from urllib import parse as urlparse
 
+import six
+
 from tornado import gen
 from tornado.escape import native_str
 from tornado.httputil import (
@@ -64,6 +66,12 @@ def http_parse_cookies(headers):
 class _HTTPRequest(object):
     def __init__(self, data):
         method, url, version, headers, self._body = msgpack_unpackb(data)
+        if six.PY3:
+            method = method.decode()
+            url = url.decode()
+            version = version.decode()
+            headers = [(k.decode(), v.decode()) for k, v in headers]
+
         self._headers = HTTPHeaders(headers)
         self._meta = {
             'method': method,

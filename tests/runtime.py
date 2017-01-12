@@ -36,7 +36,7 @@ HTTP_VERSION = '1.1'
 HEADERS = [['User-Agent', 'curl/7.22.0 (x86_64-pc-linux-gnu) libcurl/7.22.0 OpenSSL/1.0.1 zlib/1.2.3.4 libidn/1.23 librtmp/2.3'],
            ['Host', 'localhost:8080'], ['Accept', '*/*'], ['Content-Length', '6'], ['Content-Type', 'application/x-www-form-urlencoded'],
            ['Cookie', 'C=D']]
-BODY = 'dsdsds'
+BODY = b'dsdsds'
 
 
 class RuntimeMock(tcpserver.TCPServer):

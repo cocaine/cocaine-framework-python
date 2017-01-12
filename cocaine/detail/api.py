@@ -21,13 +21,13 @@
 
 
 class API(object):
-    Locator = {0: ['resolve', {}, {0: ['value', {}], 1: ['error', {}]}],
-               1: ['connect', {}, {0: ['write', None], 1: ['error', {}], 2: ['close', {}]}],
-               2: ['refresh', {}, {0: ['value', {}], 1: ['error', {}]}],
-               3: ['cluster', {}, {0: ['value', {}], 1: ['error', {}]}],
-               4: ['publish', {0: ['discard', {}]}, {0: ['value', {}], 1: ['error', {}]}],
-               5: ['routing', {0: ['discard', {}]}, {0: ['write', None], 1: ['error', {}], 2: ['close', {}]}]}
+    Locator = {0: [b'resolve', {}, {0: [b'value', {}], 1: [b'error', {}]}],
+               1: [b'connect', {}, {0: [b'write', None], 1: [b'error', {}], 2: [b'close', {}]}],
+               2: [b'refresh', {}, {0: [b'value', {}], 1: [b'error', {}]}],
+               3: [b'cluster', {}, {0: [b'value', {}], 1: [b'error', {}]}],
+               4: [b'publish', {0: [b'discard', {}]}, {0: [b'value', {}], 1: [b'error', {}]}],
+               5: [b'routing', {0: [b'discard', {}]}, {0: [b'write', None], 1: [b'error', {}], 2: [b'close', {}]}]}
 
-    Logger = {0: ['emit', {}, {}],
-              1: ['verbosity', {}, {0: ['value', {}], 1: ['error', {}]}],
-              2: ['set_verbosity', {}, {0: ['value', {}], 1: ['error', {}]}]}
+    Logger = {0: [b'emit', {}, {}],
+              1: [b'verbosity', {}, {0: [b'value', {}], 1: [b'error', {}]}],
+              2: [b'set_verbosity', {}, {0: [b'value', {}], 1: [b'error', {}]}]}

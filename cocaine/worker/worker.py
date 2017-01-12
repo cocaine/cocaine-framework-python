@@ -21,6 +21,8 @@
 import logging
 import socket
 
+import six
+
 from tornado import gen
 from tornado.ioloop import IOLoop
 from tornado.iostream import IOStream
@@ -180,6 +182,8 @@ class BasicWorker(object):
         self.io_loop.start()
 
     def on(self, event_name, event_handler):
+        if six.PY3:
+            event_name = six.b(event_name)
         workerlog.info("registering handler for event %s", event_name)
         self._events[event_name] = coroutine(event_handler)
         workerlog.info("handler for event %s has been attached", event_name)
@@ -240,7 +244,7 @@ class BasicWorker(object):
 
             start()
         except Exception as err:
-            workerlog.error("failed to invoke %s %s", err, type(err))
+            workerlog.exception("failed to invoke %s %s %s", msg.event, err, type(err))
             response.error(CocaineErrno.EINVFAILED, "failed to invoke %s" % err)
 
     def _dispatch_chunk(self, msg, headers):
@@ -249,7 +253,7 @@ class BasicWorker(object):
             session = self.sessions[msg.session]
             session.push(msg.data, headers)
         except KeyError as err:
-            workerlog.warn("no session %s", err)
+            workerlog.warning("no session %s", err)
 
     def _dispatch_choke(self, msg, headers):
         workerlog.debug("choke has been received %d", msg.session)
