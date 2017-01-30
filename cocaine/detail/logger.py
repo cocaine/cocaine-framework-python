@@ -165,6 +165,12 @@ class Logger(object):
             msgs = list()
             try:
                 msg = yield self.queue.get()
+
+                # we need to connect first, as we issue verbosity request just after connection
+                # and channels should strictly go in ascending order
+                if not self._connected:
+                    yield self.connect()
+
                 try:
                     while True:
                         msgs.append(msg)
@@ -173,9 +179,6 @@ class Logger(object):
                         msg = self.queue.get_nowait()
                 except queues.QueueEmpty:
                     pass
-
-                if not self._connected:
-                    yield self.connect()
 
                 try:
                     yield self.pipe.write(buff.getvalue())

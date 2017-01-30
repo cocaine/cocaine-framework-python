@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.11.0-alpha4) unstable; urgency=low
+
+  * [Logger] Prevent protocol violation.
+
+ -- Anton Matveenko <antmat@me.com>  Mon, 30 Jan 2017 17:29:25 +0300
+
 cocaine-framework-python (0.12.11.0-alpha3) unstable; urgency=low
 
   * [Headers] Fixed typo when packing parent_id.
