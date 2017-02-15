@@ -20,28 +20,21 @@
 #
 
 import hashlib
-import sys
 import time
 from functools import partial
 
 import msgpack
 
-
-if sys.version_info[0] == 2:
-    msgpack_pack = msgpack.pack
-    msgpack_packb = msgpack.packb
-    msgpack_unpackb = msgpack.unpackb
-    msgpack_unpacker = partial(msgpack.Unpacker, use_list=True)
-else:  # pragma: no cover
-    # py3: msgpack by default unpacks strings as bytes.
-    # Make it to unpack as strings for compatibility.
-    msgpack_pack = msgpack.pack
-    msgpack_packb = msgpack.packb
-    msgpack_unpackb = partial(msgpack.unpackb, encoding="utf8")
-    msgpack_unpacker = partial(msgpack.Unpacker, encoding="utf8", use_list=True)
+import six
 
 
-if sys.version_info[0] == 2:
+msgpack_pack = msgpack.pack
+msgpack_packb = msgpack.packb
+msgpack_unpackb = msgpack.unpackb
+msgpack_unpacker = partial(msgpack.Unpacker, use_list=True)
+
+
+if six.PY2:
     def valid_chunk(chunk):
         return isinstance(chunk, (str, unicode, bytes))
 

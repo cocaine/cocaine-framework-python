@@ -129,9 +129,9 @@ def test_node_service_bad_on_read():
 
 
 class TestRx(object):
-    rx_tree = {0: ['write', None],
-               1: ['error', {}],
-               2: ['close', {}]}
+    rx_tree = {0: [b'write', None],
+               1: [b'error', {}],
+               2: [b'close', {}]}
     io = IOLoop.current()
 
     def test_print(self):
@@ -241,23 +241,23 @@ def test_stream_timeout():
 
 
 def test_primitive_protocol():
-    assert null_protocol("A", 1) == ("A", 1)
+    assert null_protocol(b"A", 1) == (b"A", 1)
     primitive_single_payload = ["A"]
-    primitive = primitive_protocol("value", primitive_single_payload)
+    primitive = primitive_protocol(b"value", primitive_single_payload)
     assert primitive == primitive_single_payload[0], primitive
     primitive_sequence_payload = ["A", "B", "C"]
-    primitive = primitive_protocol("value", primitive_sequence_payload)
+    primitive = primitive_protocol(b"value", primitive_sequence_payload)
     assert primitive == primitive_sequence_payload, primitive
-    primitive_error = primitive_protocol("error", [(100, 100), "errormsg"])
+    primitive_error = primitive_protocol(b"error", [(100, 100), "errormsg"])
     assert isinstance(primitive_error, ProtocolError), primitive_error
 
 
 def test_streaming_protocol():
     streaming_single_payload = ["A"]
-    streaming = streaming_protocol("write", streaming_single_payload)
+    streaming = streaming_protocol(b"write", streaming_single_payload)
     assert streaming == streaming_single_payload[0], streaming
     streaming_sequence_payload = ["A", "B", "C"]
-    streaming = streaming_protocol("write", streaming_sequence_payload)
+    streaming = streaming_protocol(b"write", streaming_sequence_payload)
     assert streaming == streaming_sequence_payload, streaming
-    streaming_error = streaming_protocol("error", [(100, 100)])  # error msg is optional
+    streaming_error = streaming_protocol(b"error", [(100, 100)])  # error msg is optional
     assert isinstance(streaming_error, ProtocolError), streaming_error

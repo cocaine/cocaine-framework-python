@@ -27,9 +27,9 @@ import sys
 import threading
 
 try:
-    from cStringIO import StringIO
+    from cStringIO import StringIO as BytesIO
 except ImportError:
-    from io import StringIO
+    from io import BytesIO
 
 from tornado import gen
 from tornado import queues
@@ -58,8 +58,8 @@ VERBOSITY = 1
 RESOLVE = 0
 VALUE_CODE = 0
 ERROR_CODE = 1
-assert API.Logger[EMIT][0] == "emit"
-assert API.Locator[RESOLVE][0] == "resolve"
+assert API.Logger[EMIT][0] == b"emit"
+assert API.Locator[RESOLVE][0] == b"resolve"
 
 
 if sys.version_info[0] == 2:
@@ -160,7 +160,7 @@ class Logger(object):
             * The value is sent as is if isinstance of (str, unicode, int, float, long, bool),
               otherwise we convert the value to string.
         """
-        buff = StringIO()
+        buff = BytesIO()
         while True:
             msgs = list()
             try:
@@ -183,7 +183,6 @@ class Logger(object):
                 try:
                     yield self.pipe.write(buff.getvalue())
                 except Exception:
-                    # we will reconnect on the next iteration
                     pass
                 # clean the buffer or we will end up without memory
                 buff.truncate(0)

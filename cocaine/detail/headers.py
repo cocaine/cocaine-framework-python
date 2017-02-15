@@ -255,7 +255,7 @@ class CocaineHeaders(object):
                 if isinstance(header, six.integer_types):
                     header, _ = self.get_by_index(header)
                 else:
-                    header = six.b(header)
+                    header = header
 
                 if store:
                     self.add(header, value)

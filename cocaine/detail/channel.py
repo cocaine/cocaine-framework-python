@@ -53,18 +53,18 @@ class ProtocolError(CocaineError):
 
 
 def streaming_protocol(name, payload):
-    if name == "write":  # pragma: no cover
+    if name == b"write":  # pragma: no cover
         return payload[0] if len(payload) == 1 else payload
-    elif name == "error":
+    elif name == b"error":
         return ProtocolError(*payload)
-    elif name == "close":
+    elif name == b"close":
         return EmptyResponse()
 
 
 def primitive_protocol(name, payload):
-    if name == "value":
+    if name == b"value":
         return payload[0] if len(payload) == 1 else payload
-    elif name == "error":
+    elif name == b"error":
         return ProtocolError(*payload)
 
 
@@ -74,9 +74,9 @@ def null_protocol(name, payload):
 
 def detect_protocol_type(rx_tree):
     for name, _ in rx_tree.values():
-        if name == 'value':
+        if name == b"value":
             return primitive_protocol
-        elif name == 'write':
+        elif name == b"write":
             return streaming_protocol
     return null_protocol
 

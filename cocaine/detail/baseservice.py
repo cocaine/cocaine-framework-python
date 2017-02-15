@@ -24,6 +24,8 @@ import logging
 import time
 import weakref
 
+import six
+
 from tornado.gen import Return
 from tornado.ioloop import IOLoop
 from tornado.locks import Lock
@@ -212,7 +214,10 @@ class BaseService(object):
 
     def __getattr__(self, name):
         def on_getattr(*args, **kwargs):
-            return self._invoke(name, *args, **kwargs)
+            if six.PY2:
+                return self._invoke(name, *args, **kwargs)
+            else:
+                return self._invoke(six.b(name), *args, **kwargs)
         return on_getattr
 
     def __del__(self):
