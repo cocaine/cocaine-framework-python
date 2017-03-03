@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.12.1) unstable; urgency=low
+
+  * [Debian] Just version bump.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 03 Mar 2017 15:12:11 +0300
+
 cocaine-framework-python (0.12.11.0-alpha4) unstable; urgency=low
 
   * [Logger] Prevent protocol violation.
