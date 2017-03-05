@@ -185,7 +185,7 @@ class BaseService(object):
             yield self.connect()
 
         self.log.debug("%s", self.api)
-        for method_id, (method, tx_tree, rx_tree) in self.api.items():  # py3 has no iteritems
+        for method_id, (method, tx_tree, rx_tree) in six.iteritems(self.api):
             if method == method_name:
                 self.log.debug("method `%s` has been found in API map", method_name)
                 counter = next(self.counter)  # py3 counter has no .next() method
@@ -214,10 +214,7 @@ class BaseService(object):
 
     def __getattr__(self, name):
         def on_getattr(*args, **kwargs):
-            if six.PY2:
-                return self._invoke(name, *args, **kwargs)
-            else:
-                return self._invoke(six.b(name), *args, **kwargs)
+            return self._invoke(six.b(name), *args, **kwargs)
         return on_getattr
 
     def __del__(self):

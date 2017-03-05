@@ -21,6 +21,8 @@
 import datetime
 import logging
 
+import six
+
 from tornado.gen import Return
 from tornado.ioloop import IOLoop
 from tornado.iostream import StreamClosedError
@@ -73,7 +75,7 @@ def null_protocol(name, payload):
 
 
 def detect_protocol_type(rx_tree):
-    for name, _ in rx_tree.values():
+    for name, _ in six.itervalues(rx_tree):
         if name == b"value":
             return primitive_protocol
         elif name == b"write":
@@ -83,7 +85,7 @@ def detect_protocol_type(rx_tree):
 
 def manage_headers(headers, table):
     result = []
-    for k, v in headers.items():
+    for k, v in six.iteritems(headers):
         match = table.search(k, v)
         if match is None:
             # No match at all, add header into the table
@@ -214,7 +216,7 @@ class Tx(PrettyPrintable):
             raise StreamClosedError()
 
         log.debug("_invoke has been called %.300s %.300s", str(args), str(kwargs))
-        for method_id, (method, tx_tree) in self.tx_tree.items():  # py3 has no iteritems
+        for method_id, (method, tx_tree) in six.iteritems(self.tx_tree):
             if method == method_name:
                 log.debug("method `%s` has been found in API map", method_name)
                 headers = manage_headers(kwargs, self._header_table)

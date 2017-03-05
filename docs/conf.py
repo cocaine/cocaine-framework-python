@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-import sys
-import os
+from __future__ import print_function, unicode_literals
 
-print os.getcwd()
+import os
+import sys
+
+print(os.getcwd())
 
 sys.path.insert(0, '..')
 
@@ -13,8 +15,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'cocaine-framework-python'
-copyright = u'2013, Evgeny Safronov <division494@gmail.com>'
+project = 'cocaine-framework-python'
+copyright = '2013, Evgeny Safronov <division494@gmail.com>'
 version = '0.12.0'
 release = '0'
 
