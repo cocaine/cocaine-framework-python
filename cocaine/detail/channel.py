@@ -230,7 +230,7 @@ class Tx(PrettyPrintable):
 
     def __getattr__(self, name):
         def on_getattr(*args, **kwargs):
-            return self._invoke(name, *args, **kwargs)
+            return self._invoke(six.b(name), *args, **kwargs)
         return on_getattr
 
     def done(self):
