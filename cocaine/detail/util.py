@@ -18,6 +18,7 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+from __future__ import unicode_literals
 
 import hashlib
 import time
@@ -27,23 +28,16 @@ import msgpack
 
 import six
 
-
 msgpack_pack = msgpack.pack
 msgpack_packb = msgpack.packb
 msgpack_unpackb = msgpack.unpackb
 msgpack_unpacker = partial(msgpack.Unpacker, use_list=True)
 
 
-if six.PY2:
-    def valid_chunk(chunk):
-        return isinstance(chunk, (str, unicode, bytes))
+def valid_chunk(chunk):
+    return isinstance(chunk, six.string_types + (six.binary_type,))
 
-    def generate_service_id(self):
-        return hashlib.md5("%d:%f" % (id(self), time.time())).hexdigest()[:15]
-else:
-    def valid_chunk(chunk):
-        return isinstance(chunk, (str, bytes))
 
-    def generate_service_id(self):
-        hashed = "%d:%f" % (id(self), time.time())
-        return hashlib.md5(hashed.encode("utf-8")).hexdigest()[:15]
+def generate_service_id(self):
+    hashed = "%d:%f" % (id(self), time.time())
+    return hashlib.md5(hashed.encode("utf-8")).hexdigest()[:15]

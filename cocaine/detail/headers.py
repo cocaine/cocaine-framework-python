@@ -312,7 +312,7 @@ class Headers(collections.MutableMapping):
         If a header has multiple values, multiple pairs will be
         returned with the same name.
         """
-        for name, values in self._as_list.items():
+        for name, values in six.iteritems(self._as_list):
             for value in values:
                 yield (name, value)
 

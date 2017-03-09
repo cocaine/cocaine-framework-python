@@ -23,13 +23,10 @@ import functools
 import itertools
 import json
 import logging
-import sys
 import threading
 
-try:
-    from cStringIO import StringIO as BytesIO
-except ImportError:
-    from io import BytesIO
+import six
+from six.moves import cStringIO as BytesIO
 
 from tornado import gen
 from tornado import queues
@@ -61,11 +58,7 @@ ERROR_CODE = 1
 assert API.Logger[EMIT][0] == b"emit"
 assert API.Locator[RESOLVE][0] == b"resolve"
 
-
-if sys.version_info[0] == 2:
-    ATTRS_TYPES = (str, unicode, int, float, long, bool)
-else:
-    ATTRS_TYPES = (str, int, float, bool)
+ATTRS_TYPES = six.string_types + six.integer_types + (float, bool)
 
 
 def thread_once(class_init):
@@ -134,7 +127,7 @@ class Logger(object):
             else:
                 msg = [level, self.target, message]
         else:
-            attrs = [(str(k), (v if isinstance(v, ATTRS_TYPES) else str(v))) for k, v in kwargs["extra"].items()]
+            attrs = [(str(k), (v if isinstance(v, ATTRS_TYPES) else str(v))) for k, v in six.iteritems(kwargs["extra"])]
             msg = [level, self.target, message, attrs + self._defaultattrs]
 
         return msg

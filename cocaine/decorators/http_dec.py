@@ -19,19 +19,9 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-
-
-try:
-    import Cookie  # py2
-except ImportError:  # pragma: no cover
-    import http.cookies as Cookie  # py3
-
-try:
-    import urlparse
-except ImportError:  # pragma: no cover
-    from urllib import parse as urlparse
-
 import six
+from six.moves import http_cookies as Cookie  # noqa: N812 lowercase imported as non lowercase
+from six.moves.urllib import parse as urlparse
 
 from tornado import gen
 from tornado.escape import native_str
@@ -48,7 +38,7 @@ __all__ = ["http", "tornado_http"]
 
 
 def dict_list_to_single(inp):
-    return dict((k, v[0]) for k, v in inp.items() if len(v) > 0)
+    return dict((k, v[0]) for k, v in six.iteritems(inp) if len(v) > 0)
 
 
 def http_parse_cookies(headers):
@@ -58,7 +48,7 @@ def http_parse_cookies(headers):
     try:
         cookies = Cookie.SimpleCookie()
         cookies.load(native_str(headers["Cookie"]))
-        return dict((key, name.value) for key, name in cookies.items())
+        return dict((key, name.value) for key, name in six.iteritems(cookies))
     except Exception:
         return {}
 

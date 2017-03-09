@@ -173,7 +173,7 @@ class BasicWorker(object):
         if binds is None:
             binds = {}
         # attach handlers
-        for event, handler in binds.items():  # py3
+        for event, handler in six.iteritems(binds):
             self.on(event, handler)
 
         # schedule connection establishment
@@ -182,8 +182,7 @@ class BasicWorker(object):
         self.io_loop.start()
 
     def on(self, event_name, event_handler):
-        if six.PY3:
-            event_name = six.b(event_name)
+        event_name = six.b(event_name)
         workerlog.info("registering handler for event %s", event_name)
         self._events[event_name] = coroutine(event_handler)
         workerlog.info("handler for event %s has been attached", event_name)
