@@ -38,6 +38,7 @@ from .response import ResponseStream
 from ..common import CocaineErrno
 from ..decorators import coroutine
 from ..detail.defaults import Defaults
+from ..detail.headers import CocaineHeaders
 from ..detail.iotimer import Timer
 from ..detail.log import workerlog
 from ..detail.util import msgpack_unpacker
@@ -141,6 +142,11 @@ class BasicWorker(object):
         # avoid unnecessary dublicate packing of message
         self._heartbeat_msg = Message(RPC.HEARTBEAT, 1).pack()
 
+        self._header_table = {
+            'tx': CocaineHeaders(),
+            'rx': CocaineHeaders(),
+        }
+
     @coroutine
     def async_connect(self):
         sock = socket.socket(socket.AF_UNIX)
@@ -223,7 +229,7 @@ class BasicWorker(object):
             # ResponseStream must not throw any exception
             response = ResponseStream(msg.session, self, msg.event)
             workerlog.debug("invoke has been received %s", msg)
-            request = RequestStream(headers)
+            request = RequestStream(headers, self._header_table['rx'])
             event_handler = self._events.get(msg.event)
             self.sessions[msg.session] = request
 

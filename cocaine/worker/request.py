@@ -24,7 +24,6 @@ import datetime
 from tornado import gen
 from tornado.queues import Queue
 
-from ..detail.headers import CocaineHeaders
 from ..exceptions import ChokeEvent
 
 
@@ -36,9 +35,9 @@ class RequestError(Exception):
 
 
 class Stream(object):
-    def __init__(self, raw_headers):
+    def __init__(self, raw_headers, header_table):
         self._queue = Queue()
-        self._header_table = CocaineHeaders()
+        self._header_table = header_table
         self._current_headers = self._header_table.merge(raw_headers)
 
     @gen.coroutine
