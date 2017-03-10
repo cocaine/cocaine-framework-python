@@ -1,3 +1,10 @@
+cocaine-framework-python (0.12.12.2) unstable; urgency=low
+
+  * [Headers] Proper HPACK support for worker-side.
+  * [Headers] Properly reset header tables on a service reconnection.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 10 Mar 2017 18:04:30 +0300
+
 cocaine-framework-python (0.12.12.1) unstable; urgency=low
 
   * [Debian] Just version bump.
