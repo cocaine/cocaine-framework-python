@@ -120,6 +120,11 @@ class BaseService(object):
                     conn_statuses.append((host, port, err))
                 else:
                     self.address = (host, port)
+                    self._header_table = {
+                        'tx': CocaineHeaders(),
+                        'rx': CocaineHeaders(),
+                    }
+
                     connection_time = (time.time() - start_time) * 1000
                     log.info("connection has been established successfully %.3fms" % connection_time)
                     return
