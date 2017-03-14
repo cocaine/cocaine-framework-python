@@ -189,6 +189,9 @@ class BaseService(object):
         else:
             yield self.connect()
 
+        if self.pipe is None:
+            raise ServiceError('connection has suddenly disappeared')
+
         self.log.debug("%s", self.api)
         for method_id, (method, tx_tree, rx_tree) in six.iteritems(self.api):
             if method == method_name:
