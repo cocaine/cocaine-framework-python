@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.12.3) unstable; urgency=low
+
+  * [Service] Check that pipe exists before using.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 17 Mar 2017 18:04:03 +0300
+
 cocaine-framework-python (0.12.12.2) unstable; urgency=low
 
   * [Headers] Proper HPACK support for worker-side.
