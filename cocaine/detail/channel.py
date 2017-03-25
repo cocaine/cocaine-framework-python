@@ -140,7 +140,7 @@ class Rx(PrettyPrintable):
             raise ChokeEvent()
 
         # to pull variuos service errors
-        if timeout <= 0 or timeout is None:
+        if timeout <= 0:
             item = yield self._queue.get()
         else:
             deadline = datetime.timedelta(seconds=timeout)
