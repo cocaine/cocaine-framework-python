@@ -126,7 +126,7 @@ class BaseService(object):
                     }
 
                     connection_time = (time.time() - start_time) * 1000
-                    log.info("connection has been established successfully %.3fms" % connection_time)
+                    log.info("connection has been established successfully %.3fms", connection_time)
                     return
 
             raise ServiceConnectionError("unable to establish connection: " +
