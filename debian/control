@@ -10,7 +10,7 @@ Standards-Version: 3.9.3
 Vcs-Git: git://github.com/cocaine/cocaine-framework-python.git
 Vcs-Browser: https://github.com/cocaine/cocaine-framework-python
 
-Package: cocaine-v12-framework-python
+Package: cocaine-framework-python
 Architecture: any
 Depends: ${misc:Depends}, ${python:Depends},
  python-tornado (>= 4.2),
