@@ -18,14 +18,38 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import logging
 import struct
 from collections import namedtuple
 
+import six
+
 Trace = namedtuple('Trace', ['traceid', 'spanid', 'parentid'])
+
+
+class TraceAdapter(logging.LoggerAdapter):
+    def process(self, msg, kwargs):
+        kwargs.setdefault("extra", {}).update(self.extra)
+        return msg, kwargs
+
+
+def get_trace_adapter(logger, trace_id):
+    if trace_id is None:
+        return logger
+    # TODO Remove this cast flexibility.
+    if not isinstance(trace_id, six.string_types):
+        trace_id = hex(trace_id)[2:]
+    return TraceAdapter(logger, {'trace_id': trace_id})
 
 
 def pack_trace(trace):
     traceid = struct.pack("@Q", trace.traceid)
     spanid = struct.pack("@Q", trace.spanid)
     parentid = struct.pack("@Q", trace.parentid)
-    return ((False, 80, traceid), (False, 81, spanid), (False, 82, parentid))
+    return (False, 80, traceid), (False, 81, spanid), (False, 82, parentid)
+
+
+def update_dict_with_trace(dict_, trace):
+    dict_['trace_id'] = trace.traceid
+    dict_['span_id'] = trace.spanid
+    dict_['parent_id'] = trace.parentid

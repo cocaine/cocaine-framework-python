@@ -20,9 +20,9 @@
 #
 
 from .baseservice import BaseService
-from .baseservice import TraceAdapter
 from .defaults import Defaults
 from .locator import Locator
+from .trace import get_trace_adapter
 
 from ..decorators import coroutine
 # cocaine defined exceptions
@@ -48,7 +48,7 @@ class Service(BaseService):
 
     @coroutine
     def connect(self, traceid=None):
-        log = TraceAdapter(self.log, {"trace_id": traceid}) if traceid else self.log
+        log = get_trace_adapter(self.log, traceid)
 
         log.debug("checking if service connected")
         if self._connected:
