@@ -28,8 +28,8 @@ from tornado.ioloop import IOLoop
 from tornado.iostream import StreamClosedError
 from tornado.queues import Queue
 
-
 from .headers import CocaineHeaders, pack_value
+from .trace import get_trace_adapter, update_dict_with_trace
 from .util import msgpack_packb
 from ..common import CocaineErrno
 from ..decorators import coroutine
@@ -118,7 +118,7 @@ class PrettyPrintable(object):
 
 
 class Rx(PrettyPrintable):
-    def __init__(self, rx_tree, header_table=None, io_loop=None, servicename=None, raw_headers=None):
+    def __init__(self, rx_tree, header_table=None, io_loop=None, servicename=None, raw_headers=None, trace_id=None):
         if header_table is None:
             header_table = CocaineHeaders()
 
@@ -133,13 +133,14 @@ class Rx(PrettyPrintable):
         self.default_protocol = detect_protocol_type(rx_tree)
         self._headers = header_table
         self._current_headers = self._headers.merge(raw_headers)
+        self.log = get_trace_adapter(log, trace_id)
 
     @coroutine
     def get(self, timeout=0, protocol=None):
         if self._done and self._queue.empty():
             raise ChokeEvent()
 
-        # to pull variuos service errors
+        # to pull various service errors
         if timeout <= 0:
             item = yield self._queue.get()
         else:
@@ -166,12 +167,12 @@ class Rx(PrettyPrintable):
 
     def push(self, msg_type, payload, raw_headers):
         dispatch = self.rx_tree.get(msg_type)
-        log.debug("dispatch %s %.300s", dispatch, payload)
+        self.log.debug("dispatch %s %.300s", dispatch, payload)
         if dispatch is None:
             raise InvalidMessageType(self.servicename, CocaineErrno.INVALIDMESSAGETYPE,
                                      "unexpected message type %s" % msg_type)
         name, rx = dispatch
-        log.debug("name `%s` rx `%s`", name, rx)
+        self.log.info("got message: type `%s`, rx `%s`", name, rx)
         self._queue.put_nowait((name, payload, raw_headers))
         if rx == {}:  # the last transition
             self.done()
@@ -194,20 +195,26 @@ class Rx(PrettyPrintable):
 
 
 class Tx(PrettyPrintable):
-    def __init__(self, tx_tree, pipe, session_id, header_table):
+    def __init__(self, tx_tree, pipe, session_id, header_table, trace_id=None):
         self.tx_tree = tx_tree
         self.session_id = session_id
         self.pipe = pipe
         self._done = False
         self._header_table = header_table
+        self.trace_id = trace_id
+        self.log = get_trace_adapter(log, trace_id)
 
     @coroutine
     def _invoke(self, method_name, *args, **kwargs):
         trace = kwargs.pop("trace", None)
-        if trace is not None:
-            kwargs['trace_id'] = trace.traceid
-            kwargs['span_id'] = trace.spanid
-            kwargs['parent_id'] = trace.parentid
+        if trace:
+            update_dict_with_trace(kwargs, trace)
+        new_trace_id = kwargs.get('trace_id', self.trace_id)
+        if new_trace_id != self.trace_id:
+            self.log = get_trace_adapter(log, new_trace_id)
+            self.trace_id = new_trace_id
+
+        self.log.info("Tx method `%s` call: %.300s %.300s", method_name, args, kwargs)
 
         if self._done:
             raise ChokeEvent()
@@ -215,10 +222,9 @@ class Tx(PrettyPrintable):
         if self.pipe is None:
             raise StreamClosedError()
 
-        log.debug("_invoke has been called %.300s %.300s", str(args), str(kwargs))
         for method_id, (method, tx_tree) in six.iteritems(self.tx_tree):
             if method == method_name:
-                log.debug("method `%s` has been found in API map", method_name)
+                self.log.debug("method `%s` has been found in API map", method_name)
                 headers = manage_headers(kwargs, self._header_table)
 
                 self.pipe.write(msgpack_packb([self.session_id, method_id, args, headers]))
@@ -239,8 +245,7 @@ class Tx(PrettyPrintable):
         self._done = True
 
     def _format(self):
-        return "session_id: %d, pipe: %s, done: %s" % (
-            self.session_id, self.pipe, self._done)
+        return "session_id: %d, pipe: %s, done: %s" % (self.session_id, self.pipe, self._done)
 
 
 class Channel(PrettyPrintable):
