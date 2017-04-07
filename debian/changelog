@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.13.2) unstable; urgency=low
+
+  * [Worker] Adapt with new ticket exchange scheme.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 07 Apr 2017 15:12:23 +0300
+
 cocaine-framework-python (0.12.13.1) unstable; urgency=low
 
   * Rebuild.

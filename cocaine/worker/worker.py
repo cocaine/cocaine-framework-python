@@ -72,7 +72,8 @@ class NullTokenManager(TokenManager):
 
 
 class TicketVendingMachineTokenManager(TokenManager):
-    def __init__(self, ticket, interval, loop):
+    def __init__(self, name, ticket, interval, loop):
+        self._name = name
         self._ticket = ticket
         self._service = Service('tvm')
         self._interval = interval
@@ -88,9 +89,10 @@ class TicketVendingMachineTokenManager(TokenManager):
             now = gen.sleep(self._interval)
 
             try:
-                channel = yield self._service.ticket('ticket', {
-                    'ticket': self._ticket,
-                })
+                channel = yield self._service.refresh_ticket(
+                    self._name,
+                    self._ticket
+                )
                 self._ticket = yield channel.rx.get()
             except Exception as err:
                 log.error('failed to refresh TVM ticket: %s', err)
@@ -99,9 +101,9 @@ class TicketVendingMachineTokenManager(TokenManager):
             yield now
 
 
-def make_token_manager(token, loop):
+def make_token_manager(name, token, loop):
     if token.ty == 'TVM':
-        return TicketVendingMachineTokenManager(token.body, 10.0, loop)
+        return TicketVendingMachineTokenManager(name, token.body, 10.0, loop)
     else:
         return NullTokenManager()
 
@@ -119,7 +121,11 @@ class BasicWorker(object):
         self.endpoint = endpoint or Defaults.endpoint
 
         self.io_loop = io_loop or IOLoop.current()
-        self._token_manager = make_token_manager(Defaults.token(), self.io_loop)
+        self._token_manager = make_token_manager(
+            self.appname,
+            Defaults.token(),
+            self.io_loop
+        )
 
         self.pipe = None
         self.buffer = msgpack_unpacker()
