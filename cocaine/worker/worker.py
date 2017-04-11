@@ -22,6 +22,7 @@ import logging
 import socket
 
 import six
+from hpack.table import HeaderTable
 
 from tornado import gen
 from tornado.ioloop import IOLoop
@@ -38,7 +39,6 @@ from .response import ResponseStream
 from ..common import CocaineErrno
 from ..decorators import coroutine
 from ..detail.defaults import Defaults
-from ..detail.headers import CocaineHeaders
 from ..detail.iotimer import Timer
 from ..detail.log import workerlog
 from ..detail.util import msgpack_unpacker
@@ -149,8 +149,8 @@ class BasicWorker(object):
         self._heartbeat_msg = Message(RPC.HEARTBEAT, 1).pack()
 
         self._header_table = {
-            'tx': CocaineHeaders(),
-            'rx': CocaineHeaders(),
+            'tx': HeaderTable(),
+            'rx': HeaderTable(),
         }
 
     @coroutine

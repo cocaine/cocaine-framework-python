@@ -14,7 +14,8 @@ Package: cocaine-framework-python
 Architecture: any
 Depends: ${misc:Depends}, ${python:Depends},
  python-tornado (>= 4.2),
- python-msgpack | msgpack-python
+ python-msgpack | msgpack-python,
+ python-hpack
 Replaces: cocaine-framework-python
 Provides: cocaine-framework-python
 Conflicts: cocaine-framework-python

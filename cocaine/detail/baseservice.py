@@ -23,6 +23,7 @@ import itertools
 import time
 import weakref
 
+from hpack.table import HeaderTable
 import six
 
 from tornado.gen import Return
@@ -34,7 +35,6 @@ from .channel import Channel
 from .channel import Rx
 from .channel import Tx
 from .channel import manage_headers
-from .headers import CocaineHeaders
 from .log import servicelog
 from .trace import get_trace_adapter, update_dict_with_trace
 from .util import generate_service_id, msgpack_packb, msgpack_unpacker
@@ -81,8 +81,8 @@ class BaseService(object):
         self.buffer = msgpack_unpacker()
 
         self._header_table = {
-            'tx': CocaineHeaders(),
-            'rx': CocaineHeaders(),
+            'tx': HeaderTable(),
+            'rx': HeaderTable(),
         }
 
     @coroutine
@@ -114,8 +114,8 @@ class BaseService(object):
                 else:
                     self.address = (host, port)
                     self._header_table = {
-                        'tx': CocaineHeaders(),
-                        'rx': CocaineHeaders(),
+                        'tx': HeaderTable(),
+                        'rx': HeaderTable(),
                     }
 
                     connection_time = (time.time() - start_time) * 1000

@@ -21,6 +21,7 @@
 import datetime
 import logging
 
+from hpack.table import HeaderTable
 import six
 
 from tornado.gen import Return
@@ -28,7 +29,7 @@ from tornado.ioloop import IOLoop
 from tornado.iostream import StreamClosedError
 from tornado.queues import Queue
 
-from .headers import CocaineHeaders, pack_value
+from .headers import pack_value, synchronize_with_table
 from .trace import get_trace_adapter, update_dict_with_trace
 from .util import msgpack_packb
 from ..common import CocaineErrno
@@ -86,22 +87,24 @@ def detect_protocol_type(rx_tree):
 def manage_headers(headers, table):
     result = []
     for k, v in six.iteritems(headers):
-        match = table.search(k, v)
-        if match is None:
-            # No match at all, add header into the table
-            v = pack_value(k, v)
-            table.add(k, v)
-            result.append((True, k, v))
-        else:
-            idx, _, value = match
-            if value is None:
-                # Partial match by name.
-                v = pack_value(k, v)
-                table.add(k, v)
-                result.append((True, idx, v))
-            else:
-                # Full match.
-                result.append(idx)
+        # TODO: Remove this line and uncomment the rest when it's time to enable compression again.
+        result.append((False, k, pack_value(k, v)))
+        # match = table.search(k, v)
+        # if match is None:
+        #     # No match at all, add header into the table
+        #     v = pack_value(k, v)
+        #     table.add(k, v)
+        #     result.append((False, k, v))
+        # else:
+        #     idx, _, value = match
+        #     if value is None:
+        #         # Partial match by name.
+        #         v = pack_value(k, v)
+        #         table.add(k, v)
+        #         result.append((False, idx, v))
+        #     else:
+        #         # Full match.
+        #         result.append(idx)
     return result
 
 
@@ -121,7 +124,7 @@ class Rx(PrettyPrintable):
     def __init__(self, rx_tree, session_id, header_table=None, io_loop=None, service_name=None,
                  raw_headers=None, trace_id=None):
         if header_table is None:
-            header_table = CocaineHeaders()
+            header_table = HeaderTable()
 
         # If it's not the main thread
         # and a current IOloop doesn't exist here,
@@ -134,7 +137,7 @@ class Rx(PrettyPrintable):
         self.rx_tree = rx_tree
         self.default_protocol = detect_protocol_type(rx_tree)
         self._headers = header_table
-        self._current_headers = self._headers.merge(raw_headers)
+        self._current_headers = synchronize_with_table(self._headers, raw_headers)
         self.log = get_trace_adapter(log, trace_id)
 
     @coroutine
@@ -156,7 +159,7 @@ class Rx(PrettyPrintable):
             protocol = self.default_protocol
 
         name, payload, raw_headers = item
-        self._current_headers = self._headers.merge(raw_headers)
+        self._current_headers = synchronize_with_table(self._headers, raw_headers)
         res = protocol(name, payload)
         if isinstance(res, ProtocolError):
             raise ServiceError(self.service_name, res.reason, res.code, res.category)

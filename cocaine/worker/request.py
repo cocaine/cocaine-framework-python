@@ -24,6 +24,7 @@ import datetime
 from tornado import gen
 from tornado.queues import Queue
 
+from ..detail.headers import synchronize_with_table
 from ..exceptions import ChokeEvent
 
 
@@ -38,7 +39,7 @@ class Stream(object):
     def __init__(self, raw_headers, header_table):
         self._queue = Queue()
         self._header_table = header_table
-        self._current_headers = self._header_table.merge(raw_headers)
+        self._current_headers = synchronize_with_table(self._header_table, raw_headers)
 
     @gen.coroutine
     def get(self, timeout=0):
@@ -55,15 +56,15 @@ class Stream(object):
             raise gen.Return(res)
 
     def push(self, item, raw_headers):
-        headers = self._header_table.merge(raw_headers)
+        headers = synchronize_with_table(self._header_table, raw_headers)
         self._queue.put_nowait((item, headers))
 
     def done(self, raw_headers):
-        headers = self._header_table.merge(raw_headers)
+        headers = synchronize_with_table(self._header_table, raw_headers)
         return self._queue.put_nowait((ChokeEvent(), headers))
 
     def error(self, errnumber, reason, raw_headers):
-        headers = self._header_table.merge(raw_headers)
+        headers = synchronize_with_table(self._header_table, raw_headers)
         return self._queue.put_nowait((RequestError(errnumber, reason), headers))
 
     @property
