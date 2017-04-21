@@ -36,7 +36,6 @@ class TraceAdapter(logging.LoggerAdapter):
 def get_trace_adapter(logger, trace_id):
     if trace_id is None:
         return logger
-    # TODO Remove this cast flexibility.
     if not isinstance(trace_id, six.string_types):
         trace_id = hex(trace_id)[2:]
     return TraceAdapter(logger, {'trace_id': trace_id})

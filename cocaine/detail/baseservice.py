@@ -126,7 +126,7 @@ class BaseService(object):
                                          ", ".join(("%s:%d %s" % (host, port, err) for (host, port, err) in conn_statuses)))
 
     def disconnect(self):
-        self.log.info("disconnect has been called %s", self.name)
+        self.log.debug("`%s` disconnect has been called", self.name)
         if self.pipe is None:
             return
 
@@ -139,6 +139,7 @@ class BaseService(object):
         while sessions:
             _, rx = sessions.popitem()
             rx.error(DisconnectionError(self.name))
+        self.log.info("`%s` has been disconnected", self.name)
 
     def on_close(self, pipe_epoch, *args):
         self.log.info("`%s` pipe has been closed with args: %s", self.name, args)
@@ -177,7 +178,6 @@ class BaseService(object):
 
         trace_id = kwargs.get('trace_id')
         trace_logger = get_trace_adapter(self.log, trace_id)
-        trace_logger.info("BaseService method `%s` call", method_name)
         trace_logger.debug("BaseService method `%s` call: %.300s %.300s", method_name, args, kwargs)
 
         yield self.connect(trace_id)
@@ -185,29 +185,39 @@ class BaseService(object):
         if self.pipe is None:
             raise ServiceConnectionError('connection has suddenly disappeared')
 
-        self.log.debug("%s", self.api)
+        trace_logger.debug("%s", self.api)
         for method_id, (method, tx_tree, rx_tree) in six.iteritems(self.api):
             if method == method_name:
-                self.log.debug("method `%s` has been found in API map", method_name)
+                trace_logger.debug("method `%s` has been found in API map", method_name)
                 session = next(self.counter)  # py3 counter has no .next() method
-                self.log.debug('sending message: %.300s', [session, method_id, args, kwargs])
-
                 # Manage headers using header table.
                 headers = manage_headers(kwargs, self._header_table['tx'])
 
-                self.pipe.write(msgpack_packb([session, method_id, args, headers]))
-                self.log.debug("RX TREE %s", rx_tree)
-                self.log.debug("TX TREE %s", tx_tree)
+                packed_data = msgpack_packb([session, method_id, args, headers])
+                trace_logger.info(
+                    'send message to `%s`: channel id: %s, type: %s, length: %s bytes',
+                    self.name,
+                    session,
+                    method_name,
+                    len(packed_data)
+                )
+                trace_logger.debug('send message: %.300s', [session, method_id, args, kwargs])
+
+                self.pipe.write(packed_data)
+                trace_logger.debug("RX TREE %s", rx_tree)
+                trace_logger.debug("TX TREE %s", tx_tree)
 
                 rx = Rx(rx_tree=rx_tree,
-                        io_loop=self.io_loop,
-                        servicename=self.name,
+                        session_id=session,
                         header_table=self._header_table['rx'],
+                        io_loop=self.io_loop,
+                        service_name=self.name,
                         trace_id=trace_id)
                 tx = Tx(tx_tree=tx_tree,
                         pipe=self.pipe,
                         session_id=session,
                         header_table=self._header_table['tx'],
+                        service_name=self.name,
                         trace_id=trace_id)
                 self.sessions[session] = rx
                 channel = Channel(rx=rx, tx=tx)

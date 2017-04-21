@@ -132,27 +132,28 @@ class TestRx(object):
     rx_tree = {0: [b'write', None],
                1: [b'error', {}],
                2: [b'close', {}]}
+    session_id = 1
     io = IOLoop.current()
 
     def test_print(self):
-        log.info(Rx(self.rx_tree))
+        log.info(Rx(self.rx_tree, self.session_id))
 
     @tools.raises(ServiceError)
     def test_rx_error_branch(self):
-        rx = Rx(self.rx_tree)
+        rx = Rx(self.rx_tree, self.session_id)
         rx.push(1, [(-199, 42), "dummy_error"], None)
         self.io.run_sync(rx.get)
 
     @tools.raises(ChokeEvent)
     def test_rx_done(self):
-        rx = Rx(self.rx_tree)
+        rx = Rx(self.rx_tree, self.session_id)
         rx.push(2, [], None)
         self.io.run_sync(lambda: rx.get(timeout=1))
         self.io.run_sync(rx.get)
 
     @tools.raises(ChokeEvent)
     def test_rx_done_empty_queue(self):
-        rx = Rx(self.rx_tree)
+        rx = Rx(self.rx_tree, self.session_id)
         rx.push(1, [(-199, 32), "DUMMY"], None)
         try:
             self.io.run_sync(rx.get)
@@ -163,19 +164,20 @@ class TestRx(object):
     @tools.raises(InvalidMessageType)
     def test_rx_unexpected_msg_type(self):
         io = IOLoop.current()
-        rx = Rx(self.rx_tree)
+        rx = Rx(self.rx_tree, self.session_id)
         rx.push(4, [], None)
         io.run_sync(rx.get)
 
     @tools.raises(ChokeEvent)
     def test_rx_on_done(self):
         io = IOLoop.current()
-        rx = Rx(self.rx_tree)
+        rx = Rx(self.rx_tree, self.session_id)
         rx.done()
         io.run_sync(rx.get, timeout=1)
 
 
 class TestTx(object):
+    service_name = 'dummy_service'
     tx_tree = {0: ['dummy', None]}
 
     class PipeMock(object):
@@ -183,18 +185,18 @@ class TestTx(object):
             pass
 
     def test_print(self):
-        log.info(Tx(self.tx_tree, self.PipeMock(), 1, CocaineHeaders()))
+        log.info(Tx(self.tx_tree, self.PipeMock(), 1, CocaineHeaders(), self.service_name))
 
     @tools.raises(AttributeError)
     def test_tx(self):
-        tx = Tx(self.tx_tree, self.PipeMock(), 1, CocaineHeaders())
+        tx = Tx(self.tx_tree, self.PipeMock(), 1, CocaineHeaders(), self.service_name)
         tx.dummy().wait(4)
         tx.failed().wait(4)
 
     @tools.raises(ChokeEvent)
     def test_tx_on_done(self):
         io = IOLoop.current()
-        tx = Tx(self.tx_tree, self.PipeMock(), 1, CocaineHeaders())
+        tx = Tx(self.tx_tree, self.PipeMock(), 1, CocaineHeaders(), self.service_name)
         tx.done()
         io.run_sync(tx.get, timeout=1)
 

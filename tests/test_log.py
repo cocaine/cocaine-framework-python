@@ -18,7 +18,8 @@ class BaseTestCase(unittest.TestCase):
 
 class TestTxNoneInitialTraceId(BaseTestCase):
     def setUp(self):
-        self.tx = Tx(self.tx_tree, Mock(), 1, CocaineHeaders())
+        self.service_name = 'dummy_service'
+        self.tx = Tx(self.tx_tree, Mock(), 1, CocaineHeaders(), self.service_name)
         self.initial_log = self.tx.log
         assert not isinstance(self.initial_log, TraceAdapter)
 
@@ -28,7 +29,7 @@ class TestTxNoneInitialTraceId(BaseTestCase):
         IOLoop.current().run_sync(partial(self.tx.dummy, trace=new_trace))
         # Set new trace_id, set new logger adapter
         assert self.tx.trace_id == new_trace_id
-        assert self.tx.log.extra['trace_id'] == '{trace_id:x}'.format(trace_id=new_trace_id)
+        assert self.tx.log.extra == {'trace_id': hex(new_trace_id)[2:]}
 
     def test_not_set_trace(self):
         IOLoop.current().run_sync(self.tx.dummy)
@@ -39,8 +40,10 @@ class TestTxNoneInitialTraceId(BaseTestCase):
 
 class TestTxInitialTraceId(BaseTestCase):
     def setUp(self):
+        self.service_name = 'dummy_service'
         self.initial_trace_id = 300  # greater than 256 to not use cached ints
-        self.tx = Tx(self.tx_tree, Mock(), 1, CocaineHeaders(), trace_id=self.initial_trace_id)
+        self.tx = Tx(self.tx_tree, Mock(), 1, CocaineHeaders(), self.service_name,
+                     trace_id=self.initial_trace_id)
         self.initial_log = self.tx.log
 
     def test_set_not_none_trace_equal_trace_id(self):
@@ -58,7 +61,7 @@ class TestTxInitialTraceId(BaseTestCase):
         IOLoop.current().run_sync(partial(self.tx.dummy, trace=new_trace))
         # Set new trace_id and new logger
         assert self.tx.trace_id == new_trace_id
-        assert self.tx.log.extra['trace_id'] == '{trace_id:x}'.format(trace_id=new_trace_id)
+        assert self.tx.log.extra == {'trace_id': hex(new_trace_id)[2:]}
 
     def test_not_set_trace(self):
         IOLoop.current().run_sync(self.tx.dummy)

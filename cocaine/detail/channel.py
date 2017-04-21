@@ -118,7 +118,8 @@ class PrettyPrintable(object):
 
 
 class Rx(PrettyPrintable):
-    def __init__(self, rx_tree, header_table=None, io_loop=None, servicename=None, raw_headers=None, trace_id=None):
+    def __init__(self, rx_tree, session_id, header_table=None, io_loop=None, service_name=None,
+                 raw_headers=None, trace_id=None):
         if header_table is None:
             header_table = CocaineHeaders()
 
@@ -128,7 +129,8 @@ class Rx(PrettyPrintable):
         self._io_loop = io_loop or IOLoop.current()
         self._queue = Queue()
         self._done = False
-        self.servicename = servicename
+        self.session_id = session_id
+        self.service_name = service_name
         self.rx_tree = rx_tree
         self.default_protocol = detect_protocol_type(rx_tree)
         self._headers = header_table
@@ -157,8 +159,7 @@ class Rx(PrettyPrintable):
         self._current_headers = self._headers.merge(raw_headers)
         res = protocol(name, payload)
         if isinstance(res, ProtocolError):
-            raise ServiceError(self.servicename, res.reason,
-                               res.code, res.category)
+            raise ServiceError(self.service_name, res.reason, res.code, res.category)
         else:
             raise Return(res)
 
@@ -169,10 +170,15 @@ class Rx(PrettyPrintable):
         dispatch = self.rx_tree.get(msg_type)
         self.log.debug("dispatch %s %.300s", dispatch, payload)
         if dispatch is None:
-            raise InvalidMessageType(self.servicename, CocaineErrno.INVALIDMESSAGETYPE,
+            raise InvalidMessageType(self.service_name, CocaineErrno.INVALIDMESSAGETYPE,
                                      "unexpected message type %s" % msg_type)
         name, rx = dispatch
-        self.log.info("got message: type `%s`, rx `%s`", name, rx)
+        self.log.info(
+            "got message from `%s`: channel id: %s, type: %s",
+            self.service_name,
+            self.session_id,
+            name
+        )
         self._queue.put_nowait((name, payload, raw_headers))
         if rx == {}:  # the last transition
             self.done()
@@ -186,8 +192,7 @@ class Rx(PrettyPrintable):
         return self._done
 
     def _format(self):
-        return "name: %s, queue: %s, done: %s" % (
-            self.servicename, self._queue, self._done)
+        return "name: %s, queue: %s, done: %s" % (self.service_name, self._queue, self._done)
 
     @property
     def headers(self):
@@ -195,9 +200,10 @@ class Rx(PrettyPrintable):
 
 
 class Tx(PrettyPrintable):
-    def __init__(self, tx_tree, pipe, session_id, header_table, trace_id=None):
+    def __init__(self, tx_tree, pipe, session_id, header_table, service_name, trace_id=None):
         self.tx_tree = tx_tree
         self.session_id = session_id
+        self.service_name = service_name
         self.pipe = pipe
         self._done = False
         self._header_table = header_table
@@ -214,7 +220,13 @@ class Tx(PrettyPrintable):
             self.log = get_trace_adapter(log, new_trace_id)
             self.trace_id = new_trace_id
 
-        self.log.info("Tx method `%s` call: %.300s %.300s", method_name, args, kwargs)
+        self.log.debug(
+            "`%s` Tx method `%s` call: %.300s %.300s",
+            self.service_name,
+            method_name,
+            args,
+            kwargs
+        )
 
         if self._done:
             raise ChokeEvent()
@@ -227,7 +239,15 @@ class Tx(PrettyPrintable):
                 self.log.debug("method `%s` has been found in API map", method_name)
                 headers = manage_headers(kwargs, self._header_table)
 
-                self.pipe.write(msgpack_packb([self.session_id, method_id, args, headers]))
+                packed_data = msgpack_packb([self.session_id, method_id, args, headers])
+                self.log.info(
+                    'send message to `%s`: channel id: %s, type: %s, length: %s bytes',
+                    self.service_name,
+                    self.session_id,
+                    method_name,
+                    len(packed_data)
+                )
+                self.pipe.write(packed_data)
 
                 if tx_tree == {}:  # last transition
                     self.done()
