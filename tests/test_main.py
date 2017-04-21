@@ -22,6 +22,7 @@
 import logging
 import socket
 
+from hpack.table import HeaderTable
 from tornado import gen
 from tornado.ioloop import IOLoop
 
@@ -30,7 +31,6 @@ from cocaine.detail.baseservice import BaseService
 from cocaine.detail.channel import primitive_protocol, streaming_protocol, null_protocol
 from cocaine.detail.channel import ProtocolError
 from cocaine.detail.channel import Rx, Tx
-from cocaine.detail.headers import CocaineHeaders
 from cocaine.exceptions import ChokeEvent
 from cocaine.exceptions import ServiceConnectionError, DisconnectionError
 from cocaine.exceptions import InvalidMessageType
@@ -185,18 +185,18 @@ class TestTx(object):
             pass
 
     def test_print(self):
-        log.info(Tx(self.tx_tree, self.PipeMock(), 1, CocaineHeaders(), self.service_name))
+        log.info(Tx(self.tx_tree, self.PipeMock(), 1, HeaderTable(), self.service_name))
 
     @tools.raises(AttributeError)
     def test_tx(self):
-        tx = Tx(self.tx_tree, self.PipeMock(), 1, CocaineHeaders(), self.service_name)
+        tx = Tx(self.tx_tree, self.PipeMock(), 1, HeaderTable(), self.service_name)
         tx.dummy().wait(4)
         tx.failed().wait(4)
 
     @tools.raises(ChokeEvent)
     def test_tx_on_done(self):
         io = IOLoop.current()
-        tx = Tx(self.tx_tree, self.PipeMock(), 1, CocaineHeaders(), self.service_name)
+        tx = Tx(self.tx_tree, self.PipeMock(), 1, HeaderTable(), self.service_name)
         tx.done()
         io.run_sync(tx.get, timeout=1)
 
@@ -230,7 +230,7 @@ def test_service_connection_error():
 @tools.raises(RequestError)
 def test_stream():
     io = IOLoop.current()
-    stream = Stream(None, CocaineHeaders())
+    stream = Stream(None, HeaderTable())
     stream.error((0, 100), "TESTERROR", None)
     io.run_sync(stream.get)
 
@@ -238,7 +238,7 @@ def test_stream():
 @tools.raises(gen.TimeoutError)
 def test_stream_timeout():
     io = IOLoop.current()
-    stream = Stream(None, CocaineHeaders())
+    stream = Stream(None, HeaderTable())
     io.run_sync(lambda: stream.get(timeout=0.5))
 
 

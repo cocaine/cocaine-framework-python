@@ -4,11 +4,11 @@ import unittest
 from functools import partial
 from unittest import skip
 
+from hpack.table import HeaderTable
 from mock import Mock
 from tornado.ioloop import IOLoop
 
 from cocaine.detail.channel import Tx
-from cocaine.detail.headers import CocaineHeaders
 from cocaine.detail.trace import Trace, TraceAdapter
 
 
@@ -19,7 +19,7 @@ class BaseTestCase(unittest.TestCase):
 class TestTxNoneInitialTraceId(BaseTestCase):
     def setUp(self):
         self.service_name = 'dummy_service'
-        self.tx = Tx(self.tx_tree, Mock(), 1, CocaineHeaders(), self.service_name)
+        self.tx = Tx(self.tx_tree, Mock(), 1, HeaderTable(), self.service_name)
         self.initial_log = self.tx.log
         assert not isinstance(self.initial_log, TraceAdapter)
 
@@ -42,7 +42,7 @@ class TestTxInitialTraceId(BaseTestCase):
     def setUp(self):
         self.service_name = 'dummy_service'
         self.initial_trace_id = 300  # greater than 256 to not use cached ints
-        self.tx = Tx(self.tx_tree, Mock(), 1, CocaineHeaders(), self.service_name,
+        self.tx = Tx(self.tx_tree, Mock(), 1, HeaderTable(), self.service_name,
                      trace_id=self.initial_trace_id)
         self.initial_log = self.tx.log
 
