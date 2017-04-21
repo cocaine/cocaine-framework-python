@@ -45,7 +45,7 @@ def pack_trace(trace):
     traceid = struct.pack("@Q", trace.traceid)
     spanid = struct.pack("@Q", trace.spanid)
     parentid = struct.pack("@Q", trace.parentid)
-    return (False, 80, traceid), (False, 81, spanid), (False, 82, parentid)
+    return (False, 'trace_id', traceid), (False, 'span_id', spanid), (False, 'parent_id', parentid)
 
 
 def update_dict_with_trace(dict_, trace):
