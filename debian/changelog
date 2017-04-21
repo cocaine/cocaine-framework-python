@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.13.3) unstable; urgency=low
+
+  * [Logger] Logging improvements (#65).
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 21 Apr 2017 13:50:30 +0300
+
 cocaine-framework-python (0.12.13.2) unstable; urgency=low
 
   * [Worker] Adapt with new ticket exchange scheme.
