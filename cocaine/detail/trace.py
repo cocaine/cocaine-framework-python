@@ -37,7 +37,7 @@ def get_trace_adapter(logger, trace_id):
     if trace_id is None:
         return logger
     if not isinstance(trace_id, six.string_types):
-        trace_id = hex(trace_id)[2:]
+        trace_id = '{:016x}'.format(trace_id)
     return TraceAdapter(logger, {'trace_id': trace_id})
 
 

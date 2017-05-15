@@ -29,7 +29,7 @@ class TestTxNoneInitialTraceId(BaseTestCase):
         IOLoop.current().run_sync(partial(self.tx.dummy, trace=new_trace))
         # Set new trace_id, set new logger adapter
         assert self.tx.trace_id == new_trace_id
-        assert self.tx.log.extra == {'trace_id': hex(new_trace_id)[2:]}
+        assert self.tx.log.extra == {'trace_id': '{:016x}'.format(new_trace_id)}
 
     def test_not_set_trace(self):
         IOLoop.current().run_sync(self.tx.dummy)
@@ -61,7 +61,7 @@ class TestTxInitialTraceId(BaseTestCase):
         IOLoop.current().run_sync(partial(self.tx.dummy, trace=new_trace))
         # Set new trace_id and new logger
         assert self.tx.trace_id == new_trace_id
-        assert self.tx.log.extra == {'trace_id': hex(new_trace_id)[2:]}
+        assert self.tx.log.extra == {'trace_id': '{:016x}'.format(new_trace_id)}
 
     def test_not_set_trace(self):
         IOLoop.current().run_sync(self.tx.dummy)
