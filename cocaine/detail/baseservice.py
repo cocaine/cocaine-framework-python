@@ -98,15 +98,18 @@ class BaseService(object):
 
             start_time = time.time()
 
+            if self.pipe:
+                log.info("`%s` pipe has been closed by StreamClosed exception", self.name)
+                self.disconnect()
+
             conn_statuses = []
             for host, port in self.endpoints:
                 try:
                     log.info("trying %s:%d to establish connection %s", host, port, self.name)
                     self.pipe_epoch += 1
-                    pipe_epoch = self.pipe_epoch
                     self.pipe = yield TCPClient(io_loop=self.io_loop).connect(host, port)
                     self.pipe.set_nodelay(True)
-                    self.pipe.read_until_close(callback=functools.partial(weak_wrapper, weakref.ref(self), "on_close", pipe_epoch),
+                    self.pipe.read_until_close(callback=functools.partial(weak_wrapper, weakref.ref(self), "on_close", self.pipe_epoch),
                                                streaming_callback=functools.partial(weak_wrapper, weakref.ref(self), "on_read"))
                 except Exception as err:
                     log.error("connection error %s", err)
