@@ -198,14 +198,16 @@ class CocaineHeaders(object):
             - ``(index, name, None)`` for partial matches on name only.
             - ``(index, name, value)`` for perfect matches.
         """
-        offset = len(CocaineHeaders.STATIC_TABLE)
         partial = None
-        for (i, (n, v)) in enumerate(CocaineHeaders.STATIC_TABLE):
-            if n == name:
-                if v == value:
-                    return i + 1, n, v
-                elif partial is None:
-                    partial = (i + 1, n, None)
+
+        header_name_search_result = CocaineHeaders.STATIC_TABLE_MAPPING.get(name)
+        if header_name_search_result:
+            index = header_name_search_result[1].get(value)
+            if index is not None:
+                return index, name, value
+            partial = (header_name_search_result[0], name, None)
+
+        offset = len(CocaineHeaders.STATIC_TABLE)
         for (i, (n, v)) in enumerate(self.dynamic_entries):
             if n == name:
                 if v == value:
@@ -261,6 +263,24 @@ class CocaineHeaders(object):
                     self.add(header, value)
                 headers.add(header, value)
         return headers
+
+
+def _build_static_table_mapping():
+    """
+    Build static table mapping from header name to tuple with next structure:
+    (<minimal index of header>, <mapping from header value to it index>).
+
+    static_table_mapping used for hash searching.
+    """
+    static_table_mapping = {}
+    for index, (name, value) in enumerate(CocaineHeaders.STATIC_TABLE, 1):
+        header_name_search_result = static_table_mapping.setdefault(name, (index, {}))
+        header_name_search_result[1][value] = index
+    return static_table_mapping
+
+
+CocaineHeaders.STATIC_TABLE_MAPPING = _build_static_table_mapping()
+
 
 _PACK_TRAITS = {
     'trace_id': 'Q',
