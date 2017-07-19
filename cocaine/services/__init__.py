@@ -23,6 +23,10 @@
 
 from ..detail.channel import EmptyResponse
 from ..detail.locator import LOCATOR_DEFAULT_ENDPOINTS, Locator
+from ..detail.secadaptor import SecureServiceFabric
 from ..detail.service import Service
 
-__all__ = ["Service", "Locator", "EmptyResponse", "LOCATOR_DEFAULT_ENDPOINTS"]
+__all__ = [
+    "Service", "Locator", "EmptyResponse", "LOCATOR_DEFAULT_ENDPOINTS",
+    "SecureServiceFabric"
+]
