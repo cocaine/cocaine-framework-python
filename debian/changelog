@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.14.0) unstable; urgency=low
+
+  * [Service]: Activate TCP keep-alive for services.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 27 Jul 2017 19:42:03 +0300
+
 cocaine-framework-python (0.12.13.4) unstable; urgency=low
 
   * [Service]: bugfix: sessions are not notified that pipe is closed
