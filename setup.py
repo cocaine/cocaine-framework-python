@@ -25,7 +25,7 @@ from setuptools import setup
 
 setup(
     name="cocaine",
-    version="0.12.13.4",
+    version="0.12.14.0",
     author="Anton Tyurin",
     author_email="noxiouz@yandex.ru",
     maintainer='Evgeny Safronov',
