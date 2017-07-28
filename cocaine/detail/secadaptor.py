@@ -1,10 +1,9 @@
-'''Secure service adaptor.
+"""Secure service adaptor.
 
 Provides method for Service adaptor construction, capable to wrap Cocaine
 service and inject security token into the header of service request.
+"""
 
-Note: mostly copy-pasted from cocaine-tools `SecureService` implementation.
-'''
 import time
 
 from tornado import gen
@@ -18,39 +17,34 @@ class SecureServiceError(CocaineError):
 
 
 class Promiscuous(object):
-    '''Null token fetch interface implementation.
+    """Null token fetch interface implementation.
 
     Used for fallback in case of unsupported (not set) secure module type
     provided by user, access errors due empty token will be propagated
     to caller code.
-    '''
+    """
     @gen.coroutine
     def fetch_token(self):
         raise gen.Return('')
 
 
 class TVM(object):
-    '''Tokens fetch interface implementation.
+    """Tokens fetch interface implementation.
 
     Provides public `fetch_token` method, which should be common
-    among various token backends types.
-
-    Attributes:
-        TYPE (str): String representation of token fetcher type,
-            will be included in secure header.
-    '''
+    among various token backend types.
+    """
     # Can be taken from class name in case of TVM, but could be inconvenient
     # in less general name formatting rules.
     TYPE = 'TVM'
 
     def __init__(self, client_id, client_secret, name='tvm'):
-        '''TVM
+        """TVM
 
-        Args:
-            client_id (int): Integer client identificator.
-            client_secret (str): Client secret.
-            name (str): TVM service name, defaults to 'tvm'.
-        '''
+        :param client_id: Integer client identifier.
+        :param client_secret: Client secret.
+        :param name: TVM service name, defaults to 'tvm'.
+        """
         self._client_id = client_id
         self._client_secret = client_secret
 
@@ -58,10 +52,10 @@ class TVM(object):
 
     @gen.coroutine
     def fetch_token(self):
-        '''Gains token from secure backend service.
-        Returns:
-            str: token formatted for cocaine protocol header.
-        '''
+        """Gains token from secure backend service.
+
+        :return: Token formatted for Cocaine protocol header.
+        """
         grant_type = 'client_credentials'
 
         channel = yield self._tvm.ticket_full(
@@ -75,14 +69,13 @@ class TVM(object):
 
 
 class SecureServiceAdaptor(object):
-    '''Wrapper for injecting service method with secure token.
-    '''
+    """Wrapper for injecting service method with secure token.
+    """
     def __init__(self, wrapped, secure, tok_update_sec=None):
-        '''
-        Args:
-            wrapped (cocaine.Service): Cocaine service.
-            secure: Tokens provider with `fetch_token` implementation.
-        '''
+        """
+        :param wrapped: Cocaine service.
+        :param secure: Tokens provider with `fetch_token` implementation.
+        """
         self._wrapped = wrapped
         self._secure = secure
 
@@ -135,18 +128,15 @@ class SecureServiceAdaptor(object):
 class SecureServiceFabric(object):
 
     @staticmethod
-    def make_secure_adaptor(
-            service, mod, client_id, client_secret, tok_update_sec=None):
-        '''
-        Args:
-            service (cocaine.Service): Service to wrap in.
-            mod (str): Name (type) of token refresh backend.
-            client_id (int): Client identificator.
-            client_secret (str): Client secret.
-            tok_update_sec (int, optional): Token update interval in seconds.
-        '''
+    def make_secure_adaptor(service, mod, client_id, client_secret, tok_update_sec=None):
+        """
+        :param service: Service to wrap in.
+        :param mod: Name (type) of token refresh backend.
+        :param client_id: Client identifier.
+        :param client_secret: Client secret.
+        :param tok_update_sec: Token update interval in seconds.
+        """
         if mod == 'TVM':
-            return SecureServiceAdaptor(
-                service, TVM(client_id, client_secret), tok_update_sec)
+            return SecureServiceAdaptor(service, TVM(client_id, client_secret), tok_update_sec)
 
         return SecureServiceAdaptor(service, Promiscuous(), tok_update_sec)
