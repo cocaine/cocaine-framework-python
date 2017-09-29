@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.14.1) unstable; urgency=low
+
+  * [Locator]: New API.
+
+ -- Anton Matveenko <antmat@me.com>  Fri, 29 Sep 2017 18:29:03 +0300
+
 cocaine-framework-python (0.12.14.0) unstable; urgency=low
 
   * [Service]: Activate TCP keep-alive for services.
