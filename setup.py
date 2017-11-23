@@ -21,7 +21,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup(
     name="cocaine",
@@ -38,16 +38,7 @@ setup(
     namespace_packages=['cocaine'],
     include_package_data=True,
     zip_safe=False,
-    packages=[
-        "cocaine",
-        "cocaine.common",
-        "cocaine.decorators",
-        "cocaine.detail",
-        "cocaine.exceptions",
-        "cocaine.logger",
-        "cocaine.services",
-        "cocaine.worker",
-    ],
+    packages=find_packages(),
     install_requires=open('./requirements.txt').read(),
     tests_require=open('./tests/requirements.txt').read(),
     test_suite='nose.collector',
@@ -55,9 +46,9 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
-        # 'Programming Language :: Python :: 3.2',
-        # 'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         "Programming Language :: Python :: Implementation :: PyPy",
         "Programming Language :: Python :: Implementation :: CPython",
         # 'Development Status :: 1 - Planning',

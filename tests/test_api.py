@@ -18,6 +18,7 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+from unittest import skip
 
 from tornado.ioloop import IOLoop
 
@@ -25,6 +26,7 @@ from cocaine.services import Service
 from cocaine.detail.api import API
 
 
+@skip('Docker image with a new cocaine version required')
 def test_verify_locator_api():
     io = IOLoop.current()
     l = Service("locator")

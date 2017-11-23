@@ -2,7 +2,6 @@ from __future__ import unicode_literals
 
 import unittest
 from functools import partial
-from unittest import skip
 
 from mock import Mock
 from tornado.ioloop import IOLoop

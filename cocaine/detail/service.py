@@ -23,9 +23,7 @@ from .baseservice import BaseService
 from .defaults import Defaults
 from .locator import Locator
 from .trace import get_trace_adapter
-
 from ..decorators import coroutine
-# cocaine defined exceptions
 from ..exceptions import InvalidApiVersion
 
 

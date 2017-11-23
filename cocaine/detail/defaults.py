@@ -19,10 +19,9 @@
 #
 import os
 import sys
-
-# ToDo: should I resolve hostname?
 from collections import namedtuple
 
+# ToDo: should I resolve hostname?
 LOCATOR_DEFAULT_HOST = "127.0.0.1"
 LOCATOR_DEFAULT_PORT = 10053
 DEFAULT_APPNAME = "app/standalone"

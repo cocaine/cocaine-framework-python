@@ -27,8 +27,7 @@ class API(object):
                3: [b'cluster', {}, {0: [b'value', {}], 1: [b'error', {}]}],
                4: [b'publish', {0: [b'discard', {}]}, {0: [b'value', {}], 1: [b'error', {}]}],
                5: [b'routing', {0: [b'discard', {}]}, {0: [b'write', None], 1: [b'error', {}], 2: [b'close', {}]}],
-               6: [b'uuid',    {}, {0: [b'value', {}], 1: [b'error', {}]}]
-               }
+               6: [b'uuid', {}, {0: [b'value', {}], 1: [b'error', {}]}]}
 
     Logger = {0: [b'emit', {}, {}],
               1: [b'verbosity', {}, {0: [b'value', {}], 1: [b'error', {}]}],

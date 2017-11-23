@@ -2,6 +2,9 @@ language: python
 
 python:
   - "2.7"
+  - "3.4"
+  - "3.5"
+  - "3.6"
 
 sudo: required
 
@@ -16,9 +19,9 @@ before_install:
   - docker run -d --net=host noxiouz/cocaine && docker ps
 
 install:
-  - "pip install tox flake8 python-coveralls"
+  - "pip install tox tox-travis python-coveralls"
 
-script: tox -e flake8,py27,py34,py35,py36 && python setup.py nosetests
+script: tox
 
 notifications:
   slack: cocaine:qDewv6ZVDt0TciQeNdE47GqG

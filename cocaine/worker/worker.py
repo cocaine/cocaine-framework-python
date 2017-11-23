@@ -34,7 +34,6 @@ from .message import RPCv1
 from .message import packv1
 from .request import RequestStream
 from .response import ResponseStream
-
 from ..common import CocaineErrno
 from ..decorators import coroutine
 from ..detail.defaults import Defaults

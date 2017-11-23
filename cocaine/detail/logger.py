@@ -30,7 +30,6 @@ from six.moves import cStringIO as BytesIO
 
 from tornado import gen
 from tornado import queues
-
 from tornado.gen import coroutine
 from tornado.ioloop import IOLoop
 from tornado.locks import Lock
