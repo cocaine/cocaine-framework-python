@@ -226,7 +226,7 @@ class BasicWorker(object):
         self.disown_timer.stop()
 
     def _dispatch_terminate(self, msg):
-        workerlog.debug("terminate has been received %s %s", msg.errno, msg.reason)
+        workerlog.info("terminate has been received %s %s", msg.errno, msg.reason)
         self.terminate(msg.errno, msg.reason)
 
     def _dispatch_invoke(self, msg, headers):
