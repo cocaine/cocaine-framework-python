@@ -54,7 +54,8 @@ def http_parse_cookies(headers):
 
 
 class _HTTPRequest(object):
-    def __init__(self, data):
+    def __init__(self, request, data):
+        self._underlying_request = request
         method, url, version, headers, self._body = msgpack_unpackb(data)
         if six.PY3:
             method = method.decode()
@@ -80,6 +81,10 @@ class _HTTPRequest(object):
     @property
     def headers(self):
         return self._headers
+
+    @property
+    def hpack_headers(self):
+        return self._underlying_request.headers
 
     @property
     def body(self):
@@ -160,7 +165,7 @@ class PatchedWebRequest(object):
 
 class HTTPPatchedRequest(PatchedWebRequest):
     def handle(self, data):
-        return _HTTPRequest(data)
+        return _HTTPRequest(self.request, data)
 
 
 class TornadoPatchedRequest(PatchedWebRequest):
