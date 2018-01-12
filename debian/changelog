@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.14.3) unstable; urgency=low
+
+  * [Worker]: HPACK headers also for tornado request.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 12 Jan 2018 19:44:54 +0300
+
 cocaine-framework-python (0.12.14.2) unstable; urgency=low
 
   * [Worker]: HPACK headers for HTTP request.
