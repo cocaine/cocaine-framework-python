@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.14.2) unstable; urgency=low
+
+  * [Worker]: HPACK headers for HTTP request.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 12 Jan 2018 18:22:06 +0300
+
 cocaine-framework-python (0.12.14.1) unstable; urgency=low
 
   * [Locator]: New API.
