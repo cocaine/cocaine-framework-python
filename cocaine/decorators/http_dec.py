@@ -82,7 +82,6 @@ class _HTTPRequest(object):
     def headers(self):
         return self._headers
 
-    @property
     def hpack_headers(self):
         return self._underlying_request.headers
 
@@ -139,11 +138,13 @@ def format_http_version(version):
         return "HTTP/%s" % version
 
 
-def tornado_request_handler(data):
+def tornado_request_handler(request, data):
     unpacked_data = msgpack_unpackb(data)
     method, uri, version, headers, body = unpacked_data
     version = format_http_version(version)
-    return HTTPServerRequest(method, uri, version, HTTPHeaders(headers), body)
+    tornado_request = HTTPServerRequest(method, uri, version, HTTPHeaders(headers), body)
+    tornado_request.hpack_headers = lambda: request.headers
+    return tornado_request
 
 
 class PatchedWebRequest(object):
@@ -170,7 +171,7 @@ class HTTPPatchedRequest(PatchedWebRequest):
 
 class TornadoPatchedRequest(PatchedWebRequest):
     def handle(self, data):
-        return tornado_request_handler(data)
+        return tornado_request_handler(self.request, data)
 
 
 def tornado_http(func):
