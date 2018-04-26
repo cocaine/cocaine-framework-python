@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.14.4) unstable; urgency=low
+
+  * Update requirements: use proper msgpack package
+
+ -- Kirill Smorodinnikov <shaitkir@gmail.com>  Thu, 26 Apr 2018 12:05:48 +0300
+
 cocaine-framework-python (0.12.14.3) unstable; urgency=low
 
   * [Worker]: HPACK headers also for tornado request.
