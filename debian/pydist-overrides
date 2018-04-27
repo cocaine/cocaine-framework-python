@@ -1,3 +1,2 @@
 # for the sake of Precise, I have to that
-msgpack_python	msgpack-python
-tornado 	python-tornado
+msgpack-python	python-msgpack
