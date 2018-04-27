@@ -1,3 +1,9 @@
+cocaine-framework-python (0.12.14.5) unstable; urgency=low
+
+  * Fix dependency from msgpack
+
+ -- Kirill Smorodinnikov <shaitkir@gmail.com>  Fri, 27 Apr 2018 11:22:42 +0300
+
 cocaine-framework-python (0.12.14.4) unstable; urgency=low
 
   * Update requirements: use proper msgpack package
