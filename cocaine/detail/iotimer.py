@@ -18,10 +18,14 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+import warnings
 
-from tornado.ioloop import PeriodicCallback
+from tornado.ioloop import IOLoop, PeriodicCallback
 
 
 class Timer(PeriodicCallback):
-    def __init__(self, callback, callback_time, io_loop):
+    def __init__(self, callback, callback_time, io_loop=None):
+        if io_loop:
+            warnings.warn('io_loop argument is deprecated.', DeprecationWarning)
+        io_loop = io_loop or IOLoop.current()
         super(Timer, self).__init__(callback, callback_time * 1000, io_loop)

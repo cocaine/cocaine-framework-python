@@ -20,6 +20,7 @@
 #
 import logging
 import socket
+import warnings
 
 import six
 
@@ -71,7 +72,10 @@ class NullTokenManager(TokenManager):
 
 
 class TicketVendingMachineTokenManager(TokenManager):
-    def __init__(self, name, ticket, interval, loop):
+    def __init__(self, name, ticket, interval, loop=None):
+        if loop:
+            warnings.warn('loop argument is deprecated.', DeprecationWarning)
+        loop = loop or IOLoop.current()
         self._name = name
         self._ticket = ticket
         self._service = Service('tvm')
@@ -100,7 +104,10 @@ class TicketVendingMachineTokenManager(TokenManager):
             yield now
 
 
-def make_token_manager(name, token, loop):
+def make_token_manager(name, token, loop=None):
+    if loop:
+        warnings.warn('io_loop argument is deprecated.', DeprecationWarning)
+    loop = loop or IOLoop.current()
     if token.ty == 'TVM':
         return TicketVendingMachineTokenManager(name, token.body, 10.0, loop)
     else:
@@ -111,7 +118,6 @@ class BasicWorker(object):
     def __init__(self, disown_timeout=DEFAULT_DISOWN_TIMEOUT,
                  heartbeat_timeout=DEFAULT_HEARTBEAT_TIMEOUT,
                  io_loop=None, app=None, uuid=None, endpoint=None):
-
         if heartbeat_timeout < disown_timeout:
             raise ValueError("heartbeat timeout must be greater than disown")
 
@@ -119,6 +125,8 @@ class BasicWorker(object):
         self.uuid = uuid or Defaults.uuid
         self.endpoint = endpoint or Defaults.endpoint
 
+        if io_loop:
+            warnings.warn('io_loop argument is deprecated.', DeprecationWarning)
         self.io_loop = io_loop or IOLoop.current()
         self._token_manager = make_token_manager(
             self.appname,

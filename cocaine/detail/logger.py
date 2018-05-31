@@ -24,6 +24,7 @@ import itertools
 import json
 import logging
 import threading
+import warnings
 
 import six
 from six.moves import cStringIO as BytesIO
@@ -87,6 +88,8 @@ class Logger(object):
 
     @thread_once
     def __init__(self, endpoints=LOCATOR_DEFAULT_ENDPOINTS, io_loop=None):
+        if io_loop:
+            warnings.warn('io_loop argument is deprecated.', DeprecationWarning)
         self.io_loop = io_loop or IOLoop.current()
         self.endpoints = endpoints
         self._lock = Lock()
@@ -268,7 +271,8 @@ class Logger(object):
 
 @coroutine
 def resolve_logging(endpoints, name="logging", io_loop=None):
-    io_loop = io_loop or IOLoop.current()
+    if io_loop:
+        warnings.warn('io_loop argument is deprecated.', DeprecationWarning)
 
     for host, port in endpoints:
         buff = msgpack_unpacker()
@@ -303,7 +307,7 @@ class CocaineHandler(logging.Handler):
         lvl = record.levelno
         extra = getattr(record, "extra", {})
         if lvl >= logging.ERROR:
-            # to avoid message formating
+            # to avoid message formatting
             if self._logger.enable_for(ERROR_LEVEL):
                 self._logger.error(self.format(record), extra=extra)
         elif lvl >= logging.WARNING:

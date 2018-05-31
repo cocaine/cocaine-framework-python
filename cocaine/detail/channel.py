@@ -20,6 +20,7 @@
 
 import datetime
 import logging
+import warnings
 
 import six
 
@@ -123,6 +124,8 @@ class Rx(PrettyPrintable):
         if header_table is None:
             header_table = CocaineHeaders()
 
+        if io_loop:
+            warnings.warn('io_loop argument is deprecated.', DeprecationWarning)
         # If it's not the main thread
         # and a current IOloop doesn't exist here,
         # IOLoop.instance becomes self._io_loop

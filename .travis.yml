@@ -12,10 +12,6 @@ services:
   - docker
 
 before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install zookeeper zookeeperd -y
-  - sudo pip install cocaine cocaine-tools
-  - docker pull noxiouz/cocaine
   - docker run -d --net=host noxiouz/cocaine && docker ps
 
 install:

@@ -17,6 +17,7 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+import warnings
 
 from .api import API
 from .baseservice import BaseService
@@ -27,6 +28,8 @@ LOCATOR_DEFAULT_ENDPOINTS = Defaults.locators
 
 class Locator(BaseService):
     def __init__(self, endpoints=LOCATOR_DEFAULT_ENDPOINTS, io_loop=None):
+        if io_loop:
+            warnings.warn('io_loop argument is deprecated.', DeprecationWarning)
         super(Locator, self).__init__(name="locator",
                                       endpoints=endpoints, io_loop=io_loop)
         self.api = API.Locator

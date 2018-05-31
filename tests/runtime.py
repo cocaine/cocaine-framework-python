@@ -42,9 +42,8 @@ BODY = b'dsdsds'
 class RuntimeMock(tcpserver.TCPServer):
     _msgpack_string_encoding = None if sys.version_info[0] == 2 else 'utf8'
 
-    def __init__(self, unixsocket, io_loop=None):
-        super(RuntimeMock, self).__init__(io_loop=io_loop or ioloop.IOLoop.current())
-        self.io_loop = io_loop or ioloop.IOLoop.current()
+    def __init__(self, unixsocket):
+        super(RuntimeMock, self).__init__()
         self.actions = list()
         self.counter = 1
         self.endpoint = unixsocket

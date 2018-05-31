@@ -20,6 +20,7 @@
 #
 
 import threading
+import warnings
 
 from tornado.concurrent import Future
 from tornado.ioloop import IOLoop
@@ -31,6 +32,8 @@ __all__ = ["ConcurrentWorker", "threaded"]
 class ConcurrentWorker(object):
     def __init__(self, func, io_loop=None, args=(), kwargs=None):
         self._func = func
+        if io_loop:
+            warnings.warn('io_loop argument is deprecated.', DeprecationWarning)
         self._io_loop = io_loop or IOLoop.current()
         self._args = args
         self._kwargs = kwargs or {}
@@ -53,5 +56,5 @@ class ConcurrentWorker(object):
 
 def threaded(func):
     def wrapper(*args, **kwargs):
-        return ConcurrentWorker(func, io_loop=None, args=args, kwargs=kwargs).execute()
+        return ConcurrentWorker(func, args=args, kwargs=kwargs).execute()
     return wrapper

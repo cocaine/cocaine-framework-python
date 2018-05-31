@@ -1,3 +1,9 @@
-msgpack-python
-six <= 1.10
-tornado>=4.2
+
+msgpack
+six >= 1.9,<= 1.10
+tornado >=4.2,<5
+
+
+
+
+

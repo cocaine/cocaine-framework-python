@@ -18,6 +18,7 @@
 #    You should have received a copy of the GNU Lesser General Public License
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+import warnings
 
 from .baseservice import BaseService
 from .defaults import Defaults
@@ -34,6 +35,8 @@ SYNC_CONNECTION_TIMEOUT = 5
 class Service(BaseService):
     def __init__(self, name, endpoints=LOCATOR_DEFAULT_ENDPOINT,
                  seed=None, version=0, locator=None, io_loop=None, timeout=0):
+        if io_loop:
+            warnings.warn('io_loop argument is deprecated.', DeprecationWarning)
         super(Service, self).__init__(name=name, endpoints=LOCATOR_DEFAULT_ENDPOINT, io_loop=io_loop)
         self.locator_endpoints = endpoints
         self.locator = locator

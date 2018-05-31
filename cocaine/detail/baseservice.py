@@ -22,6 +22,7 @@ import functools
 import itertools
 import socket
 import time
+import warnings
 import weakref
 
 import six
@@ -76,6 +77,8 @@ def set_keep_alive(sock, idle=10, interval=5, fails=5):
 
 class BaseService(object):
     def __init__(self, name, endpoints, io_loop=None):
+        if io_loop:
+            warnings.warn('io_loop argument is deprecated.', DeprecationWarning)
         # If it's not the main thread
         # and a current IOloop doesn't exist here,
         # IOLoop.instance becomes self._io_loop
