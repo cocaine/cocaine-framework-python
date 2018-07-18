@@ -79,5 +79,5 @@ class LogFormatterTest(unittest.TestCase):
 
     def test_bad_format_args(self):
         msg = self.logger.prepare_message_args(100, "format %s %d", "me")
-        self.assertEqual(len(msg), 3)
+        self.assertEqual(len(msg), 4)
         self.assertTrue(msg[2].startswith("unformatted:"))

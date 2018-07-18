@@ -127,7 +127,7 @@ class Logger(object):
             if self._defaultattrs:
                 msg = [level, self.target, message, self._defaultattrs]
             else:
-                msg = [level, self.target, message]
+                msg = [level, self.target, message, []]
         else:
             attrs = [(str(k), (v if isinstance(v, ATTRS_TYPES) else str(v))) for k, v in six.iteritems(kwargs["extra"])]
             msg = [level, self.target, message, attrs + self._defaultattrs]
