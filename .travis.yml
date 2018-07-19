@@ -15,7 +15,7 @@ before_install:
   - docker run -d --net=host noxiouz/cocaine && docker ps
 
 install:
-  - "pip install tox tox-travis python-coveralls"
+  - "pip install -U pip wheel setuptools tox tox-travis python-coveralls"
 
 script: tox
 

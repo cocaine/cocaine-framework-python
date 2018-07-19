@@ -20,7 +20,6 @@
 #
 
 import logging
-import socket
 
 from tornado import gen
 from tornado.ioloop import IOLoop
